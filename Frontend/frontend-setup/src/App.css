@@ -1,0 +1,131 @@
+/* Global Styles */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f5f5f5;
+    color: #333;
+}
+
+/* Main Container */
+.App {
+    max-width: 900px;
+    margin: 40px auto;
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Detail Page Container */
+.detail-page {
+    padding: 20px;
+}
+
+/* Chart Container for Detail Page */
+.chart-container {
+    margin: 20px 0;
+    padding: 20px;
+    background: #fafafa;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+}
+
+/* Buttons */
+.start-button,
+.back-button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    margin: 10px 0;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: opacity 0.3s ease, transform 0.2s ease;
+}
+
+.back-button {
+    background-color: #dc3545;
+}
+
+.start-button:hover,
+.back-button:hover {
+    opacity: 0.9;
+    transform: translateY(-2px);
+}
+
+/* Dropdown Styling */
+label {
+    font-weight: bold;
+    margin-top: 10px;
+    display: block;
+}
+
+select {
+    width: 100%;
+    padding: 8px;
+    margin: 5px 0 15px 0;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+}
+
+/* Table Styling */
+.reit-table, .reits-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.reit-table th,
+.reit-table td,
+.reits-table th,
+.reits-table td {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: left;
+}
+
+.reit-table th,
+.reits-table th {
+    background-color: #007bff;
+    color: white;
+}
+
+.reit-table tr:nth-child(even),
+.reits-table tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+
+/* REIT Website Links */
+.reit-link {
+    color: #007bff;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.reit-link:hover {
+    text-decoration: underline;
+}
+
+/* Filter Page Specific Styling */
+.filter-page {
+    padding: 20px;
+    background-color: #f9f9f9;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 600px) {
+    .App {
+        margin: 20px;
+        padding: 15px;
+    }
+    .start-button, .back-button {
+        font-size: 14px;
+        padding: 8px 16px;
+    }
+    .reit-table th, .reit-table td,
+    .reits-table th, .reits-table td {
+        padding: 8px;
+    }
+}

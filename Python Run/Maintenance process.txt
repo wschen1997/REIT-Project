@@ -1,0 +1,27 @@
+
+Quarterly update on Excel Db - orange tabs
+Go to REIT Database-Excel, saved updated REIT Universe csv
+Go to REIT Database-Excel - Payout tab, saved updated REIT FFO Payout csv
+Go to REIT Database-Excel, saved financial display csv
+
+
+Activate virtual environment: .\venv\Scripts\activate
+Update database: run 
+    Stock universe - initial set up.py
+    Stock data analysis - risk.py
+    Stock data analysis - operations.py
+Start website: 
+    1. run Backend setup.py, and run 
+    2.
+    cd "Frontend\frontend-setup"
+    npm start 
+in App.js terminal
+
+
+
+
+Excel Db items that need quarterly update:
+    DVD
+    FFO
+    Shares out
+    
