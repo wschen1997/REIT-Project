@@ -1,0 +1,88 @@
+Acrion item:
+
+Design daily routine for full time entru
+
+System migrate
+YF to FMP free plan -success
+SQL to digital Ocean - No
+Replace DB to appending new data
+Deploy to web
+Add - developing waitlist
+
+
+Data Cleaning
+	regional focus (will have REIT that invest in diff countries, so category important)
+	missing FFO - ALEX
+	RLj - extreme FFO growth (Block 2021 data as NA)
+	SVC - extreme FFO Growth (Block 2021 data as NA)
+	WHLR - extreme FFO Yield (Change to FFO annualized)
+	
+Operational score - 
+1. FFO Yield (current, are you buying the stock at a cheap price, how much CF or rent are you generate if you buy now) 
+2. Payout (Historical, and take into acct of fluctuation, is the stock's dividend predictable, ie how much of that CF you generated can you actually receive) 
+3. FFO growth - Historical (is the company's Operation good, is the management able to increase your rent while keeping the overhead low?)
+
+Price Volitility Score - 
+Price volitility, extreme loss events, liquidity, expected price return, etc
+
+Explain these calculation on the website - what does the three components mean?
+
+Cloud DB
+
+When the site is ready to deploy:
+Set up a cloud database.
+Change API URLs (http://127.0.0.1:5000 → https://your-backend.com).
+Host React on a public platform.
+Ensure Flask runs properly on a web server.
+
+
+Website:
+Add regional focus replace country option(with no specify option)
+Legal disclaimer on the website
+
+Marketing
+Data integraty  only track reit, handle and double check all data point
+handle anomaly, negative earnings growth
+REIT specific metrics
+Explain the ranking/scoring
+exclude problematic REIT/FOF, and companies that classified as REIT only for tax purposes.
+
+Pricing
+Free:
+1. Customizable screener - property types, AUM, reginal investment focus, etc.
+2. REIT Display - 
+	Business Des
+	Website
+	Number of Professionals, etc.
+	Stock price and volumne data (from existing DB)
+
+3. Market Monitor? - Add later on (cap rate, interest rate, etc)
+
+Paid: 
+	Advanced analytics - price volitility
+	Target price and upside
+	Financial Statements
+	export to excel
+
+4. Advanced functionality, ex: predictive analytics or scenario analysis (like “stress test if interest rates rise another 2%”)
+
+5. Further functionality - 
+Connect REPE platform, track PE strategy and reginal focus, function as a connector? like a direct real estate listing website? but instead of real estate it's fund/developer (private investment platform)
+
+
+
+increase country coverage - UK
+Increase asset coverage - CMBS - very low competition.
+China clients?
+Think about AI integration
+
+
+SQL Credentials:
+# Database credentials
+DB_USERNAME = "wsche"
+DB_PASSWORD = "Tyreke1211"
+DB_HOST = "127.0.0.1"
+DB_NAME = "investment_data"
+
+# API Key for Financial Modeling Prep (FMP)
+FMP_API_KEY = "t0o1Uhjcsk4w7pIIj32z0rusEwe61SN3"

@@ -17,4 +17,5 @@ __pycache__/
 Credentials.env
 
 # Ignore text files
-*.txt
+Maintenance process.txt
+Action Items.txt
