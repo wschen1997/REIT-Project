@@ -1,0 +1,20 @@
+# Ignore node modules
+node_modules/
+
+# Ignore database files
+*.db
+
+# Ignore Python compiled files
+__pycache__/
+*.pyc
+
+# Ignore Excel and CSV files
+*.xlsx
+*.csv
+
+# Ignore environment files
+.env
+Credentials.env
+
+# Ignore text files
+*.txt
