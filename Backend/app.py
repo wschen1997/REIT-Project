@@ -4,11 +4,37 @@ import pandas as pd
 from flask_cors import CORS
 from datetime import datetime
 import os
+from dotenv import load_dotenv
+
+# Explicitly load environment variables from the Credentials.env file
+dotenv_path = os.path.abspath("C:/Users/wsche/OneDrive/桌面/Investment Research/Startup Project/Python Run/Credentials.env")
+load_dotenv(dotenv_path)
 
 app = Flask(__name__)
 CORS(app)
-# Use the DATABASE_URL from the environment variable, fallback to local DB if not set
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'mysql+pymysql://wsche:Tyreke1211@127.0.0.1/investment_data')
+
+# Database credentials from environment variables
+DB_USERNAME = os.getenv("DB_USERNAME")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+DB_HOST = os.getenv("DB_HOST")
+DB_PORT = os.getenv("DB_PORT")     
+DB_NAME = os.getenv("DB_NAME")
+
+# Construct the database connection string
+DB_URL = f"mysql+pymysql://{DB_USERNAME}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+
+# Apply the same SSL forced connection logic
+app.config['SQLALCHEMY_DATABASE_URI'] = DB_URL
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    "connect_args": {
+        "ssl": {
+            "fake_flag_to_enable": True  # Ensures SSL connection
+        }
+    }
+}
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Initialize SQLAlchemy with the updated configuration
 db = SQLAlchemy(app)
 
 @app.route('/')
