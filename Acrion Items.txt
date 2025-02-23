@@ -76,13 +76,3 @@ Increase asset coverage - CMBS - very low competition.
 China clients?
 Think about AI integration
 
-
-SQL Credentials:
-# Database credentials
-DB_USERNAME = "wsche"
-DB_PASSWORD = "Tyreke1211"
-DB_HOST = "127.0.0.1"
-DB_NAME = "investment_data"
-
-# API Key for Financial Modeling Prep (FMP)
-FMP_API_KEY = "t0o1Uhjcsk4w7pIIj32z0rusEwe61SN3"

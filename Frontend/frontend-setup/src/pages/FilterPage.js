@@ -2,6 +2,9 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
+// Load backend URL from environment variable
+const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:5000";
+
 function FilterPage() {
   const [reits, setReits] = useState([]);
   const [explanation, setExplanation] = useState("");
@@ -37,7 +40,7 @@ function FilterPage() {
 
   const fetchREITs = () => {
     axios
-      .get("http://127.0.0.1:5000/api/reits", {
+      .get(`${API_BASE_URL}/api/reits`, {
         params: {
           country: selectedCountry,
           property_type: selectedPropertyType

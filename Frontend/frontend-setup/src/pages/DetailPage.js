@@ -23,6 +23,9 @@ ChartJS.register(
   Legend
 );
 
+// Load backend URL from environment variable
+const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:5000";
+
 function DetailPage() {
   const { ticker } = useParams();
   const navigate = useNavigate();
@@ -41,7 +44,7 @@ function DetailPage() {
       return;
     }
     // Fetch with include_scores=true to get scoring data along with quarterly data
-    fetch(`http://127.0.0.1:5000/api/reits/${ticker}/financials?include_scores=true`)
+    fetch(`${API_BASE_URL}/api/reits/${ticker}/financials?include_scores=true`)
       .then((res) => res.json())
       .then((data) => {
         console.log("Fetched financial data:", data);
