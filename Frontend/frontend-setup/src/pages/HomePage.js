@@ -8,7 +8,7 @@ function HomePage() {
       <h1>Your All-in-One Tool for Smarter REITs Investing</h1>
       <p>Find the best REITs based on your preferences.</p>
       <button className="start-button" onClick={() => navigate("/filter")}>
-        Start Your Customized REITs Journey
+        REIT Screener
       </button>
     </div>
   );
