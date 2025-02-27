@@ -7,7 +7,7 @@ function HomePage() {
     <div className="home" style={{ textAlign: "center", padding: "40px" }}>
       {/* Logo with increased size and spacing */}
       <img
-        src="/logo-crop.png"
+        src="/logo-crop.PNG"
         alt="Viserra Logo"
         style={{
           maxWidth: "300px", // Increase size
