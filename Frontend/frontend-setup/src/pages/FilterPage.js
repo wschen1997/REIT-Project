@@ -39,17 +39,47 @@ function FilterPage() {
   }, [selectedCountry, selectedPropertyType]);
 
   const fetchREITs = () => {
+    console.log("fetchREITs called with:", { selectedCountry, selectedPropertyType });
+
+    const url = `${API_BASE_URL}/api/reits`;
+
     axios
-      .get(`${API_BASE_URL}/api/reits`, {
+      .get(url, {
         params: {
           country: selectedCountry,
           property_type: selectedPropertyType
         }
       })
       .then((response) => {
-        console.log("Fetched Data:", response.data);
-        setReits(response.data.reits || []);
-        setExplanation(response.data.explanation || "No explanation provided.");
+        console.log("Request made to:", url, {
+          country: selectedCountry,
+          property_type: selectedPropertyType
+        });
+
+        let responseData;
+        if (typeof response.data === "string") {
+          console.warn("Response data is a string, attempting to parse...");
+          try {
+            responseData = JSON.parse(response.data);
+          } catch (err) {
+            console.error("JSON parsing failed!", err);
+            return;
+          }
+        } else {
+          responseData = response.data;
+        }
+
+        console.log("Fetched Data:", responseData);
+        console.log("Type of response.data:", typeof responseData);
+        console.log("Keys in response.data:", Object.keys(responseData));
+        console.log("Value of explanation:", responseData.explanation);
+
+        setReits(responseData.reits || []);
+        setExplanation(prev => {
+          console.log("Previous explanation:", prev);
+          console.log("New explanation being set:", responseData.explanation);
+          return responseData.explanation || "No explanation provided.";
+        });
       })
       .catch((error) => {
         console.error("Error fetching data:", error);
@@ -57,7 +87,6 @@ function FilterPage() {
       });
   };
 
-  // Helper to format website URLs
   const formatWebsiteUrl = (url) => {
     if (!url) return "No website available";
     return url.startsWith("http") ? url : `https://${url}`;
