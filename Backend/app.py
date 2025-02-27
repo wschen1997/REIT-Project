@@ -126,15 +126,6 @@ def get_reits():
     # -------------------------------------------------------------------------
     # NEW: Include additional columns in the response
     # -------------------------------------------------------------------------
-    # Make sure your database has these columns:
-    #  - Numbers_Employee
-    #  - Year_Founded
-    #  - US_Investment_Regions
-    #  - Overseas_Investment
-    #  - Total_Real_Estate_Assets_M_
-    #  - 5yr_FFO_Growth
-    # If any is missing, you might want to add a try/except or dynamic check.
-    # For now, assuming all exist in reit_business_data.
 
     response = {
         "explanation": explanation,
@@ -148,6 +139,7 @@ def get_reits():
                 "Year_Founded",
                 "US_Investment_Regions",
                 "Overseas_Investment",
+                "Property_Type",
                 "Total_Real_Estate_Assets_M_",
                 "5yr_FFO_Growth",
             ]
