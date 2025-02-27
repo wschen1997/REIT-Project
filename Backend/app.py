@@ -55,6 +55,7 @@ def get_reits():
       - Numbers_Employee
       - Year_Founded
       - US_Investment_Regions
+      - Target_Price
       - Overseas_Investment
       - Total_Real_Estate_Assets_M_
       - 5yr_FFO_Growth
@@ -136,6 +137,7 @@ def get_reits():
                 "Business_Description",
                 "Website",
                 "Numbers_Employee",
+                "Target_Price",
                 "Year_Founded",
                 "US_Investment_Regions",
                 "Overseas_Investment",

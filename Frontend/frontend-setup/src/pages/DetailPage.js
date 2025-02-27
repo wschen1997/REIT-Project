@@ -298,7 +298,7 @@ function DetailPage() {
 
       {/* Business Statistics Table */}
       <div style={{ marginBottom: "30px" }}>
-        <h3>Business Statistics</h3>
+        <h2 style={{ fontSize: "1.5rem" }}>Business Statistics</h2>
         <table
           style={{
             width: "100%",
@@ -309,7 +309,7 @@ function DetailPage() {
           <tbody>
             <tr>
               <td style={{ padding: "8px", border: "1px solid #ccc" }}>
-                Property Type
+                Investment Property Type
               </td>
               <td style={{ padding: "8px", border: "1px solid #ccc" }}>
                 {safeDisplay(propertyType)}
@@ -338,9 +338,10 @@ function DetailPage() {
               <td style={{ padding: "8px", border: "1px solid #ccc" }}>
                 {website ? (
                   <a
-                    href={website}
+                    href={website.startsWith("http") ? website : `https://${website}`}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()} // Prevent navigation issues
                     style={{ color: "#007bff" }}
                   >
                     {website}
