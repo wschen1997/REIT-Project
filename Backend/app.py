@@ -111,6 +111,9 @@ def get_reits():
         f"Total REITs after merging business and scoring analysis data: {merged_data.shape[0]}"
     )
 
+    # Convert NaN values to None (JSON does not support NaN)
+    merged_data = merged_data.where(pd.notna(merged_data), None)
+
     # We won't sort; display in original order
     data_to_display = merged_data
 
