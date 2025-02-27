@@ -39,6 +39,7 @@ function DetailPage() {
   const [website, setWebsite] = useState(null);
   const [totalAssetsM, setTotalAssetsM] = useState(null);
   const [fiveYrFFOGrowth, setFiveYrFFOGrowth] = useState(null);
+  const [targetPrice, setTargetPrice] = useState(null);
 
   // Financial data & scoring
   const [financialData, setFinancialData] = useState([]);
@@ -94,6 +95,9 @@ function DetailPage() {
 
           setWebsite(reit.Website ?? null);
           setTotalAssetsM(reit.Total_Real_Estate_Assets_M_ ?? null);
+
+          // Negative Target Price is fine; we just store the raw number:
+          setTargetPrice(reit["Target_Price"] ?? null);
 
           // Negative FFO growth is fine; we just store the raw number:
           setFiveYrFFOGrowth(reit["5yr_FFO_Growth"] ?? null);
