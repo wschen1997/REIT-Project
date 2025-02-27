@@ -94,7 +94,7 @@ function FilterPage() {
 
   return (
     <div className="filter-page">
-      <h1>Customized REIT Screener</h1>
+      <h2>REIT Screener</h2>
 
       {/* Country Selection */}
       <label>Select Country:</label>

@@ -11,16 +11,16 @@ function HomePage() {
         alt="Viserra Logo"
         style={{
           maxWidth: "300px", // Increase size
-          height: "auto", // More spacing
-          marginBottom: "0.1px",
+          height: "auto", 
+          marginBottom: "0.1px", // spacing
         }}
       />
 
-      <h1>Your All-in-One Tool for Smarter REITs Investing</h1>
-      <p>Find the best REITs based on your preferences.</p>
+      <h2>Your All-in-One Tool for Smarter REITs Investing</h2>
+      <p>Access our REITs analytics platform and make data-driven decisions with confidence.</p>
 
       <button className="start-button" onClick={() => navigate("/filter")}>
-        REIT Screener
+        Search for a REIT
       </button>
     </div>
   );
