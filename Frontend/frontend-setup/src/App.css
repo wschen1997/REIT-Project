@@ -9,12 +9,73 @@ body {
 
 /* Main Container */
 .App {
-    max-width: 900px;
+    max-width: 1200px; /* Increased width */
     margin: 40px auto;
     background: white;
-    padding: 20px;
-    border-radius: 8px;
+    padding: 30px;
+    border-radius: 10px;
     box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Navigation Bar */
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 50px;
+    background-color: #fff;
+    color: #333;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Logo */
+.logo {
+    max-height: 50px;
+    cursor: pointer;
+}
+
+/* Navigation Links */
+.nav-links {
+    display: flex;
+    gap: 15px;
+}
+
+.nav-button {
+    background-color: transparent;
+    border: 1px solid #007bff;
+    color: #007bff;
+    font-size: 1rem;
+    padding: 10px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.nav-button:hover {
+    background-color: #007bff;
+    color: white;
+}
+
+/* Hero Section */
+.hero-section {
+    text-align: center;
+    padding: 80px 20px;
+    background-color: #f8f9fa;
+    border-radius: 10px;
+    margin: 40px auto;
+    max-width: 900px;
+}
+
+.hero-section h1 {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+}
+
+.hero-section p {
+    font-size: 1.2rem;
+    max-width: 600px;
+    margin: 0 auto;
+    line-height: 1.5;
 }
 
 /* Detail Page Container */
@@ -22,7 +83,7 @@ body {
     padding: 20px;
 }
 
-/* Chart Container for Detail Page */
+/* Chart Container */
 .chart-container {
     margin: 20px 0;
     padding: 20px;
@@ -38,7 +99,6 @@ body {
     color: white;
     border: none;
     padding: 10px 20px;
-    margin: 10px 0;
     font-size: 16px;
     cursor: pointer;
     border-radius: 5px;
@@ -108,22 +168,46 @@ select {
     text-decoration: underline;
 }
 
-/* Filter Page Specific Styling */
+/* Filter Page */
 .filter-page {
     padding: 20px;
     background-color: #f9f9f9;
 }
 
 /* Responsive Adjustments */
-@media (max-width: 600px) {
+@media (max-width: 768px) {
     .App {
-        margin: 20px;
-        padding: 15px;
+        max-width: 90%;
     }
+    
+    .navbar {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .nav-links {
+        margin-top: 10px;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .hero-section {
+        padding: 50px 20px;
+    }
+
+    .hero-section h1 {
+        font-size: 2rem;
+    }
+
+    .hero-section p {
+        font-size: 1rem;
+    }
+
     .start-button, .back-button {
         font-size: 14px;
         padding: 8px 16px;
     }
+
     .reit-table th, .reit-table td,
     .reits-table th, .reits-table td {
         padding: 8px;

@@ -65,6 +65,7 @@ def get_reits():
     selected_country = request.args.get('country', default=None, type=str)
     selected_property_type = request.args.get('property_type', default=None, type=str)
     selected_ticker = request.args.get('ticker', default=None, type=str)
+    min_avg_return = request.args.get('min_avg_return', default=None, type=float)
 
     # Load REIT business data from MySQL
     try:
@@ -112,6 +113,11 @@ def get_reits():
         f"Total REITs after merging business and scoring analysis data: {merged_data.shape[0]}"
     )
 
+    # Apply Average Annual Return filter
+    if min_avg_return is not None:
+        merged_data = merged_data[merged_data['Average Annual Return'] > min_avg_return]
+        app.logger.info(f"Filtered REITs with Average Annual Return greater than {min_avg_return}: {merged_data.shape[0]}")
+
     # Replace NaN values with None for better JSON serialization
     merged_data = merged_data.astype(object).where(pd.notna(merged_data), None)
 
@@ -119,6 +125,7 @@ def get_reits():
     data_to_display = merged_data
 
     explanation = (
+        f"Filtered REITs: Minimum Average Annual Return - {min_avg_return}, "
         f"Filtered REITs: Country - {selected_country}, "
         f"Property Type - {selected_property_type}, "
         f"Ticker - {selected_ticker}."

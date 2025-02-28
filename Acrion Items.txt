@@ -12,7 +12,6 @@ Data Cleaning
 	SVC - extreme FFO Growth (Block 2021 data as NA)
 	WHLR - extreme FFO Yield (Change to FFO annualized)
 
-	
 Operational score - 
 1. FFO Yield (current, are you buying the stock at a cheap price, how much CF or rent are you generate if you buy now) 
 2. Payout (Historical, and take into acct of fluctuation, is the stock's dividend predictable, ie how much of that CF you generated can you actually receive) 
@@ -24,12 +23,6 @@ Price volitility, extreme loss events, liquidity, expected price return, etc
 Explain these calculation on the website - what does the three components mean?
 
 Cloud DB
-
-When the site is ready to deploy:
-Set up a cloud database.
-Change API URLs (http://127.0.0.1:5000 → https://your-backend.com).
-Host React on a public platform.
-Ensure Flask runs properly on a web server.
 
 
 Website:
@@ -64,6 +57,7 @@ Paid:
 
 5. Further functionality - 
 Connect REPE platform, track PE strategy and reginal focus, function as a connector? like a direct real estate listing website? but instead of real estate it's fund/developer (private investment platform)
+Add RE crowdfunding analytics function
 
 
 
@@ -72,4 +66,5 @@ Increase asset coverage - CMBS - very low competition.
 China clients?
 Think about AI integration
 Design daily routine for full time entru
+
 
