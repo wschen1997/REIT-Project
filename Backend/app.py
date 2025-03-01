@@ -72,7 +72,8 @@ def get_reits():
 
     # NEW: Real-time search parameter
     search_term = request.args.get('search', default=None, type=str)
-
+    app.logger.info("Search term received: %s", search_term)
+    
     # Load REIT business data from MySQL
     try:
         with db.engine.connect() as conn:
@@ -97,10 +98,19 @@ def get_reits():
 
     # If a search term is provided, filter by Ticker startswith (case-insensitive)
     if search_term:
-        business_data = business_data[
-            business_data['Ticker'].notna() & 
-            business_data['Ticker'].str.startswith(search_term, case=False, na=False)
-        ]
+        if 'Ticker' in business_data.columns:
+            app.logger.info("Ticker column sample: %s", business_data['Ticker'].head().to_dict())
+        else:
+            app.logger.error("Ticker column missing in business_data")
+        try:
+            business_data = business_data[
+                business_data['Ticker'].notna() & 
+                business_data['Ticker'].astype(str).str.startswith(search_term, case=False, na=False)
+            ]
+            app.logger.info("After search filter, business_data shape: %s", business_data.shape)
+        except Exception as e:
+            app.logger.error("Error filtering by search term: %s", e)
+            return jsonify({"error": "Error filtering by search term"}), 500
 
     app.logger.info(
         f"Filtered REITs after country/property/ticker/search selection: {business_data.shape[0]}"
