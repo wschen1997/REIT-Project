@@ -96,7 +96,7 @@ def get_reits():
     if selected_ticker:
         business_data = business_data[business_data['Ticker'] == selected_ticker]
 
-    # If a search term is provided, filter by Ticker startswith (case-insensitive)
+    # NEW: If a search term is provided, filter by Ticker startswith (case-insensitive)
     if search_term:
         if 'Ticker' in business_data.columns:
             app.logger.info("Ticker column sample: %s", business_data['Ticker'].head().to_dict())
@@ -104,8 +104,8 @@ def get_reits():
             app.logger.error("Ticker column missing in business_data")
         try:
             business_data = business_data[
-                business_data['Ticker'].notna() & 
-                business_data['Ticker'].astype(str).str.startswith(search_term, case=False, na=False)
+                business_data['Ticker'].notna() &
+                business_data['Ticker'].astype(str).str.lower().str.startswith(search_term.lower(), na=False)
             ]
             app.logger.info("After search filter, business_data shape: %s", business_data.shape)
         except Exception as e:
