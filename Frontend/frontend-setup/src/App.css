@@ -178,6 +178,51 @@ select {
     background-color: #f9f9f9;
 }
 
+/* ----------------------------------------------
+   Tooltip for Info Icon 
+----------------------------------------------- */
+
+/* Tooltip icon container */
+.tooltip-icon {
+    position: relative;
+    display: inline-block;
+    margin-left: 8px;         /* space between label and icon */
+    width: 18px;
+    height: 18px;
+    background-color: #007bff;  /* circle color */
+    color: #fff;
+    border-radius: 50%;
+    text-align: center;
+    font-size: 14px;
+    line-height: 18px;        /* vertically center the "i" */
+    cursor: pointer;
+}
+
+/* Hidden tooltip text by default */
+.tooltip-text {
+    visibility: hidden;       /* hide by default */
+    width: 220px;             /* tooltip width */
+    background-color: #333;   /* dark background */
+    color: #fff;              /* white text */
+    text-align: left;
+    border-radius: 6px;
+    padding: 8px;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%;             /* position above the icon */
+    left: 50%;
+    transform: translateX(-50%);
+    opacity: 0;               /* for a smooth fade-in effect */
+    transition: opacity 0.3s;
+    font-size: 0.875rem;
+}
+
+/* Show the tooltip on hover */
+.tooltip-icon:hover .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+}
+
 /* Responsive Adjustments */
 @media (max-width: 768px) {
     .App {

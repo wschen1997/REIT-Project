@@ -4,6 +4,7 @@ Company name: Viserra
 Add - developing waitlist
 
 
+
 Data Cleaning
 	regional focus (will have REIT that invest in diff countries, so category important)
 	Need to add all missing data from REIT universe
@@ -11,6 +12,7 @@ Data Cleaning
 	RLj - extreme FFO growth (Block 2021 data as NA)
 	SVC - extreme FFO Growth (Block 2021 data as NA)
 	WHLR - extreme FFO Yield (Change to FFO annualized)
+	Stocks with extremely high annualized return - PECO, CURB, extreme surge in single day
 
 Operational score - 
 1. FFO Yield (current, are you buying the stock at a cheap price, how much CF or rent are you generate if you buy now) 
@@ -66,5 +68,6 @@ Increase asset coverage - CMBS - very low competition.
 China clients?
 Think about AI integration
 Design daily routine for full time entru
+make Fundamental + Score Stability into a map
 
 

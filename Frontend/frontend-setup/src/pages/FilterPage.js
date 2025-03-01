@@ -8,11 +8,9 @@ const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:5000
 function FilterPage() {
   const [reits, setReits] = useState([]);
   const [explanation, setExplanation] = useState("");
-  // Removed: const [selectedCountry, setSelectedCountry] = useState("");
   const [selectedPropertyType, setSelectedPropertyType] = useState("");
-  const [minAvgReturn, setMinAvgReturn] = useState(""); // New state for minimum average annual return
+  const [minAvgReturn, setMinAvgReturn] = useState(""); // User enters a percentage (e.g., "10")
 
-  // Removed countryOptions
   const propertyTypeOptions = [
     "Apartments",
     "Industrial Assets",
@@ -33,8 +31,8 @@ function FilterPage() {
 
   const navigate = useNavigate();
 
+  // Trigger fetch if at least one filter is provided
   useEffect(() => {
-    // Trigger fetch if at least one filter is provided
     if (minAvgReturn || selectedPropertyType) {
       fetchREITs();
     }
@@ -45,16 +43,19 @@ function FilterPage() {
 
     const url = `${API_BASE_URL}/api/reits`;
 
+    // Convert the entered percentage to a decimal (e.g., "10" => 0.10)
+    const convertedMinAvgReturn = minAvgReturn ? parseFloat(minAvgReturn) / 100 : "";
+
     axios
       .get(url, {
         params: {
-          min_avg_return: minAvgReturn,
+          min_avg_return: convertedMinAvgReturn,
           property_type: selectedPropertyType
         }
       })
       .then((response) => {
         console.log("Request made to:", url, {
-          min_avg_return: minAvgReturn,
+          min_avg_return: convertedMinAvgReturn,
           property_type: selectedPropertyType
         });
 
@@ -77,10 +78,9 @@ function FilterPage() {
         console.log("Value of explanation:", responseData.explanation);
 
         setReits(responseData.reits || []);
-        setExplanation(() => {
-          console.log("New explanation being set:", responseData.explanation);
-          return responseData.explanation || "No explanation provided.";
-        });
+        setExplanation(
+          `Filtered REITs: Minimum Annualized Return - ${minAvgReturn}%, Property Type - ${selectedPropertyType}`
+        );
       })
       .catch((error) => {
         console.error("Error fetching data:", error);
@@ -97,16 +97,24 @@ function FilterPage() {
     <div className="filter-page">
       <h2>REIT Screener</h2>
 
-      {/* Removed Country Selection */}
-
-      {/* Minimum Average Annual Return Selection */}
-      <label>Minimum Average Annual Return (%):</label>
+      {/* Minimum Annualized Return with Tooltip */}
+      <label>
+        Minimum Annualized Return (%):
+        <span className="tooltip-icon">
+          i
+          <span className="tooltip-text">
+          Annualized return is calculated by 
+          multiplying the average daily return (over the last five years) by 252
+          —the approximate number of trading days in a year.
+          </span>
+        </span>
+      </label>
       <input
         type="number"
         step="0.1"
         value={minAvgReturn}
         onChange={(e) => setMinAvgReturn(e.target.value)}
-        placeholder="Enter minimum return"
+        placeholder="Enter minimum return (%)"
       />
 
       <br />

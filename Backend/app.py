@@ -49,6 +49,9 @@ def get_reits():
     Filters REITs based on user-selected preferences:
     - Country (from 'Country_Region' in reit_business_data)
     - Property Type (from 'Property_Type' in reit_business_data; supports multiple categories)
+    - Ticker (if ticker=?)
+    - min_avg_return (for Average Annual Return)
+    - search (partial ticker match for real-time suggestions)
 
     Merges with scoring analysis data from reit_scoring_analysis.
     Returns relevant business data and website plus new fields:
@@ -66,6 +69,9 @@ def get_reits():
     selected_property_type = request.args.get('property_type', default=None, type=str)
     selected_ticker = request.args.get('ticker', default=None, type=str)
     min_avg_return = request.args.get('min_avg_return', default=None, type=float)
+
+    # NEW: Real-time search parameter
+    search_term = request.args.get('search', default=None, type=str)
 
     # Load REIT business data from MySQL
     try:
@@ -86,12 +92,17 @@ def get_reits():
             business_data['Property_Type'].str.contains(selected_property_type, case=False, na=False)
         ]
 
-    # Optionally filter by single Ticker (if ticker=?)
     if selected_ticker:
         business_data = business_data[business_data['Ticker'] == selected_ticker]
 
+    # If a search term is provided, filter by Ticker startswith (case-insensitive)
+    if search_term:
+        business_data = business_data[
+            business_data['Ticker'].str.startswith(search_term, case=False, na=False)
+        ]
+
     app.logger.info(
-        f"Filtered REITs after country/property/ticker selection: {business_data.shape[0]}"
+        f"Filtered REITs after country/property/ticker/search selection: {business_data.shape[0]}"
     )
 
     if business_data.empty:
@@ -130,10 +141,6 @@ def get_reits():
         f"Property Type - {selected_property_type}, "
         f"Ticker - {selected_ticker}."
     )
-
-    # -------------------------------------------------------------------------
-    # NEW: Include additional columns in the response
-    # -------------------------------------------------------------------------
 
     response = {
         "explanation": explanation,
