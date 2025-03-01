@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Bar, Doughnut } from "react-chartjs-2";
+import Header from "../components/Header.js";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -117,6 +118,7 @@ function DetailPage() {
   if (loading) {
     return (
       <div className="detail-page" style={{ padding: "20px" }}>
+        <Header />
         <h2>{ticker} - Analytics Dashboard</h2>
         <p>Loading financial data...</p>
         <button className="back-button" onClick={() => navigate(-1)}>
@@ -129,7 +131,8 @@ function DetailPage() {
   if (error || !Array.isArray(financialData) || financialData.length === 0) {
     return (
       <div className="detail-page" style={{ padding: "20px" }}>
-        <h2>{ticker} - Detailed Information</h2>
+        <Header />
+        <h2>{ticker} - Analytics Dashboard</h2>
         <p>{error || "Financial data is unavailable for this REIT."}</p>
         <button className="back-button" onClick={() => navigate(-1)}>
           Back to Results
@@ -318,6 +321,7 @@ function DetailPage() {
 
   return (
     <div className="detail-page" style={{ padding: "20px" }}>
+      <Header />
       {/* Name & description */}
       <div style={{ marginBottom: "20px" }}>
         <h2 style={{ margin: 0, fontSize: "1.5rem" }}>{companyName}</h2>
@@ -389,7 +393,25 @@ function DetailPage() {
             </tr>
             <tr>
               <td style={{ padding: "8px", border: "1px solid #ccc" }}>
-                5yr FFO Growth
+                Annualized Historical FFO Growth
+                <span
+                  className="tooltip-icon"
+                  style={{
+                    marginLeft: "6px",
+                    cursor: "pointer",
+                    fontSize: "0.8rem",
+                    width: "14px",
+                    height: "14px",
+                    display: "inline-block",
+                    textAlign: "center",
+                    lineHeight: "16px"
+                  }}
+                >
+                  i
+                  <span className="tooltip-text">
+                    This represents the CAGR of a REIT's FFO over the last five years. If a CAGR is unavailable—due to a sign change or both the starting and ending values being negative—the average annual growth over five years is displayed.
+                  </span>
+                </span>
               </td>
               <td style={{ padding: "8px", border: "1px solid #ccc" }}>
                 {formatFFOGrowth(fiveYrFFOGrowth)}
@@ -399,7 +421,7 @@ function DetailPage() {
         </table>
       </div>
 
-      <h2 style={{ marginBottom: "20px" }}>{ticker} - Detailed Information</h2>
+      <h2 style={{ marginBottom: "20px" }}>{ticker} - Analytics Dashboard</h2>
 
       {/* ============== Quant SCORING SECTION ============== */}
       <div style={sectionContainer}>
@@ -409,7 +431,19 @@ function DetailPage() {
           <div style={blockStyle}>
             <h4>
               Stability Percentile
-              <span className="tooltip-icon">
+              <span
+                  className="tooltip-icon"
+                  style={{
+                    marginLeft: "6px",
+                    cursor: "pointer",
+                    fontSize: "0.8rem",
+                    width: "14px",
+                    height: "14px",
+                    display: "inline-block",
+                    textAlign: "center",
+                    lineHeight: "16px"
+                  }}
+                >
                 i
                 <span className="tooltip-text">
                   Stability Percentile measures price volatility risk. Our algorithm calculates it using average daily return, standard deviation, skewness, kurtosis, and trading volume over the last five years. A higher percentile indicates lower risk.
@@ -432,10 +466,22 @@ function DetailPage() {
           <div style={blockStyle}>
             <h4>
               Fundamental Percentile
-              <span className="tooltip-icon">
+              <span
+                  className="tooltip-icon"
+                  style={{
+                    marginLeft: "6px",
+                    cursor: "pointer",
+                    fontSize: "0.8rem",
+                    width: "14px",
+                    height: "14px",
+                    display: "inline-block",
+                    textAlign: "center",
+                    lineHeight: "16px"
+                  }}
+                >
                 i
                 <span className="tooltip-text">
-                  Fundamental Percentile reflects the underlying financial strength of the REIT. It combines FFO Yield (are you buying at a good price?), FFO Payout (dividend predictability), and 5-Year FFO Growth (operational performance). A higher percentile indicates stronger fundamentals.
+                  Fundamental Percentile reflects the underlying financial strength of the REIT. Our algorithm takes into account of factors like FFO Yield, FFO Payout, FFO Growth, and Dividend Predictability. A higher percentile indicates stronger fundamentals.
                 </span>
               </span>
             </h4>
@@ -489,9 +535,19 @@ function DetailPage() {
         </div>
       </div>
 
-      <button className="back-button" onClick={() => navigate(-1)}>
-        Back to Filter Page
+      <button
+        className="back-button"
+        onClick={() => {
+          if (window.history.length > 2) {
+            navigate(-1); // If there's history, go back
+          } else {
+            navigate("/filter"); // Otherwise, go directly to the filter page
+          }
+        }}
+      >
+        Go to Screener Page
       </button>
+
     </div>
   );
 }

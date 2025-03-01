@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import Header from "../components/Header.js";
 
 // Load backend URL from environment variable
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:5000";
@@ -95,12 +96,25 @@ function FilterPage() {
 
   return (
     <div className="filter-page">
+      <Header /> 
       <h2>REIT Screener</h2>
 
       {/* Minimum Annualized Return with Tooltip */}
       <label>
         Minimum Annualized Return (%):
-        <span className="tooltip-icon">
+        <span
+                  className="tooltip-icon"
+                  style={{
+                    marginLeft: "6px",
+                    cursor: "pointer",
+                    fontSize: "0.8rem",
+                    width: "14px",
+                    height: "14px",
+                    display: "inline-block",
+                    textAlign: "center",
+                    lineHeight: "16px"
+                  }}
+                >
           i
           <span className="tooltip-text">
           Annualized return is calculated by 
