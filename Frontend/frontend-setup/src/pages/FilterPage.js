@@ -8,10 +8,11 @@ const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:5000
 function FilterPage() {
   const [reits, setReits] = useState([]);
   const [explanation, setExplanation] = useState("");
-  const [selectedCountry, setSelectedCountry] = useState("");
+  // Removed: const [selectedCountry, setSelectedCountry] = useState("");
   const [selectedPropertyType, setSelectedPropertyType] = useState("");
+  const [minAvgReturn, setMinAvgReturn] = useState(""); // New state for minimum average annual return
 
-  const countryOptions = ["United States", "United Kingdom", "Canada"];
+  // Removed countryOptions
   const propertyTypeOptions = [
     "Apartments",
     "Industrial Assets",
@@ -33,26 +34,27 @@ function FilterPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (selectedCountry && selectedPropertyType) {
+    // Trigger fetch if at least one filter is provided
+    if (minAvgReturn || selectedPropertyType) {
       fetchREITs();
     }
-  }, [selectedCountry, selectedPropertyType]);
+  }, [minAvgReturn, selectedPropertyType]);
 
   const fetchREITs = () => {
-    console.log("fetchREITs called with:", { selectedCountry, selectedPropertyType });
+    console.log("fetchREITs called with:", { minAvgReturn, selectedPropertyType });
 
     const url = `${API_BASE_URL}/api/reits`;
 
     axios
       .get(url, {
         params: {
-          country: selectedCountry,
+          min_avg_return: minAvgReturn,
           property_type: selectedPropertyType
         }
       })
       .then((response) => {
         console.log("Request made to:", url, {
-          country: selectedCountry,
+          min_avg_return: minAvgReturn,
           property_type: selectedPropertyType
         });
 
@@ -75,8 +77,7 @@ function FilterPage() {
         console.log("Value of explanation:", responseData.explanation);
 
         setReits(responseData.reits || []);
-        setExplanation(prev => {
-          console.log("Previous explanation:", prev);
+        setExplanation(() => {
           console.log("New explanation being set:", responseData.explanation);
           return responseData.explanation || "No explanation provided.";
         });
@@ -96,19 +97,17 @@ function FilterPage() {
     <div className="filter-page">
       <h2>REIT Screener</h2>
 
-      {/* Country Selection */}
-      <label>Select Country:</label>
-      <select
-        value={selectedCountry}
-        onChange={(e) => setSelectedCountry(e.target.value)}
-      >
-        <option value="">-- Select Country --</option>
-        {countryOptions.map((country) => (
-          <option key={country} value={country}>
-            {country}
-          </option>
-        ))}
-      </select>
+      {/* Removed Country Selection */}
+
+      {/* Minimum Average Annual Return Selection */}
+      <label>Minimum Average Annual Return (%):</label>
+      <input
+        type="number"
+        step="0.1"
+        value={minAvgReturn}
+        onChange={(e) => setMinAvgReturn(e.target.value)}
+        placeholder="Enter minimum return"
+      />
 
       <br />
 

@@ -115,23 +115,27 @@ body {
     transform: translateY(-2px);
 }
 
-/* Dropdown Styling */
+/* Label Styling */
 label {
     font-weight: bold;
     margin-top: 10px;
-    display: block;
+    display: block; /* Places label on its own line above input/select */
 }
 
+/* Match input & select styling */
+input[type="text"],
+input[type="number"],
 select {
     width: 100%;
     padding: 8px;
-    margin: 5px 0 15px 0;
+    margin: 5px 0 15px 0; /* Same vertical spacing as select */
     border-radius: 5px;
     border: 1px solid #ccc;
 }
 
 /* Table Styling */
-.reit-table, .reits-table {
+.reit-table,
+.reits-table {
     width: 100%;
     border-collapse: collapse;
     margin-top: 20px;
@@ -179,7 +183,7 @@ select {
     .App {
         max-width: 90%;
     }
-    
+
     .navbar {
         flex-direction: column;
         text-align: center;
