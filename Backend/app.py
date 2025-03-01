@@ -98,6 +98,7 @@ def get_reits():
     # If a search term is provided, filter by Ticker startswith (case-insensitive)
     if search_term:
         business_data = business_data[
+            business_data['Ticker'].notna() & 
             business_data['Ticker'].str.startswith(search_term, case=False, na=False)
         ]
 
@@ -136,7 +137,7 @@ def get_reits():
     data_to_display = merged_data
 
     explanation = (
-        f"Filtered REITs: Minimum Average Annual Return - {min_avg_return}, "
+        f"Filtered REITs: Minimum Annual Annual Return - {min_avg_return}, "
         f"Filtered REITs: Country - {selected_country}, "
         f"Property Type - {selected_property_type}, "
         f"Ticker - {selected_ticker}."
