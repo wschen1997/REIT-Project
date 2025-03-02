@@ -298,5 +298,36 @@ def get_financials(ticker):
         # Return only the array of quarterly data for backward compatibility
         return jsonify(results), 200
 
+@app.route("/api/signup", methods=["POST"])
+def signup():
+    """Handles new email signups and stores them in the MySQL database."""
+    data = request.json
+    email = data.get("email")
+    interest = data.get("interest")
+    feedback = data.get("feedback", None)  # Optional field
+
+    if not email or not interest:
+        return jsonify({"error": "Missing required fields"}), 400
+
+    # Check if email already exists
+    existing_entry = db.session.execute(
+        db.select(EmailSignup).filter_by(email=email)
+    ).scalar_one_or_none()
+
+    if existing_entry:
+        return jsonify({"error": "Email already exists in database"}), 409
+
+    try:
+        # Insert new record using SQLAlchemy ORM
+        new_signup = EmailSignup(email=email, interest=interest, feedback=feedback)
+        db.session.add(new_signup)
+        db.session.commit()
+
+        return jsonify({"message": "Signup successful!"}), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"Database error: {str(e)}"}), 500
+
 if __name__ == '__main__':
     app.run(debug=True)
