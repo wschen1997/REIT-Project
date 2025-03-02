@@ -3,7 +3,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Bar, Doughnut } from "react-chartjs-2";
 import Header from "../components/Header.js";
 import { ComposableMap, Geographies, Geography } from "react-simple-maps";
-import { geoNaturalEarth1 } from "d3-geo";
 import { feature } from "topojson-client";
 import {
   Chart as ChartJS,
@@ -15,6 +14,8 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
+
+const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
 
 ChartJS.register(
   CategoryScale,
@@ -44,6 +45,27 @@ function DetailPage() {
   const [totalAssetsM, setTotalAssetsM] = useState(null);
   const [fiveYrFFOGrowth, setFiveYrFFOGrowth] = useState(null);
   const [targetPrice, setTargetPrice] = useState(null);
+
+  // Map&Diversification Data and Fields
+  const [usInvestmentRegions, setUSInvestmentRegions] = useState([]);
+  const [overseasInvestment, setOverseasInvestment] = useState([]);
+
+  const US_STATE_MAP = {
+    AL: "Alabama", AK: "Alaska", AZ: "Arizona", AR: "Arkansas", CA: "California",
+    CO: "Colorado", CT: "Connecticut", DE: "Delaware", FL: "Florida", GA: "Georgia",
+    HI: "Hawaii", ID: "Idaho", IL: "Illinois", IN: "Indiana", IA: "Iowa",
+    KS: "Kansas", KY: "Kentucky", LA: "Louisiana", ME: "Maine", MD: "Maryland",
+    MA: "Massachusetts", MI: "Michigan", MN: "Minnesota", MS: "Mississippi",
+    MO: "Missouri", MT: "Montana", NE: "Nebraska", NV: "Nevada", NH: "New Hampshire",
+    NJ: "New Jersey", NM: "New Mexico", NY: "New York", NC: "North Carolina",
+    ND: "North Dakota", OH: "Ohio", OK: "Oklahoma", OR: "Oregon", PA: "Pennsylvania",
+    RI: "Rhode Island", SC: "South Carolina", SD: "South Dakota", TN: "Tennessee",
+    TX: "Texas", UT: "Utah", VT: "Vermont", VA: "Virginia", WA: "Washington",
+    WV: "West Virginia", WI: "Wisconsin", WY: "Wyoming"
+  };  
+  
+  const [hoveredCountry, setHoveredCountry] = useState(null);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
 
   // Financial data & scoring
   const [financialData, setFinancialData] = useState([]);
@@ -89,6 +111,18 @@ function DetailPage() {
           setTotalAssetsM(reit.Total_Real_Estate_Assets_M_ ?? null);
           setTargetPrice(reit["Target_Price"] ?? null);
           setFiveYrFFOGrowth(reit["5yr_FFO_Growth"] ?? null);
+          setUSInvestmentRegions(
+            reit.US_Investment_Regions
+              ? reit.US_Investment_Regions.split(", ")
+                  .map(state => US_STATE_MAP[state.trim()]) // Convert to full names
+                  .filter(Boolean) // Remove undefined values
+              : []
+          );          
+          setOverseasInvestment(
+            reit.Overseas_Investment 
+              ? reit.Overseas_Investment.split(", ").map(country => country.trim()) 
+              : []
+          );
         }
       })
       .catch((err) => {
@@ -542,6 +576,96 @@ function DetailPage() {
         </div>
       </div>
 
+      {/* ============== DIVERSIFICATION MAP SECTION ============== */}
+      <div style={{ ...sectionContainer, position: "relative" }}>
+        <h3 style={{ marginTop: 0, marginBottom: "10px" }}>Diversification</h3>
+
+        {/* White box wrapper for the map */}
+        <div style={{ 
+          backgroundColor: "#fff", 
+          padding: "20px", 
+          borderRadius: "8px", 
+          boxShadow: "0 2px 6px rgba(0,0,0,0.1)" 
+        }}>
+          <div style={{ textAlign: "center" }}>
+            <ComposableMap projectionConfig={{ scale: 100 }} width={800} height={400}>
+              <Geographies geography={geoUrl}>
+                {({ geographies }) =>
+                  geographies.map((geo) => {
+                    const countryName = geo.properties.name;
+                    const isInvested =
+                      overseasInvestment.includes(countryName) ||
+                      (countryName === "United States of America" && usInvestmentRegions.length > 0);
+
+                    return (
+                      <Geography
+                        key={geo.rsmKey}
+                        geography={geo}
+                        fill={isInvested ? "#b12d78" : "#D6D6DA"}
+                        stroke="#FFFFFF"
+                        strokeWidth={0.5}
+                        onMouseEnter={(event) => {
+                          setTooltipPosition({ 
+                            x: event.clientX + 10, // Add small offset to prevent overlap
+                            y: event.clientY - 30  // Position tooltip slightly above cursor
+                          });
+                        
+                          setHoveredCountry(
+                            countryName === "United States of America" && usInvestmentRegions.length > 0
+                              ? `Invested in: ${usInvestmentRegions.join(", ")}`
+                              : overseasInvestment.includes(countryName)
+                              ? `${countryName}`
+                              : null
+                          );
+                        }}                        
+                        onMouseMove={(event) => {
+                          setTooltipPosition({ 
+                            x: event.clientX + 10, // Keeps tooltip next to cursor
+                            y: event.clientY - 30  
+                          });
+                        }}                                             
+                        onMouseLeave={() => setHoveredCountry(null)}
+                        
+                        style={{
+                          default: { outline: "none" },
+                          hover: { fill: "#5A153D", outline: "none" },
+                          pressed: { fill: "#2A0920", outline: "none" },
+                        }}
+                      />
+                    );
+                  })
+                }
+              </Geographies>
+            </ComposableMap>
+          </div>
+        </div>
+
+        {/* Floating Tooltip */}
+        {hoveredCountry && (
+          <div
+          style={{
+            position: "fixed", // Use `fixed` instead of `absolute` for better positioning
+            left: `${tooltipPosition.x}px`,
+            top: `${tooltipPosition.y}px`,
+            backgroundColor: "#fff",
+            padding: "8px",
+            borderRadius: "5px",
+            boxShadow: "0 2px 5px rgba(0,0,0,0.2)",
+            fontSize: "14px",
+            pointerEvents: "none",
+            maxWidth: "200px",
+            wordWrap: "break-word",
+            whiteSpace: "normal",
+            textAlign: "left",
+            zIndex: 1000, // Ensure tooltip is above other elements
+          }}
+        >             
+            {hoveredCountry}
+          </div>
+        )}
+      </div>
+
+      {/* ============== Go back to filter ============== */}
       <button
         className="back-button"
         onClick={() => {
