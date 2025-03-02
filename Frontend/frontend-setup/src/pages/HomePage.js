@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "../components/Header.js";
 
-// Use environment variable for backend URL
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:5000";
 
 function HomePage() {
@@ -11,20 +10,19 @@ function HomePage() {
   // Form State
   const [email, setEmail] = useState("");
   const [feedback, setFeedback] = useState("");
-  const [interest, setInterest] = useState(""); // Interest selection
+  const [interest, setInterest] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [showPopup, setShowPopup] = useState(false); // Controls popup visibility
 
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Ensure interest is selected
     if (!interest) {
       alert("Please select your investment interest before submitting.");
       return;
     }
 
-    // Send data to the backend
     try {
       const response = await fetch(`${API_BASE_URL}/api/signup`, {
         method: "POST",
@@ -33,10 +31,11 @@ function HomePage() {
       });
 
       const result = await response.json();
-      console.log("Server response:", result); // Debugging: Check API response
+      console.log("Server response:", result);
 
       if (response.ok) {
         setSubmitted(true);
+        setShowPopup(true); // Show popup after successful submission
       } else {
         console.error("Failed to submit data:", result);
       }
@@ -150,6 +149,48 @@ function HomePage() {
           )}
         </div>
       </div>
+
+      {/* POPUP MODAL */}
+      {showPopup && (
+        <div style={{
+          position: "fixed",
+          top: "0",
+          left: "0",
+          width: "100%",
+          height: "100%",
+          backgroundColor: "rgba(0, 0, 0, 0.5)", // Dim background
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: "#fff",
+            padding: "20px",
+            borderRadius: "10px",
+            textAlign: "center",
+            width: "300px",
+            boxShadow: "0 4px 8px rgba(0,0,0,0.2)"
+          }}>
+            <h3 style={{ color: "#5A153D" }}>✅ Thank You!</h3>
+            <p style={{ color: "#333", fontSize: "1rem" }}>You've successfully signed up. We'll keep you updated.</p>
+            <button 
+              onClick={() => setShowPopup(false)} 
+              style={{
+                backgroundColor: "#5A153D",
+                color: "white",
+                padding: "8px 15px",
+                border: "none",
+                cursor: "pointer",
+                borderRadius: "5px",
+                marginTop: "10px"
+              }}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }
