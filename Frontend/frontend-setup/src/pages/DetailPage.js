@@ -2,6 +2,9 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Bar, Doughnut } from "react-chartjs-2";
 import Header from "../components/Header.js";
+import { ComposableMap, Geographies, Geography } from "react-simple-maps";
+import { geoNaturalEarth1 } from "d3-geo";
+import { feature } from "topojson-client";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -174,6 +177,10 @@ function DetailPage() {
               return Number(value).toFixed(1);
             },
           },
+          grid: { display: false },
+        },
+        x: {
+          grid: { display: false },
         },
       },
     };
@@ -186,7 +193,7 @@ function DetailPage() {
       {
         label: "FFO PS",
         data: ffoData,
-        backgroundColor: "rgba(75, 192, 192, 0.6)",
+        backgroundColor: "rgba(177, 45, 120, 0.8)",
       },
     ],
   };
@@ -196,7 +203,7 @@ function DetailPage() {
       {
         label: "Dividend PS",
         data: dvdData,
-        backgroundColor: "rgba(153, 102, 255, 0.6)",
+        backgroundColor: "rgba(177, 45, 120, 0.8)",
       },
     ],
   };
@@ -206,7 +213,7 @@ function DetailPage() {
       {
         label: "NOI PS",
         data: noiData,
-        backgroundColor: "rgba(255, 159, 64, 0.6)",
+        backgroundColor: "rgba(177, 45, 120, 0.8)",
       },
     ],
   };
@@ -226,7 +233,7 @@ function DetailPage() {
       {
         label: "",
         data: [stabilityVal, 100 - stabilityVal],
-        backgroundColor: ["rgba(75, 192, 192, 0.6)", "#e0e0e0"],
+        backgroundColor: ["rgba(90, 21, 61, 0.8)", "#e0e0e0"],
         borderWidth: 0,
       },
     ],
@@ -237,7 +244,7 @@ function DetailPage() {
       {
         label: "",
         data: [fundamentalVal, 100 - fundamentalVal],
-        backgroundColor: ["rgba(153, 102, 255, 0.6)", "#e0e0e0"],
+        backgroundColor: ["rgba(90, 21, 61, 0.8)", "#e0e0e0"],
         borderWidth: 0,
       },
     ],
@@ -539,7 +546,7 @@ function DetailPage() {
         className="back-button"
         onClick={() => {
           if (window.history.length > 2) {
-            navigate(-1); // If there's history, go back
+            navigate("/filter"); 
           } else {
             navigate("/filter"); // Otherwise, go directly to the filter page
           }
