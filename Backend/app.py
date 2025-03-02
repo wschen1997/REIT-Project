@@ -298,6 +298,22 @@ def get_financials(ticker):
         # Return only the array of quarterly data for backward compatibility
         return jsonify(results), 200
 
+
+
+class EmailSignup(db.Model):
+    __tablename__ = "email_signups"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    email = db.Column(db.String(255), unique=True, nullable=False)
+    interest = db.Column(db.Enum("REITs", "Crowdfunding", "Both"), nullable=False)
+    feedback = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.TIMESTAMP, server_default=db.func.current_timestamp())
+
+    def __init__(self, email, interest, feedback=None):
+        self.email = email
+        self.interest = interest
+        self.feedback = feedback
+
 @app.route("/api/signup", methods=["POST"])
 def signup():
     """Handles new email signups and stores them in the MySQL database."""
