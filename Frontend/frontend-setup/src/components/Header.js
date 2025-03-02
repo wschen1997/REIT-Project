@@ -76,19 +76,16 @@ const Header = () => {
           style={{ maxHeight: "90px", cursor: "pointer" }}
           onClick={() => navigate("/")}
         />
-        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", justifyContent: "flex-end", marginRight: "40px" }}>
-          <button className="nav-button" onClick={() => navigate("/filter")}>
-            REITs Screening
-          </button>
-          <button className="nav-button" onClick={handleSearchClick}>
-            Search for a REIT
-          </button>
-          <button className="nav-button">About Us</button>
-          <button className="nav-button">Pricing</button>
-          <button className="nav-button">Services</button>
+        <div style={{ display: "flex", gap: "25px", flexWrap: "wrap", justifyContent: "flex-end", marginRight: "40px" }}>
+          <div className="nav-link" onClick={() => navigate("/filter")}>REITs Screening</div>
+          <span className="nav-link" onClick={handleSearchClick}>Search for a REIT</span>
+          <div className="nav-link" onClick={() => navigate("/about us")}>About Us</div>
+          <div className="nav-link" onClick={() => navigate("/solutions")}>Solutions</div>
+          <div className="nav-link" onClick={() => navigate("/pricing")}>Pricing</div>
+          <div className="nav-link" onClick={() => navigate("/contact us")}>Contact Us</div>
         </div>
       </nav>
-              
+
       {/* Full-Screen Search Overlay */}
       {showSearchOverlay && (
         <div
@@ -169,7 +166,7 @@ const Header = () => {
               <button
                 onClick={() => console.log("Searching for:", searchQuery)}
                 style={{
-                  backgroundColor: "#007bff",
+                  backgroundColor: "#5A153D",
                   color: "#fff",
                   border: "none",
                   padding: "0.75rem 1.5rem",
@@ -185,7 +182,7 @@ const Header = () => {
               <button
                 onClick={handleCloseSearch}
                 style={{
-                  backgroundColor: "#dc3545",
+                  backgroundColor: "#385E88",
                   color: "#fff",
                   border: "none",
                   padding: "0.75rem 1.5rem",
