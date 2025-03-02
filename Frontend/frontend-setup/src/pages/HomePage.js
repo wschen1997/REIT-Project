@@ -144,7 +144,7 @@ function HomePage() {
             </form>
           ) : (
             <p style={{ color: "#5A153D", fontWeight: "bold", marginTop: "20px" }}>
-              ✅ Thanks for signing up! We’ll be in touch soon.
+              Thanks for signing up! We’ll be in touch soon.
             </p>
           )}
         </div>
@@ -172,7 +172,7 @@ function HomePage() {
             width: "300px",
             boxShadow: "0 4px 8px rgba(0,0,0,0.2)"
           }}>
-            <h3 style={{ color: "#5A153D" }}>✅ Thank You!</h3>
+            <h3 style={{ color: "#5A153D" }}>Thank You!</h3>
             <p style={{ color: "#333", fontSize: "1rem" }}>You've successfully signed up. We'll keep you updated.</p>
             <button 
               onClick={() => setShowPopup(false)} 
