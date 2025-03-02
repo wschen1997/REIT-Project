@@ -182,7 +182,7 @@ const Header = () => {
               <button
                 onClick={handleCloseSearch}
                 style={{
-                  backgroundColor: "#385E88",
+                  backgroundColor: "#B12D78",
                   color: "#fff",
                   border: "none",
                   padding: "0.75rem 1.5rem",

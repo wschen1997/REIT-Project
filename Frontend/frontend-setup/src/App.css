@@ -47,13 +47,12 @@ body {
     cursor: pointer;
     text-decoration: none;
     font-weight: 500;
-    transition: color 0.3s ease, border-bottom 0.3s ease;
+    transition: color 0.09s ease, border-bottom 0.09s ease;
 }
 
 .nav-link:hover {
-    color: #5A153D; /* Darker blue when hovered */
+    color: #B12D78; /* Darker blue when hovered */
     text-decoration: none;
-    border-bottom: 2px solid #5A153D; /* Underline effect on hover */
 }
 
 /* Hero Section */
@@ -189,7 +188,7 @@ select {
     margin-left: 8px;         /* space between label and icon */
     width: 18px;
     height: 18px;
-    background-color: #5A153D;  /* circle color */
+    background-color: #B12D78;  /* circle color */
     color: #fff;
     border-radius: 50%;
     text-align: center;
