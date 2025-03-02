@@ -157,7 +157,7 @@ function DetailPage() {
       <div className="detail-page" style={{ padding: "20px" }}>
         <Header />
         <h2>{ticker} - Analytics Dashboard</h2>
-        <p>Loading financial data...</p>
+        <p>Loading Analytics Dashboard...</p>
         <button className="back-button" onClick={() => navigate(-1)}>
           Back to Results
         </button>
@@ -369,9 +369,9 @@ function DetailPage() {
         <p style={{ marginTop: "10px" }}>{businessDescription}</p>
       </div>
 
-      {/* Business Statistics Table */}
-      <div style={{ marginBottom: "30px" }}>
-        <h2 style={{ fontSize: "1.5rem" }}>Business Statistics</h2>
+      {/* Business Statistics Table (Now inside Grey Background) */}
+      <div style={sectionContainer}>
+        <h3 style={{ marginTop: 0, marginBottom: "10px" }}>Business Statistics</h3>
         <table
           style={{
             width: "100%",
@@ -414,7 +414,6 @@ function DetailPage() {
                     href={website.startsWith("http") ? website : `https://${website}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
                     style={{ color: "#007bff" }}
                   >
                     {website}
@@ -445,7 +444,7 @@ function DetailPage() {
                     height: "14px",
                     display: "inline-block",
                     textAlign: "center",
-                    lineHeight: "16px"
+                    lineHeight: "16px",
                   }}
                 >
                   i
@@ -578,7 +577,7 @@ function DetailPage() {
 
       {/* ============== DIVERSIFICATION MAP SECTION ============== */}
       <div style={{ ...sectionContainer, position: "relative" }}>
-        <h3 style={{ marginTop: 0, marginBottom: "10px" }}>Diversification</h3>
+        <h3 style={{ marginTop: 0, marginBottom: "10px" }}>Geographical Diversification</h3>
 
         {/* White box wrapper for the map */}
         <div style={{ 
