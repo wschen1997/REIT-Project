@@ -50,7 +50,7 @@ function HomePage() {
       <Header />
 
       {/* Main Content Container */}
-      <div className="home" style={{ textAlign: "center", fontFamily: "Arial, sans-serif", paddingTop: "20px" }}>
+      <div className="home" style={{ textAlign: "center", fontFamily: "Arial, sans-serif" }}>
         
         {/* Hero Section */}
         <div
@@ -58,24 +58,28 @@ function HomePage() {
             backgroundImage: "url('/banner.jpg')",
             backgroundSize: "cover",
             backgroundPosition: "center",
-            padding: "80px 20px",
+            padding: "10px 50px",
             color: "#333",
           }}
         >
         </div>
 
         {/* Email Signup Section */}
-        <div style={{ backgroundColor: "#f9f9f9", padding: "20px 20px", marginTop: "5px", borderRadius: "8px" }}>
-          <h2>🚀 Join Our Early Access List</h2>
-          <p style={{ maxWidth: "500px", margin: "0 auto", fontSize: "1.2rem", color: "#555" }}>
-            Viserra is an early-stage startup building a real estate investment analytics platform focusing on:
+        <div style={{ backgroundColor: "#f9f9f9", padding: "20px", marginTop: "5px", borderRadius: "8px", textAlign: "center" }}>
+          <h2 style={{ fontSize: "1.8rem", fontWeight: "bold", color: "#333" }}>🚀 Join Our Early Access List</h2>
+          
+          <p style={{ maxWidth: "600px", margin: "10px auto", fontSize: "1.2rem", color: "#555", lineHeight: "1.6" }}>
+            Viserra is an early-stage fintech startup. We are building a platform that tracks and analyzes the performance of:
           </p>
-          <ul style={{ listStyle: "none", padding: 0 }}>
-            <li>REITs – Track and analyze public real estate investments.</li>
-            <li>Real Estate Crowdfunding – Compare and evaluate private real estate opportunities.</li>
-          </ul>
-          <p style={{ maxWidth: "500px", margin: "0 auto", fontSize: "1.2rem", color: "#555" }}>
-            Sign up below for exclusive updates and a 30% discount when we launch!
+          <div style={{ display: "inline-block", textAlign: "left", fontSize: "1.2rem", color: "#333", margin: "10px 0" }}>
+            <ul style={{ listStyleType: "✅", padding: 0, margin: 0 }}>
+              <li style={{ marginBottom: "8px" }}><strong>Public REITs</strong></li>
+              <li><strong>Real Estate Crowdfunding Vehicles</strong></li>
+            </ul>
+          </div>
+
+          <p style={{ maxWidth: "600px", margin: "20px auto", fontSize: "1.2rem", color: "#555", lineHeight: "1.6" }}>
+            Sign up below for exclusive updates and a <strong>30% discount</strong> when we launch!
           </p>
 
           {/* Form */}
