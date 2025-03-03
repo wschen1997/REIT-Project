@@ -611,7 +611,7 @@ function DetailPage() {
                         
                           setHoveredCountry(
                             countryName === "United States of America" && usInvestmentRegions.length > 0
-                              ? `Invested in: ${usInvestmentRegions.join(", ")}`
+                              ? `States invested: ${usInvestmentRegions.join(", ")}`
                               : overseasInvestment.includes(countryName)
                               ? `${countryName}`
                               : null
