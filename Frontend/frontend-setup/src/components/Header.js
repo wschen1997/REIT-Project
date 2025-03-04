@@ -322,7 +322,7 @@ const Header = () => {
               Real Estate Crowdfundings
             </h2>
             <p style={{ fontSize: "1rem", lineHeight: "1.5" }}>
-              We’re currently developing a new platform to help you evaluate
+              We’re currently developing a platform that helps you evaluate
               real estate crowdfunding opportunities more effectively.
               <br />
               <br />
