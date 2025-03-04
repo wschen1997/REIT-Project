@@ -12,6 +12,9 @@ function FilterPage() {
   const [selectedPropertyType, setSelectedPropertyType] = useState("");
   const [minAvgReturn, setMinAvgReturn] = useState(""); // User enters a percentage (e.g., "10")
 
+  // Track if the request is in progress
+  const [isLoading, setIsLoading] = useState(false);
+
   const propertyTypeOptions = [
     "Apartments",
     "Industrial Assets",
@@ -32,7 +35,7 @@ function FilterPage() {
 
   const navigate = useNavigate();
 
-  // Trigger fetch if at least one filter is provided
+  // Whenever minAvgReturn or selectedPropertyType changes, we fetch
   useEffect(() => {
     if (minAvgReturn || selectedPropertyType) {
       fetchREITs();
@@ -41,6 +44,9 @@ function FilterPage() {
 
   const fetchREITs = () => {
     console.log("fetchREITs called with:", { minAvgReturn, selectedPropertyType });
+
+    // Start loading
+    setIsLoading(true);
 
     const url = `${API_BASE_URL}/api/reits`;
 
@@ -74,10 +80,6 @@ function FilterPage() {
         }
 
         console.log("Fetched Data:", responseData);
-        console.log("Type of response.data:", typeof responseData);
-        console.log("Keys in response.data:", Object.keys(responseData));
-        console.log("Value of explanation:", responseData.explanation);
-
         setReits(responseData.reits || []);
         setExplanation(
           `Filtered REITs: Minimum Annualized Return - ${minAvgReturn}%, Property Type - ${selectedPropertyType}`
@@ -86,6 +88,10 @@ function FilterPage() {
       .catch((error) => {
         console.error("Error fetching data:", error);
         setReits([]);
+      })
+      .finally(() => {
+        // End loading
+        setIsLoading(false);
       });
   };
 
@@ -96,30 +102,30 @@ function FilterPage() {
 
   return (
     <div className="filter-page">
-      <Header /> 
+      <Header />
       <h2>REIT Screener</h2>
 
       {/* Minimum Annualized Return with Tooltip */}
       <label>
         Minimum Annualized Return (%):
         <span
-                  className="tooltip-icon"
-                  style={{
-                    marginLeft: "6px",
-                    cursor: "pointer",
-                    fontSize: "0.8rem",
-                    width: "14px",
-                    height: "14px",
-                    display: "inline-block",
-                    textAlign: "center",
-                    lineHeight: "16px"
-                  }}
-                >
+          className="tooltip-icon"
+          style={{
+            marginLeft: "6px",
+            cursor: "pointer",
+            fontSize: "0.8rem",
+            width: "14px",
+            height: "14px",
+            display: "inline-block",
+            textAlign: "center",
+            lineHeight: "16px"
+          }}
+        >
           i
           <span className="tooltip-text">
-          Annualized return is calculated by 
-          multiplying the average daily return (over the last five years) by 252
-          —the approximate number of trading days in a year.
+            Annualized return is calculated by 
+            multiplying the average daily return (over the last five years) by 252
+            —the approximate number of trading days in a year.
           </span>
         </span>
       </label>
@@ -150,56 +156,55 @@ function FilterPage() {
       <h2>Filtered REITs</h2>
       <p>{explanation}</p>
 
-      <table border="1" cellPadding="6" className="reits-table">
-        <thead>
-          <tr>
-            <th>Ticker</th>
-            <th>Company Name</th>
-            <th>Description</th>
-            <th>Website</th>
-          </tr>
-        </thead>
-        <tbody>
-          {reits.length > 0 ? (
-            reits.map((reit, index) => {
-              console.log(
-                `REIT #${index} Ticker type:`,
-                typeof reit.Ticker,
-                "value:",
-                reit.Ticker
-              );
-              return (
-                <tr key={index}>
-                  <td>
-                    <button onClick={() => navigate(`/reits/${reit.Ticker}`)}>
-                      {reit.Ticker}
-                    </button>
-                  </td>
-                  <td>{reit.Company_Name}</td>
-                  <td>{reit.Business_Description || "No description available."}</td>
-                  <td>
-                    {reit.Website ? (
-                      <a
-                        href={formatWebsiteUrl(reit.Website)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        Visit
-                      </a>
-                    ) : (
-                      "No website available"
-                    )}
-                  </td>
-                </tr>
-              );
-            })
-          ) : (
+      {/* If loading, show a message; otherwise, show table */}
+      {isLoading ? (
+        <p>Loading REITs...</p>
+      ) : (
+        <table border="1" cellPadding="6" className="reits-table">
+          <thead>
             <tr>
-              <td colSpan="4">No REITs available for the selected criteria.</td>
+              <th>Ticker</th>
+              <th>Company Name</th>
+              <th>Description</th>
+              <th>Website</th>
             </tr>
-          )}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {reits.length > 0 ? (
+              reits.map((reit, index) => {
+                return (
+                  <tr key={index}>
+                    <td>
+                      <button onClick={() => navigate(`/reits/${reit.Ticker}`)}>
+                        {reit.Ticker}
+                      </button>
+                    </td>
+                    <td>{reit.Company_Name}</td>
+                    <td>{reit.Business_Description || "No description available."}</td>
+                    <td>
+                      {reit.Website ? (
+                        <a
+                          href={formatWebsiteUrl(reit.Website)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Visit
+                        </a>
+                      ) : (
+                        "No website available"
+                      )}
+                    </td>
+                  </tr>
+                );
+              })
+            ) : (
+              <tr>
+                <td colSpan="4">No REITs available for the selected criteria.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      )}
 
       <button onClick={() => navigate("/")}>Back to Home</button>
     </div>

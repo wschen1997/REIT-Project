@@ -5,15 +5,19 @@ import Header from "../components/Header.js";
 import { ComposableMap, Geographies, Geography } from "react-simple-maps";
 import { feature } from "topojson-client";
 import { Line } from "react-chartjs-2";
+import 'chartjs-adapter-date-fns';
 import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
+  LineElement,   
+  PointElement,  
   BarElement,
   ArcElement,
   Title,
   Tooltip,
   Legend,
+  TimeScale,
 } from "chart.js";
 
 const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
@@ -22,7 +26,10 @@ ChartJS.register(
   CategoryScale,
   LinearScale,
   BarElement,
-  ArcElement, // For Pie/Donut
+  ArcElement,
+  TimeScale,
+  LineElement, 
+  PointElement, 
   Title,
   Tooltip,
   Legend
@@ -287,6 +294,8 @@ function DetailPage() {
         backgroundColor: "rgba(177, 45, 120, 0.1)",
         yAxisID: "y-axis-price",
         tension: 0.2, // optional curve
+        pointRadius: 0,       // Hides the normal dots
+        pointHoverRadius: 5,  
       },
       {
         label: "Volume",
@@ -298,6 +307,7 @@ function DetailPage() {
     ],
   };
 
+
   const priceVolumeChartOptions = {
     responsive: true,
     plugins: {
@@ -306,6 +316,27 @@ function DetailPage() {
       title: { display: false },
     },
     scales: {
+      x: {
+        type: "time",
+        bounds: "data",
+        offset: false,
+        time: {
+          // Parsing daily date strings like "2020-03-04"
+          parser: "yyyy-MM-dd",
+          tooltipFormat: "MMM d, yyyy",
+          // Show major ticks once per year
+          unit: "year",
+          displayFormats: {
+            year: "yyyy", // Just the 4-digit year
+          },
+        },
+        // You can still rotate labels if you want
+        ticks: {
+          maxRotation: 60,
+          minRotation: 45,
+        },
+        grid: { display: false },
+      },
       "y-axis-price": {
         type: "linear",
         position: "left",
@@ -322,15 +353,9 @@ function DetailPage() {
         },
         grid: { display: false },
       },
-      x: {
-        ticks: {
-          maxRotation: 60,
-          minRotation: 45,
-        },
-        grid: { display: false },
-      },
     },
   };
+
 
   const ffoBarOptions = makeBarOptions("FFO PS");
   const dvdBarOptions = makeBarOptions("Dividend PS");
@@ -539,20 +564,23 @@ function DetailPage() {
             </tr>
           </tbody>
         </table>
-        {/* === PRICE & VOLUME CHART === */}
-        {priceData.length > 0 && (
-          <div style={{ marginTop: "20px" }}>
-            <h4>Daily Price & Volume</h4>
-            <Line
-              data={priceVolumeChartData}
-              options={priceVolumeChartOptions}
-              height={80}
-            />
-          </div>
-        )}
       </div>
 
       <h2 style={{ marginBottom: "20px" }}>{ticker} - Analytics Dashboard</h2>
+
+      {/* Price & Volume Chart */}
+      <div style={sectionContainer}>
+        <h3 style={{ marginTop: 0, marginBottom: "10px" }}>Daily Price & Volume</h3>
+        {priceData.length > 0 ? (
+          <Line
+            data={priceVolumeChartData}
+            options={priceVolumeChartOptions}
+            height={80}
+          />
+        ) : (
+          <p>No price data available.</p>
+        )}
+      </div>
 
       {/* ============== Quant SCORING SECTION ============== */}
       <div style={sectionContainer}>

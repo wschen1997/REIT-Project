@@ -58,31 +58,71 @@ function HomePage() {
             backgroundImage: "url('/banner.jpg')",
             backgroundSize: "cover",
             backgroundPosition: "center",
-            padding: "10px 50px",
+            padding: "80px 20px",
             color: "#333",
+            position: "relative",
           }}
         >
+          {/* A slight overlay to darken the background image and make text more readable */}
+          <div
+            style={{
+              backgroundColor: "rgba(255, 255, 255, 0.7)",
+              padding: "40px 20px",
+              borderRadius: "8px",
+              maxWidth: "700px",
+              margin: "0 auto",
+            }}
+          >
+            <h1 style={{ fontSize: "2.4rem", color: "#5A153D", marginBottom: "10px" }}>
+              Welcome to Viserra
+            </h1>
+            <p style={{ fontSize: "1.2rem", lineHeight: "1.6", color: "#444", margin: "0 auto" }}>
+              Your gateway to smarter real estate investing. Track and compare public REITs, 
+              explore crowdfunding opportunities, and unlock powerful analytics — all in one place.
+            </p>
+            {/* Example "Learn More" button if you want a direct CTA */}
+            <button
+              onClick={() => navigate("/filter")}
+              style={{
+                marginTop: "20px",
+                backgroundColor: "#5A153D",
+                color: "#fff",
+                border: "none",
+                borderRadius: "5px",
+                padding: "10px 50px",
+                cursor: "pointer",
+                fontSize: "1rem",
+              }}
+            >
+              Explore REITs
+            </button>
+          </div>
         </div>
 
         {/* Email Signup Section */}
-        <div style={{ backgroundColor: "#f9f9f9", padding: "20px", marginTop: "5px", borderRadius: "8px", textAlign: "center" }}>
-          <h2 style={{ fontSize: "1.8rem", fontWeight: "bold", color: "#333" }}>🚀 Join Our Early Access List</h2>
+        <div
+          style={{
+            backgroundColor: "#f9f9f9",
+            padding: "20px 20px",
+            marginTop: "0px",
+            borderRadius: "8px",
+            textAlign: "center",
+          }}
+        >
+          <h2 style={{ fontSize: "1.8rem", fontWeight: "bold", color: "#333" }}>
+            🚀 Join Our Early Access List
+          </h2>
           
           <p style={{ maxWidth: "600px", margin: "10px auto", fontSize: "1.2rem", color: "#555", lineHeight: "1.6" }}>
-            Viserra is an early-stage fintech startup. We are building a platform that tracks and analyzes the performance of:
+            Viserra is an early-stage fintech startup. We are building a platform that tracks and
+            analyzes the performance of public REITs and real estate crowdfunding vehicles.
           </p>
-          <div style={{ display: "inline-block", textAlign: "left", fontSize: "1.2rem", color: "#333", margin: "10px 0" }}>
-            <ul style={{ listStyleType: "✅", padding: 0, margin: 0 }}>
-              <li style={{ marginBottom: "8px" }}><strong>Public REITs</strong></li>
-              <li><strong>Real Estate Crowdfunding Vehicles</strong></li>
-            </ul>
-          </div>
 
           <p style={{ maxWidth: "600px", margin: "20px auto", fontSize: "1.2rem", color: "#555", lineHeight: "1.6" }}>
-            Sign up below for exclusive updates and a <strong>30% discount</strong> when we launch!
+            Sign up below for exclusive updates and enjoy a <strong>30% discount</strong> when we launch!
           </p>
 
-          {/* Form */}
+          {/* Sign-Up Form */}
           {!submitted ? (
             <form onSubmit={handleSubmit} style={{ marginTop: "20px" }}>
               {/* Email Input */}
@@ -97,7 +137,7 @@ function HomePage() {
                   width: "280px",
                   border: "1px solid #ccc",
                   borderRadius: "5px",
-                  marginBottom: "10px"
+                  marginBottom: "10px",
                 }}
               />
 
@@ -127,28 +167,30 @@ function HomePage() {
                   height: "60px",
                   padding: "10px",
                   border: "1px solid #ccc",
-                  borderRadius: "5px"
+                  borderRadius: "5px",
                 }}
               />
 
               {/* Submit Button */}
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 style={{
-                  backgroundColor: "#5A153D", 
-                  color: "white", 
-                  padding: "10px 15px", 
-                  border: "none", 
+                  backgroundColor: "#5A153D",
+                  color: "white",
+                  padding: "10px 15px",
+                  border: "none",
                   cursor: "pointer",
-                  borderRadius: "5px"
+                  borderRadius: "5px",
+                  marginTop: "10px",
+                  fontSize: "1rem",
                 }}
               >
                 Sign Up
               </button>
             </form>
           ) : (
-            <p style={{ color: "#5A153D", fontWeight: "bold", marginTop: "20px" }}>
-              Thanks for signing up! We’ll be in touch soon.
+            <p style={{ color: "#5A153D", fontWeight: "bold", marginTop: "20px", fontSize: "1.2rem" }}>
+              Thank you for signing up! We’ll be in touch soon.
             </p>
           )}
         </div>
@@ -156,30 +198,36 @@ function HomePage() {
 
       {/* POPUP MODAL */}
       {showPopup && (
-        <div style={{
-          position: "fixed",
-          top: "0",
-          left: "0",
-          width: "100%",
-          height: "100%",
-          backgroundColor: "rgba(0, 0, 0, 0.5)", // Dim background
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 1000
-        }}>
-          <div style={{
-            backgroundColor: "#fff",
-            padding: "20px",
-            borderRadius: "10px",
-            textAlign: "center",
-            width: "300px",
-            boxShadow: "0 4px 8px rgba(0,0,0,0.2)"
-          }}>
+        <div
+          style={{
+            position: "fixed",
+            top: "0",
+            left: "0",
+            width: "100%",
+            height: "100%",
+            backgroundColor: "rgba(0, 0, 0, 0.5)", // Dim background
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "#fff",
+              padding: "20px",
+              borderRadius: "10px",
+              textAlign: "center",
+              width: "300px",
+              boxShadow: "0 4px 8px rgba(0,0,0,0.2)",
+            }}
+          >
             <h3 style={{ color: "#5A153D" }}>Thank You!</h3>
-            <p style={{ color: "#333", fontSize: "1rem" }}>You've successfully signed up. We'll keep you updated.</p>
-            <button 
-              onClick={() => setShowPopup(false)} 
+            <p style={{ color: "#333", fontSize: "1rem", lineHeight: "1.5" }}>
+              You’ve successfully joined our early access list. We’ll keep you up to date on our progress.
+            </p>
+            <button
+              onClick={() => setShowPopup(false)}
               style={{
                 backgroundColor: "#5A153D",
                 color: "white",
@@ -187,7 +235,7 @@ function HomePage() {
                 border: "none",
                 cursor: "pointer",
                 borderRadius: "5px",
-                marginTop: "10px"
+                marginTop: "10px",
               }}
             >
               Close
