@@ -1,9 +1,6 @@
 Company name: Viserra
 
-
-Add - developing waitlist
-
-
+Add DDOT protection subscription.
 
 Data Cleaning
 	regional focus (will have REIT that invest in diff countries, so category important)
@@ -15,23 +12,18 @@ Data Cleaning
 	Stocks with extremely high annualized return - PECO, CURB, extreme surge in single day
 
 Operational score - 
-1. FFO Yield (current, are you buying the stock at a cheap price, how much CF or rent are you generate if you buy now) 
-2. Payout (Historical, and take into acct of fluctuation, is the stock's dividend predictable, ie how much of that CF you generated can you actually receive) 
+1. FFO Yield (This is the opposite of P/FFO basically, it shows that are you buying this REIT at a cheap price, how much CF or rental income are you generate if you buy now) 
+2. FFO Payout (Historical, and take into acct of fluctuation, is the stock's dividend predictable, ie how much of that CF you generated can you actually receive) 
 3. FFO growth - Historical (is the company's Operation good, is the management able to increase your rent while keeping the overhead low?)
 
 Price Volitility Score - 
 Price volitility, extreme loss events, liquidity, expected price return, etc
 
-Explain these calculation on the website - what does the three components mean?
-
-Cloud DB
-
 
 Website:
-Add regional focus replace country option(with no specify option)
 Legal disclaimer on the website
 
-Marketing
+Marketing (Selling points):
 Data integraty  only track reit, handle and double check all data point
 handle anomaly, negative earnings growth
 REIT specific metrics
@@ -60,8 +52,6 @@ Paid:
 5. Further functionality - 
 Connect REPE platform, track PE strategy and reginal focus, function as a connector? like a direct real estate listing website? but instead of real estate it's fund/developer (private investment platform)
 Add RE crowdfunding analytics function
-
-
 
 increase country coverage - UK
 Increase asset coverage - CMBS - very low competition.

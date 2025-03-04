@@ -133,7 +133,7 @@ except Exception as e:
 cleaned_price_data.rename(columns={'date': 'date', 'ticker': 'ticker', 'close': 'close_price', 'volume': 'volume'}, inplace=True)
 cleaned_price_data.drop_duplicates(subset=['date', 'ticker'], keep='last', inplace=True)
 try:
-    cleaned_price_data.to_sql('reit_price_data', con=engine, if_exists='append', index=False)
+    cleaned_price_data.to_sql('reit_price_data', con=engine, if_exists='append', index=False, chunksize=2000, method='multi')
     print("✅ New REIT price data inserted successfully into MySQL.")
 except Exception as e:
     print(f"❌ Error inserting price data into MySQL: {e}")

@@ -345,5 +345,39 @@ def signup():
         db.session.rollback()
         return jsonify({"error": f"Database error: {str(e)}"}), 500
 
+@app.route("/api/reits/<string:ticker>/price", methods=['GET'])
+def get_price_data(ticker):
+    """
+    Returns all historical close_price and volume for the specified ticker.
+    """
+    try:
+        with db.engine.connect() as conn:
+            sql_query = f"""
+                SELECT date, close_price, volume
+                FROM reit_price_data
+                WHERE ticker = '{ticker}'
+                ORDER BY date ASC
+            """
+            df_price = pd.read_sql(sql_query, conn)
+
+        if df_price.empty:
+            return jsonify({"message": f"No price data found for ticker '{ticker}'"}), 200
+
+        # Convert to JSON-safe types
+        df_price["date"] = df_price["date"].astype(str)
+        df_price["close_price"] = df_price["close_price"].astype(float)
+        df_price["volume"] = df_price["volume"].astype(float)
+
+        price_records = df_price.to_dict(orient='records')
+        return jsonify({
+            "ticker": ticker,
+            "price_data": price_records
+        }), 200
+
+    except Exception as e:
+        app.logger.error(f"Error fetching price data for {ticker}: {e}")
+        return jsonify({"error": "Failed to load price data"}), 500
+
+
 if __name__ == '__main__':
     app.run(debug=True)

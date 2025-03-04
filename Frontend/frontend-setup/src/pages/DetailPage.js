@@ -4,6 +4,7 @@ import { Bar, Doughnut } from "react-chartjs-2";
 import Header from "../components/Header.js";
 import { ComposableMap, Geographies, Geography } from "react-simple-maps";
 import { feature } from "topojson-client";
+import { Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -67,6 +68,9 @@ function DetailPage() {
   const [hoveredCountry, setHoveredCountry] = useState(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
 
+  // Price data for the line chart
+  const [priceData, setPriceData] = useState([]);
+
   // Financial data & scoring
   const [financialData, setFinancialData] = useState([]);
   const [stabilityScore, setStabilityScore] = useState(null);
@@ -129,7 +133,21 @@ function DetailPage() {
         console.error("Error fetching REIT info:", err);
       });
 
-    // 2) Fetch financials + scores
+    // Fetch daily price & volume data
+    fetch(`${API_BASE_URL}/api/reits/${ticker}/price`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.price_data && data.price_data.length > 0) {
+          setPriceData(data.price_data);
+        } else if (data.message) {
+          console.warn(data.message);
+        }
+      })
+      .catch((err) => {
+        console.error("Error fetching price data:", err);
+      });
+
+    // Fetch financials + scores
     fetch(`${API_BASE_URL}/api/reits/${ticker}/financials?include_scores=true`)
       .then((res) => res.json())
       .then((data) => {
@@ -250,6 +268,68 @@ function DetailPage() {
         backgroundColor: "rgba(177, 45, 120, 0.8)",
       },
     ],
+  };
+
+  // Price line chart data
+  // === PRICE/VOLUME CHART DATA & OPTIONS ===
+  const priceLabels = priceData.map((d) => d.date);
+  const closePrices = priceData.map((d) => d.close_price);
+  const volumes = priceData.map((d) => d.volume);
+
+  const priceVolumeChartData = {
+    labels: priceLabels,
+    datasets: [
+      {
+        label: "Close Price",
+        data: closePrices,
+        type: "line",
+        borderColor: "rgba(177, 45, 120, 0.8)",   // pinkish line
+        backgroundColor: "rgba(177, 45, 120, 0.1)",
+        yAxisID: "y-axis-price",
+        tension: 0.2, // optional curve
+      },
+      {
+        label: "Volume",
+        data: volumes,
+        type: "bar",
+        backgroundColor: "rgba(90, 21, 61, 0.8)", // darker bar color
+        yAxisID: "y-axis-volume",
+      },
+    ],
+  };
+
+  const priceVolumeChartOptions = {
+    responsive: true,
+    plugins: {
+      tooltip: { mode: "index", intersect: false },
+      legend: { display: true },
+      title: { display: false },
+    },
+    scales: {
+      "y-axis-price": {
+        type: "linear",
+        position: "left",
+        ticks: {
+          callback: (value) => `$${value}`,
+        },
+        grid: { display: false },
+      },
+      "y-axis-volume": {
+        type: "linear",
+        position: "right",
+        ticks: {
+          callback: (value) => Number(value).toLocaleString(),
+        },
+        grid: { display: false },
+      },
+      x: {
+        ticks: {
+          maxRotation: 60,
+          minRotation: 45,
+        },
+        grid: { display: false },
+      },
+    },
   };
 
   const ffoBarOptions = makeBarOptions("FFO PS");
@@ -459,6 +539,17 @@ function DetailPage() {
             </tr>
           </tbody>
         </table>
+        {/* === PRICE & VOLUME CHART === */}
+        {priceData.length > 0 && (
+          <div style={{ marginTop: "20px" }}>
+            <h4>Daily Price & Volume</h4>
+            <Line
+              data={priceVolumeChartData}
+              options={priceVolumeChartOptions}
+              height={80}
+            />
+          </div>
+        )}
       </div>
 
       <h2 style={{ marginBottom: "20px" }}>{ticker} - Analytics Dashboard</h2>
