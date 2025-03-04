@@ -73,7 +73,7 @@ function HomePage() {
               margin: "0 auto",
             }}
           >
-            <h1 style={{ fontSize: "2.4rem", color: "#5A153D", marginBottom: "10px" }}>
+            <h1 style={{ fontSize: "2.2rem", color: "#5A153D", marginBottom: "20px" }}>
               Welcome to Viserra
             </h1>
             <p style={{ fontSize: "1.2rem", lineHeight: "1.6", color: "#444", margin: "0 auto" }}>
@@ -109,16 +109,16 @@ function HomePage() {
             textAlign: "center",
           }}
         >
-          <h2 style={{ fontSize: "1.8rem", fontWeight: "bold", color: "#333" }}>
+          <h2 style={{ fontSize: "2.2rem", fontWeight: "bold", color: "#5A153D" }}>
             🚀 Join Our Early Access List
           </h2>
           
-          <p style={{ maxWidth: "600px", margin: "10px auto", fontSize: "1.2rem", color: "#444", lineHeight: "1.6" }}>
+          <p style={{ maxWidth: "600px", margin: "0 auto", fontSize: "1.2rem", color: "#444", lineHeight: "1.6" }}>
             Viserra is an early-stage fintech startup. We are building a platform that tracks and
             analyzes the performance of public REITs and real estate crowdfunding vehicles.
           </p>
 
-          <p style={{ maxWidth: "600px", margin: "20px auto", fontSize: "1.2rem", color: "#444", lineHeight: "1.6" }}>
+          <p style={{ maxWidth: "600px", margin: "0 auto", fontSize: "1.2rem", color: "#444", lineHeight: "1.6" }}>
             Sign up below for exclusive updates and enjoy a <strong>30% discount</strong> when we launch!
           </p>
 
