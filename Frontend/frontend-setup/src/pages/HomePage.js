@@ -81,21 +81,6 @@ function HomePage() {
               explore crowdfunding opportunities, and unlock powerful analytics — all in one place.
             </p>
             {/* Example "Learn More" button if you want a direct CTA */}
-            <button
-              onClick={() => navigate("/filter")}
-              style={{
-                marginTop: "20px",
-                backgroundColor: "#5A153D",
-                color: "#fff",
-                border: "none",
-                borderRadius: "5px",
-                padding: "10px 50px",
-                cursor: "pointer",
-                fontSize: "1rem",
-              }}
-            >
-              Explore REITs
-            </button>
           </div>
         </div>
 
