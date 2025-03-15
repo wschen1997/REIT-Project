@@ -39,10 +39,15 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # Initialize SQLAlchemy with the updated configuration
 db = SQLAlchemy(app)
 
+
 @app.route('/')
 def index():
     return "REIT Screener API is running!"
 
+
+# -------------------------------------------------------------------------
+# =========================== REIT ENDPOINTS ==============================
+# -------------------------------------------------------------------------
 @app.route('/api/reits', methods=['GET'])
 def get_reits():
     """
@@ -54,14 +59,7 @@ def get_reits():
     - search (partial ticker match for real-time suggestions)
 
     Merges with scoring analysis data from reit_scoring_analysis.
-    Returns relevant business data and website plus new fields:
-      - Numbers_Employee
-      - Year_Founded
-      - US_Investment_Regions
-      - Target_Price
-      - Overseas_Investment
-      - Total_Real_Estate_Assets_M_
-      - 5yr_FFO_Growth
+    Returns relevant business data plus new fields (Numbers_Employee, Year_Founded, etc.).
     """
 
     # Get user selections from request parameters
@@ -87,12 +85,10 @@ def get_reits():
     # Apply filters if present
     if selected_country:
         business_data = business_data[business_data['Country_Region'] == selected_country]
-
     if selected_property_type:
         business_data = business_data[
             business_data['Property_Type'].str.contains(selected_property_type, case=False, na=False)
         ]
-
     if selected_ticker:
         business_data = business_data[business_data['Ticker'] == selected_ticker]
 
@@ -138,7 +134,9 @@ def get_reits():
     # Apply Average Annual Return filter
     if min_avg_return is not None:
         merged_data = merged_data[merged_data['Average Annual Return'] > min_avg_return]
-        app.logger.info(f"Filtered REITs with Average Annual Return greater than {min_avg_return}: {merged_data.shape[0]}")
+        app.logger.info(
+            f"Filtered REITs with Average Annual Return greater than {min_avg_return}: {merged_data.shape[0]}"
+        )
 
     # Replace NaN values with None for better JSON serialization
     merged_data = merged_data.astype(object).where(pd.notna(merged_data), None)
@@ -175,6 +173,7 @@ def get_reits():
 
     return jsonify(response)
 
+
 # -------------------------------------------------------------------------
 # FINANCIAL DATA ENDPOINT (Last 6 quarters) - optionally includes scoring info
 # -------------------------------------------------------------------------
@@ -188,11 +187,13 @@ def convert_date_to_quarter(date_obj):
     year_short = str(date_obj.year)[-2:]
     return f"Q{quarter} '{year_short}"
 
+
 def build_col_name(ticker_prefix, metric):
     """
     Build a column name like "GIPR_US_Equity_FFO_PS".
     """
     return f"{ticker_prefix}_{metric}"
+
 
 @app.route("/api/reits/<ticker>/financials", methods=['GET'])
 def get_financials(ticker):
@@ -299,7 +300,6 @@ def get_financials(ticker):
         return jsonify(results), 200
 
 
-
 class EmailSignup(db.Model):
     __tablename__ = "email_signups"
 
@@ -313,6 +313,7 @@ class EmailSignup(db.Model):
         self.email = email
         self.interest = interest
         self.feedback = feedback
+
 
 @app.route("/api/signup", methods=["POST"])
 def signup():
@@ -344,6 +345,7 @@ def signup():
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": f"Database error: {str(e)}"}), 500
+
 
 @app.route("/api/reits/<string:ticker>/price", methods=['GET'])
 def get_price_data(ticker):
@@ -377,6 +379,112 @@ def get_price_data(ticker):
     except Exception as e:
         app.logger.error(f"Error fetching price data for {ticker}: {e}")
         return jsonify({"error": "Failed to load price data"}), 500
+
+
+# -------------------------------------------------------------------------
+# ====================== NEW: REC ENDPOINTS ===============================
+# -------------------------------------------------------------------------
+@app.route('/api/rec/universe', methods=['GET'])
+def get_rec_universe():
+    """
+    Returns a list of all Real Estate Crowdfunding vehicles 
+    with basic info from the 'rec_universe' table.
+    """
+    try:
+        with db.engine.connect() as conn:
+            query = "SELECT * FROM rec_universe"
+            universe_df = pd.read_sql(query, conn)
+    except Exception as e:
+        app.logger.error(f"Error loading REC universe data: {e}")
+        return jsonify({"error": "Failed to load REC Universe data"}), 500
+
+    if universe_df.empty:
+        return jsonify({"message": "No REC vehicles found.", "rec_universe": []}), 200
+
+    # Replace NaN values with None for safe JSON serialization
+    universe_df = universe_df.astype(object).where(pd.notna(universe_df), None)
+
+    # Convert DataFrame to a list of dicts
+    rec_universe_list = universe_df.to_dict(orient='records')
+    return jsonify({"rec_universe": rec_universe_list}), 200
+
+
+@app.route("/api/rec/<string:investment_vehicle>/performance", methods=['GET'])
+def get_rec_performance(investment_vehicle):
+    """
+    Returns time-series data (e.g., total return, NAV growth, distribution yield)
+    for the specified REC vehicle. The actual DB columns may have underscores
+    instead of spaces, so we automatically replace spaces with underscores 
+    before looking for the column.
+    """
+
+    # 1) Convert spaces to underscores to match your DB column naming convention
+    col_name = investment_vehicle.replace(' ', '_')
+
+    try:
+        with db.engine.connect() as conn:
+            # Load each table
+            df_return = pd.read_sql("SELECT * FROM rec_total_return", conn)
+            df_distribution = pd.read_sql("SELECT * FROM rec_distribution_yield", conn)
+            df_nav = pd.read_sql("SELECT * FROM rec_nav_growth", conn)
+    except Exception as e:
+        app.logger.error(f"Error loading REC time-series tables: {e}")
+        return jsonify({"error": "Failed to load one or more REC tables"}), 500
+
+    if df_return.empty and df_distribution.empty and df_nav.empty:
+        return jsonify({"message": "No time-series data available for any vehicle."}), 200
+
+    data_out = {
+        "vehicle": investment_vehicle, 
+        "total_return": [],
+        "distribution_yield": [],
+        "nav_growth": []
+    }
+
+    def extract_series(df_wide, column):
+        """ 
+        Convert wide-format DF into a list of {date, value}, 
+        stripping '%' if found and converting to float.
+        """
+        if df_wide.empty or column not in df_wide.columns:
+            return []
+        df_wide = df_wide.copy()
+
+        # Convert 'Dates' to datetime
+        df_wide['Dates'] = pd.to_datetime(df_wide['Dates'], errors="coerce")
+
+        # Keep only date + the single vehicle column, drop NA
+        df_wide = df_wide[['Dates', column]].dropna(subset=[column])
+
+        # Strip '%' and convert to float
+        df_wide[column] = (
+            df_wide[column]
+            .astype(str)
+            .apply(pd.to_numeric, errors='coerce')
+        )
+        df_wide.dropna(subset=[column], inplace=True)
+
+        # Sort by date ascending
+        df_wide.sort_values(by='Dates', inplace=True)
+
+        results = []
+        for _, row in df_wide.iterrows():
+            results.append({
+                "date": row['Dates'].strftime('%Y-%m-%d') if not pd.isna(row['Dates']) else None,
+                "value": row[column]
+            })
+        return results
+
+    # Extract from each table
+    data_out["total_return"] = extract_series(df_return, col_name)
+    data_out["distribution_yield"] = extract_series(df_distribution, col_name)
+    data_out["nav_growth"] = extract_series(df_nav, col_name)
+
+    # If all are empty, no match
+    if not data_out["total_return"] and not data_out["distribution_yield"] and not data_out["nav_growth"]:
+        return jsonify({"message": f"No timeseries data found for vehicle '{investment_vehicle}'"}), 200
+
+    return jsonify(data_out), 200
 
 
 if __name__ == '__main__':

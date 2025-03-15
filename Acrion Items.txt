@@ -65,5 +65,7 @@ make Fundamental + Score Stability into a map
 
 FAQ - Why not single RE? (REC offers thoseas well - diversification)
 
+Long term path - automate data fetching
+
 
 
