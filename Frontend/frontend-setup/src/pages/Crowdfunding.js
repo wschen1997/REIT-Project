@@ -22,7 +22,13 @@ function CrowdfundingPage() {
     try {
       const response = await axios.get(`${API_BASE_URL}/api/rec/universe`);
       if (response.data && response.data.rec_universe) {
-        setRecVehicles(response.data.rec_universe);
+        // Filter out rows where Investment_Vehicle is null/empty
+        const filteredVehicles = response.data.rec_universe.filter(
+          (vehicle) =>
+            vehicle.Investment_Vehicle &&
+            vehicle.Investment_Vehicle.trim() !== ""
+        );
+        setRecVehicles(filteredVehicles);
       } else {
         setRecVehicles([]);
       }
@@ -46,9 +52,10 @@ function CrowdfundingPage() {
   };
 
   return (
-    <div className="crowdfunding-page">
+    <div className="crowdfunding-page filter-page">
       <Header />
-      <h2>All Real Estate Crowdfunding Vehicles</h2>
+
+      <h2 style={{ marginBottom: "20px" }}>US Real Estate Crowdfunding Vehicles</h2>
 
       {isLoading ? (
         <p>Loading crowdfundings...</p>
@@ -57,32 +64,27 @@ function CrowdfundingPage() {
           {recVehicles.length === 0 ? (
             <p>No crowdfunding vehicles found.</p>
           ) : (
-            <table border="1" cellPadding="6" className="crowdfunding-table">
+            <table className="crowdfunding-table reits-table">
               <thead>
                 <tr>
-                  <th>Vehicle Name</th>
-                  <th>Company Name</th>
-                  <th>Property Types</th>
+                  <th>Investment Funds</th>
+                  <th>Launched Platform</th>
+                  <th>Investment Property Types</th>
                   <th>Website</th>
                 </tr>
               </thead>
               <tbody>
                 {recVehicles.map((vehicle, index) => {
-                  const vehicleName = vehicle.Investment_Vehicle || "Unknown Vehicle";
+                  const vehicleName = vehicle.Investment_Vehicle;
                   return (
                     <tr key={index}>
-                      {/* Use a button to navigate to detail page */}
                       <td>
                         <button onClick={() => handleViewDetails(vehicleName)}>
                           {vehicleName}
                         </button>
                       </td>
-                      <td>
-                        {vehicle.Company_Name || "No company info"}
-                      </td>
-                      <td>
-                        {vehicle.Property_Types || "No property info"}
-                      </td>
+                      <td>{vehicle.Company_Name || "No company info"}</td>
+                      <td>{vehicle.Property_Types || "No property info"}</td>
                       <td>
                         {vehicle.Website ? (
                           <a
@@ -105,7 +107,12 @@ function CrowdfundingPage() {
         </>
       )}
 
-      <button onClick={() => navigate("/")}>Back to Home</button>
+      {/* Increase vertical space before the button */}
+      <div style={{ marginTop: "30px" }}>
+        <button className="back-button" onClick={() => navigate("/")}>
+          Back to Home
+        </button>
+      </div>
     </div>
   );
 }

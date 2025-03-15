@@ -3,7 +3,8 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import HomePage from "./pages/HomePage.js";
 import FilterPage from "./pages/FilterPage.js";
 import DetailPage from "./pages/DetailPage.js";
-import CrowdfundingPage from "./pages/Crowdfunding.js"; // <-- NEW IMPORT
+import CrowdfundingPage from "./pages/Crowdfunding.js"; // <-- Crowdfunding list page
+import RecDetailPage from "./pages/RecDetailPage.js";   // <-- NEW IMPORT for the detail page
 import "./App.css";
 
 function App() {
@@ -16,8 +17,11 @@ function App() {
           <Route path="/filter" element={<FilterPage />} />
           <Route path="/reits/:ticker" element={<DetailPage />} />
 
-          {/* NEW: Crowdfunding route */}
+          {/* Crowdfunding list route */}
           <Route path="/Crowdfunding" element={<CrowdfundingPage />} />
+
+          {/* Crowdfunding detail route */}
+          <Route path="/Crowdfunding/:vehicle" element={<RecDetailPage />} />
         </Routes>
       </Router>
     </div>
