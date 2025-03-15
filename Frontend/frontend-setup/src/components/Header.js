@@ -18,9 +18,6 @@ const Header = () => {
   // REIT analytics dropdown
   const [showAnalyticsDropdown, setShowAnalyticsDropdown] = useState(false);
 
-  // Crowdfunding overlay
-  const [showCrowdfundingOverlay, setShowCrowdfundingOverlay] = useState(false);
-
   // Open search overlay
   const handleSearchClick = () => {
     setShowSearchOverlay(true);
@@ -49,7 +46,7 @@ const Header = () => {
     }
 
     const fetchSuggestions = async () => {
-      setIsFetching(true);   // Start fetching
+      setIsFetching(true); // Start fetching
       try {
         const response = await axios.get(`${API_BASE_URL}/api/reits`, {
           params: { search: searchQuery },
@@ -64,11 +61,6 @@ const Header = () => {
     };
     fetchSuggestions();
   }, [searchQuery]);
-
-  // Close the Crowdfunding overlay
-  const handleCloseCrowdfunding = () => {
-    setShowCrowdfundingOverlay(false);
-  };
 
   return (
     <>
@@ -114,9 +106,7 @@ const Header = () => {
           >
             REITs Analytics
             <div
-              className={`dropdown-menu ${
-                showAnalyticsDropdown ? "show" : ""
-              }`}
+              className={`dropdown-menu ${showAnalyticsDropdown ? "show" : ""}`}
             >
               <div
                 className="dropdown-item"
@@ -139,10 +129,10 @@ const Header = () => {
             </div>
           </div>
 
-          {/* Crowdfunding link -> overlay */}
+          {/* Crowdfunding link -> direct navigation */}
           <div
             className="nav-link"
-            onClick={() => setShowCrowdfundingOverlay(true)}
+            onClick={() => navigate("/Crowdfunding")} 
           >
             Real Estate Crowdfundings
           </div>
@@ -193,7 +183,6 @@ const Header = () => {
               }}
             />
 
-            {/* If still fetching, show a "Loading..." message or spinner */}
             {isFetching && (
               <p style={{ fontSize: "0.9rem", color: "#555" }}>Loading...</p>
             )}
@@ -230,7 +219,6 @@ const Header = () => {
                     ))}
                   </ul>
                 ) : (
-                  /* If user typed something but we have zero suggestions */
                   searchQuery.length > 0 && (
                     <div
                       style={{
@@ -270,71 +258,10 @@ const Header = () => {
               >
                 Search
               </button>
-
               <button
                 onClick={handleCloseSearch}
                 style={{
                   backgroundColor: "#B12D78",
-                  color: "#fff",
-                  border: "none",
-                  padding: "0.75rem 1.5rem",
-                  fontSize: "1rem",
-                  borderRadius: "4px",
-                  cursor: "pointer",
-                }}
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Full-Screen Crowdfunding Overlay */}
-      {showCrowdfundingOverlay && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100vw",
-            height: "100vh",
-            backgroundColor: "rgba(0, 0, 0, 0.3)",
-            backdropFilter: "blur(6px)",
-            WebkitBackdropFilter: "blur(6px)",
-            zIndex: 9999,
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: "#fff",
-              padding: "2rem",
-              borderRadius: "8px",
-              width: "80%",
-              maxWidth: "600px",
-              position: "relative",
-            }}
-          >
-            <h2 style={{ marginBottom: "1rem", color: "#5A153D" }}>
-              Real Estate Crowdfundings
-            </h2>
-            <p style={{ fontSize: "1rem", lineHeight: "1.5" }}>
-              We’re currently developing a platform that helps you evaluate
-              real estate crowdfunding opportunities more effectively.
-              <br />
-              <br />
-              If you’re interested in early access, we’d love to hear from you!
-              Sign up on our landing page for our early-access list, and you’ll
-              receive an exclusive <strong>30% discount</strong> when we launch.
-            </p>
-            <div style={{ marginTop: "1.5rem", textAlign: "right" }}>
-              <button
-                onClick={handleCloseCrowdfunding}
-                style={{
-                  backgroundColor: "#5A153D",
                   color: "#fff",
                   border: "none",
                   padding: "0.75rem 1.5rem",
