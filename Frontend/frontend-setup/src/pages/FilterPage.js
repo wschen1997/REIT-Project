@@ -208,6 +208,8 @@ function FilterPage() {
       )}
 
       <button onClick={() => navigate("/")}>Back to Home</button>
+      {/* The new bottom banner that slides up at scroll-bottom */}
+      <BottomBanner /> 
     </div>
   );
 }

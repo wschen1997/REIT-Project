@@ -114,6 +114,8 @@ function CrowdfundingPage() {
           Back to Home
         </button>
       </div>
+      {/* The new bottom banner that slides up at scroll-bottom */}
+      <BottomBanner /> 
     </div>
   );
 }

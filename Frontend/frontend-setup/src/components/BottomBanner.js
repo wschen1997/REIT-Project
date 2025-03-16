@@ -34,6 +34,7 @@ function BottomBanner() {
     transition: "transform 0.4s ease-in-out",
     transform: isVisible ? "translateY(0%)" : "translateY(100%)",
     padding: "20px",
+    paddingBottom: "5px",
   };
 
   // The nav link row
@@ -66,7 +67,7 @@ function BottomBanner() {
     justifyContent: "center",
     alignItems: "flex-start",
     gap: "20px",          // Slightly reduced gap
-    maxWidth: "1100px",   // Widened from 900 to 1100
+    maxWidth: "1300px",   // Widened container
     margin: "0 auto",
     textAlign: "left",
     flexWrap: "wrap",
@@ -99,18 +100,20 @@ function BottomBanner() {
       {/* Disclaimer columns */}
       <div style={disclaimerContainerStyle}>
         <p style={paragraphStyle}>
-          All the information presented is collected from official and public documents 
-          such as: Quarterly and Annual Reports, 10-K (US), Information Forms, 
-          prospectuses or offering documents for crowdfunded funds, presentations, 
-          and the Investor Relations (IR) section of the company’s website.
+          All the information presented is collected from official public documents 
+          such as: earnings presentations, 10-K, 10-Q, 8-K, proxy statements, press releases, and company
+          prospectuses or private offering documents for crowdfunded funds and REITs.
         </p>
         <p style={paragraphStyle}>
           The data displayed by viserra-group.com is solely for informational purposes. 
           We do not recommend the buying, holding, or selling of any assets on this website. 
-          If you have no experience in the stock or real estate market, please consult 
-          a personal licensed investment advisor before making any decisions.
+          Please consult a personal licensed financial advisor before making any investment decisions.
         </p>
       </div>
+       {/* Copyright Notice */}
+        <p style={{ textAlign: "center", fontSize: "0.8rem", marginTop: "18px", color: "#666" }}>
+        © {new Date().getFullYear()} Viserra Group. All Rights Reserved.
+        </p>
     </div>
   );
 }
