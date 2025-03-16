@@ -21,8 +21,8 @@ function AboutUs() {
             style={{
               display: "flex",
               gap: "30px",
-              alignItems: "flex-start", // top-align columns
-              flexWrap: "wrap",         // allows wrapping on smaller screens
+              alignItems: "flex-start",
+              flexWrap: "wrap",
             }}
           >
             {/* COLUMN 1: HEADING */}
@@ -43,9 +43,6 @@ function AboutUs() {
               style={{
                 width: "2px",
                 backgroundColor: "#ccc",
-                // To extend the bar so it lines up with your text, 
-                // we can add a fixed height or let the parent's height grow.
-                // We'll use a tall fixed height:
                 height: "320px",
                 alignSelf: "center",
               }}
@@ -95,7 +92,7 @@ function AboutUs() {
             </div>
           </div>
 
-          {/* -- WHY VISERRA SECTION BELOW -- */}
+          {/* -- WHY VISERRA SECTION -- */}
           <div style={{ marginTop: "7rem" }}>
             <h2
               style={{
@@ -124,20 +121,61 @@ function AboutUs() {
               <div style={{ lineHeight: "1.6", fontSize: "1rem" }}>
                 <strong style={{ color: "#B12D78" }}>Unmatched Data Depth</strong> &nbsp;
                 Our platform is backed by some of the world’s most comprehensive financial databases, 
-                including S&P Capital IQ, Bloomberg, MSCI Real Capital Analytics, and CoStar. This enable us to provide a depth of data that is unmatched in the industry.
+                including S&P Capital IQ, Bloomberg, MSCI Real Capital Analytics, and CoStar. 
+                This enable us to provide a depth of data that is unmatched in the industry.
               </div>
 
               <div style={{ lineHeight: "1.6", fontSize: "1rem" }}>
                 <strong style={{ color: "#B12D78" }}>Quantitative Scoring System</strong> &nbsp;
-                Our proprietary scoring system assesses real estate investments using real time pricing and operating data. 
-                We do the heavy lifting analysis so you don’t have to.
+                Our proprietary scoring system assesses real estate investments 
+                using real time pricing and operating data. We do the heavy lifting 
+                analysis so you don’t have to.
+              </div>
+            </div>
+          </div>
+
+          {/* -- LOCATION SECTION -- */}
+          <div style={{ marginTop: "7rem" }}>
+            <h2
+              style={{
+                fontSize: "1.7rem",
+                marginBottom: "1rem",
+                color: "#5A153D",
+              }}
+            >
+              Our Locations
+            </h2>
+
+            {/* Keep styling consistent with the rest */}
+            <div style={{ display: "flex", gap: "40px", flexWrap: "wrap" }}>
+              <div style={{ flex: "1", minWidth: "200px" }}>
+                <h4 style={{ color: "#B12D78", marginBottom: "0.5rem" }}>
+                  Cleveland Office
+                </h4>
+                <p style={{ margin: 0, lineHeight: "1.6", fontSize: "1rem" }}>
+                  2020 Lorain Avenue
+                  <br />
+                  Cleveland, Ohio 44113
+                </p>
+              </div>
+
+              <div style={{ flex: "1", minWidth: "200px" }}>
+                <h4 style={{ color: "#B12D78", marginBottom: "0.5rem" }}>
+                  Pittsburgh Office
+                </h4>
+                <p style={{ margin: 0, lineHeight: "1.6", fontSize: "1rem" }}>
+                  5727 Elwood Street
+                  <br />
+                  Pittsburgh, Pennsylvania 15232
+                </p>
               </div>
             </div>
           </div>
         </div>
       </div>
-        {/* The new bottom banner that slides up at scroll-bottom */}
-      <BottomBanner /> 
+
+      {/* The new bottom banner that slides up at scroll-bottom */}
+      <BottomBanner />
     </>
   );
 }
