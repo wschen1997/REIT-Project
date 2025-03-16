@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Bar, Doughnut } from "react-chartjs-2";
 import Header from "../components/Header.js";
+import BottomBanner from "../components/BottomBanner.js";
 import { ComposableMap, Geographies, Geography } from "react-simple-maps";
 import { feature } from "topojson-client";
 import { Line } from "react-chartjs-2";
@@ -796,7 +797,8 @@ function DetailPage() {
       >
         Go to Screener Page
       </button>
-
+       {/* The new bottom banner that slides up at scroll-bottom */}
+      <BottomBanner /> 
     </div>
   );
 }

@@ -18,6 +18,18 @@ const Header = () => {
   // REIT analytics dropdown
   const [showAnalyticsDropdown, setShowAnalyticsDropdown] = useState(false);
 
+  // Listen for the custom event from HomePage's REIT card
+  useEffect(() => {
+    const handleOpenOverlay = () => {
+      setShowSearchOverlay(true);
+    };
+    window.addEventListener("openSearchOverlay", handleOpenOverlay);
+
+    return () => {
+      window.removeEventListener("openSearchOverlay", handleOpenOverlay);
+    };
+  }, []);
+
   // Open search overlay
   const handleSearchClick = () => {
     setShowSearchOverlay(true);
@@ -111,7 +123,7 @@ const Header = () => {
               <div
                 className="dropdown-item"
                 onClick={() => {
-                  setShowSearchOverlay(true);
+                  handleSearchClick();
                   setShowAnalyticsDropdown(false);
                 }}
               >
@@ -132,7 +144,7 @@ const Header = () => {
           {/* Crowdfunding link -> direct navigation */}
           <div
             className="nav-link"
-            onClick={() => navigate("/Crowdfunding")} 
+            onClick={() => navigate("/Crowdfunding")}
           >
             Real Estate Crowdfundings
           </div>
@@ -173,12 +185,12 @@ const Header = () => {
             }}
           >
             <h2 style={{ marginBottom: "1rem" }}>Search for a REIT</h2>
-            
+
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Type REIT ticker or name..."
+              placeholder="Type REIT ticker..."
               style={{
                 width: "100%",
                 padding: "0.75rem",

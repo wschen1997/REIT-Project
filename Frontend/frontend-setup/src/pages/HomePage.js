@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "../components/Header.js";
+import BottomBanner from "../components/BottomBanner.js";
 
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:5000";
 
@@ -42,6 +43,27 @@ function HomePage() {
     } catch (error) {
       console.error("Error submitting form:", error);
     }
+  };
+
+  // REIT card => open search overlay
+  const handleReitClick = () => {
+    window.dispatchEvent(new Event("openSearchOverlay"));
+  };
+
+  // Crowdfunding card => navigate
+  const handleCrowdfundingClick = () => {
+    navigate("/Crowdfunding");
+  };
+
+  const featureBoxStyle = {
+    cursor: "pointer",
+    backgroundColor: "#fff",
+    borderRadius: "10px",
+    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+    width: "320px",
+    padding: "16px",
+    textAlign: "left",
+    transition: "background-color 0.2s, transform 0.2s",
   };
 
   return (
@@ -99,7 +121,7 @@ function HomePage() {
         <div
           style={{
             textAlign: "center",
-            margin: "70px auto",
+            margin: "80px auto",
             maxWidth: "1200px",
             padding: "0 20px",
           }}
@@ -114,13 +136,102 @@ function HomePage() {
           />
         </div>
 
+        {/* FEATURES SECTION */}
+        <div
+          style={{
+            textAlign: "center",
+            margin: "150px auto",
+            maxWidth: "1200px",
+            padding: "0 20px",
+          }}
+        >
+          <h2 style={{ fontSize: "2rem", color: "#5A153D", marginBottom: "50px" }}>
+            Powerful Analytics for Real Estate Investor
+          </h2>
+
+          <div
+            style={{
+              display: "flex",
+              gap: "40px",
+              justifyContent: "center",
+              flexWrap: "wrap",
+            }}
+          >
+            {/* REIT BOX */}
+            <div
+              onClick={handleReitClick}
+              style={featureBoxStyle}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "#faf0fb";
+                e.currentTarget.style.transform = "translateY(-3px)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "#fff";
+                e.currentTarget.style.transform = "translateY(0)";
+              }}
+            >
+              <img
+                src="/REIT.png"
+                alt="REIT Feature"
+                style={{
+                  width: "100%",
+                  height: "auto",
+                  borderRadius: "8px",
+                  marginBottom: "16px",
+                }}
+              />
+              <h3 style={{ fontSize: "1.3rem", marginBottom: "10px", color: "#5A153D" }}>
+                REIT Analytics
+              </h3>
+              <p style={{ fontSize: "0.95rem", color: "#444", lineHeight: "1.5" }}>
+                Gain insights into publicly traded REITs with live pricing,
+                fundamental data, and advanced screening tools. 
+                Quickly search and compare your target tickers.
+              </p>
+            </div>
+
+            {/* CROWDFUNDING BOX */}
+            <div
+              onClick={handleCrowdfundingClick}
+              style={featureBoxStyle}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "#faf0fb";
+                e.currentTarget.style.transform = "translateY(-3px)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "#fff";
+                e.currentTarget.style.transform = "translateY(0)";
+              }}
+            >
+              <img
+                src="/Crowdfunding.png"
+                alt="Crowdfunding Feature"
+                style={{
+                  width: "100%",
+                  height: "auto",
+                  borderRadius: "8px",
+                  marginBottom: "16px",
+                }}
+              />
+              <h3 style={{ fontSize: "1.3rem", marginBottom: "10px", color: "#5A153D" }}>
+                Crowdfunding Insights
+              </h3>
+              <p style={{ fontSize: "0.95rem", color: "#444", lineHeight: "1.5" }}>
+                Explore top real estate crowdfunding deals, with standardized metrics
+                including total return, distribution yield, and NAV growth. 
+                Compare different platforms for your next investment.
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* SIGNUP SECTION */}
         <div
           style={{
-            padding: "40px 20px",
-            maxWidth: "1200px",
-            margin: "0 auto",
             textAlign: "center",
+            margin: "80px auto",
+            maxWidth: "1200px",
+            padding: "0 20px",
           }}
         >
           <h2
@@ -131,23 +242,8 @@ function HomePage() {
               marginBottom: "20px",
             }}
           >
-            🚀 Join Our Early Access List
+            Join Our Early Access List
           </h2>
-
-          <p
-            style={{
-              maxWidth: "600px",
-              margin: "0 auto",
-              fontSize: "1.2rem",
-              color: "#444",
-              lineHeight: "1.6",
-              marginBottom: "10px",
-            }}
-          >
-            Viserra is an early-stage fintech startup. We’re building a platform
-            that tracks and analyzes the performance of public REITs and real
-            estate crowdfunding vehicles.
-          </p>
           <p
             style={{
               maxWidth: "600px",
@@ -159,7 +255,7 @@ function HomePage() {
             }}
           >
             Sign up below for exclusive updates and enjoy a{" "}
-            <strong>30% discount</strong> when we launch!
+            <strong>30% discount</strong> when we officially launch!
           </p>
 
           {/* SIGN-UP FORM */}
@@ -179,6 +275,8 @@ function HomePage() {
                   borderRadius: "5px",
                   marginBottom: "10px",
                   marginRight: "10px",
+                  fontSize: "1rem",
+                  fontFamily: "inherit",
                 }}
               />
 
@@ -190,9 +288,11 @@ function HomePage() {
                 style={{
                   padding: "8px",
                   borderRadius: "5px",
-                  width: "200px",
+                  width: "260px", // Widened further to avoid text cutoff
                   marginBottom: "10px",
                   marginRight: "10px",
+                  fontSize: "1rem",
+                  fontFamily: "inherit",
                 }}
               >
                 <option value="">What are you interested in?</option>
@@ -216,6 +316,8 @@ function HomePage() {
                   padding: "10px",
                   border: "1px solid #ccc",
                   borderRadius: "5px",
+                  fontSize: "1rem",
+                  fontFamily: "inherit",
                 }}
               />
 
@@ -256,8 +358,8 @@ function HomePage() {
         <div
           style={{
             position: "fixed",
-            top: "0",
-            left: "0",
+            top: 0,
+            left: 0,
             width: "100%",
             height: "100%",
             backgroundColor: "rgba(0, 0, 0, 0.5)", // Dim background
@@ -299,6 +401,9 @@ function HomePage() {
           </div>
         </div>
       )}
+
+      {/* The new bottom banner that slides up at scroll-bottom */}
+      <BottomBanner />
     </>
   );
 }

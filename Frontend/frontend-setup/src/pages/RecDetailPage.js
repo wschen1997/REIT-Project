@@ -15,6 +15,7 @@ import {
 import 'chartjs-adapter-date-fns';
 import { Bar } from "react-chartjs-2";
 import Header from "../components/Header.js";
+import BottomBanner from "../components/BottomBanner.js";
 
 ChartJS.register(
   CategoryScale,
@@ -390,6 +391,8 @@ function RecDetailPage() {
       <button className="back-button" onClick={() => navigate("/Crowdfunding")}>
         Back to Crowdfunding
       </button>
+      {/* The new bottom banner that slides up at scroll-bottom */}
+      <BottomBanner />
     </div>
   );
 }

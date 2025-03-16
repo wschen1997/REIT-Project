@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import BottomBanner from "../components/BottomBanner.js";
 import Header from "../components/Header.js";
 
 // Load backend URL from environment variable
