@@ -157,17 +157,23 @@ const Header = () => {
             alignItems: "center",
           }}
         >
+          {/* Centered box */}
           <div
             style={{
               backgroundColor: "#fff",
-              padding: "2rem",
+              width: "clamp(400px, 80%, 600px)",
+              margin: "0 auto",
+              padding: "2rem 2.5rem",
               borderRadius: "8px",
-              width: "80%",
-              maxWidth: "600px",
               position: "relative",
+              // Use flex column to center the input & messages
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
             }}
           >
             <h2 style={{ marginBottom: "1rem" }}>Search for a REIT</h2>
+            
             <input
               type="text"
               value={searchQuery}
@@ -184,7 +190,9 @@ const Header = () => {
             />
 
             {isFetching && (
-              <p style={{ fontSize: "0.9rem", color: "#555" }}>Loading...</p>
+              <p style={{ fontSize: "0.9rem", color: "#555", alignSelf: "flex-start" }}>
+                Loading...
+              </p>
             )}
 
             {!isFetching && (
@@ -201,6 +209,7 @@ const Header = () => {
                       maxHeight: "200px",
                       overflowY: "auto",
                       textAlign: "left",
+                      width: "100%", // match input width
                     }}
                   >
                     {suggestions.map((reit) => (
@@ -230,6 +239,7 @@ const Header = () => {
                         textAlign: "left",
                         maxHeight: "200px",
                         overflowY: "auto",
+                        width: "100%",
                       }}
                     >
                       <p style={{ margin: 0 }}>
@@ -242,7 +252,7 @@ const Header = () => {
               </>
             )}
 
-            <div style={{ marginTop: "1rem" }}>
+            <div style={{ marginTop: "1rem", alignSelf: "flex-start" }}>
               <button
                 onClick={() => console.log("Searching for:", searchQuery)}
                 style={{
