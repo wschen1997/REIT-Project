@@ -88,7 +88,7 @@ function HomePage() {
           {/* RIGHT COLUMN: DASHBOARD IMAGE */}
           <div style={{ flex: "1", textAlign: "right" }}>
             <img
-              src="/Dashboard.PNG"
+              src="/Dashboard.png"
               alt="Viserra Dashboard"
               style={{ width: "100%", maxWidth: "500px", borderRadius: "8px" }}
             />
