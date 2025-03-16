@@ -11,8 +11,6 @@ const Header = () => {
   const [showSearchOverlay, setShowSearchOverlay] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [suggestions, setSuggestions] = useState([]);
-
-  // Track if the API call is in progress
   const [isFetching, setIsFetching] = useState(false);
 
   // REIT analytics dropdown
@@ -56,9 +54,8 @@ const Header = () => {
       setSuggestions([]);
       return;
     }
-
     const fetchSuggestions = async () => {
-      setIsFetching(true); // Start fetching
+      setIsFetching(true);
       try {
         const response = await axios.get(`${API_BASE_URL}/api/reits`, {
           params: { search: searchQuery },
@@ -68,7 +65,7 @@ const Header = () => {
         console.error("Error fetching suggestions:", error);
         setSuggestions([]);
       } finally {
-        setIsFetching(false); // Done fetching
+        setIsFetching(false);
       }
     };
     fetchSuggestions();
@@ -115,6 +112,7 @@ const Header = () => {
             className="nav-link dropdown-trigger"
             onMouseEnter={() => setShowAnalyticsDropdown(true)}
             onMouseLeave={() => setShowAnalyticsDropdown(false)}
+            style={{ cursor: "pointer" }}
           >
             REITs Analytics
             <div
@@ -141,12 +139,22 @@ const Header = () => {
             </div>
           </div>
 
-          {/* Crowdfunding link -> direct navigation */}
+          {/* Crowdfunding link */}
           <div
             className="nav-link"
+            style={{ cursor: "pointer" }}
             onClick={() => navigate("/Crowdfunding")}
           >
             Real Estate Crowdfundings
+          </div>
+
+          {/* NEW: About Us link */}
+          <div
+            className="nav-link"
+            style={{ cursor: "pointer" }}
+            onClick={() => navigate("/about")}
+          >
+            About Us
           </div>
         </div>
       </nav>
@@ -178,14 +186,12 @@ const Header = () => {
               padding: "2rem 2.5rem",
               borderRadius: "8px",
               position: "relative",
-              // Use flex column to center the input & messages
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
             }}
           >
             <h2 style={{ marginBottom: "1rem" }}>Search for a REIT</h2>
-
             <input
               type="text"
               value={searchQuery}
@@ -200,13 +206,9 @@ const Header = () => {
                 marginBottom: "1rem",
               }}
             />
-
             {isFetching && (
-              <p style={{ fontSize: "0.9rem", color: "#555", alignSelf: "flex-start" }}>
-                Loading...
-              </p>
+              <p style={{ fontSize: "0.9rem", color: "#555" }}>Loading...</p>
             )}
-
             {!isFetching && (
               <>
                 {suggestions.length > 0 ? (
@@ -221,13 +223,15 @@ const Header = () => {
                       maxHeight: "200px",
                       overflowY: "auto",
                       textAlign: "left",
-                      width: "100%", // match input width
+                      width: "100%",
                     }}
                   >
                     {suggestions.map((reit) => (
                       <li
                         key={reit.Ticker}
-                        onClick={() => handleSelect(reit.Ticker)}
+                        onClick={() => {
+                          handleSelect(reit.Ticker);
+                        }}
                         style={{
                           padding: "8px",
                           cursor: "pointer",
@@ -263,7 +267,6 @@ const Header = () => {
                 )}
               </>
             )}
-
             <div style={{ marginTop: "1rem", alignSelf: "flex-start" }}>
               <button
                 onClick={() => console.log("Searching for:", searchQuery)}

@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom"; // <-- import useNavigate
 
 function BottomBanner() {
   const [isVisible, setIsVisible] = useState(false);
+  const navigate = useNavigate(); // <-- For programmatic navigation
 
   useEffect(() => {
     // Add bottom padding so main content doesn't get covered by the banner
@@ -81,28 +83,44 @@ function BottomBanner() {
     margin: 0,
   };
 
+  // We'll define the link names in an array
+  const links = ["About Us", "FAQ", "Terms", "Privacy", "Contact Us"];
+
   return (
     <div style={bannerStyle}>
       {/* Link row */}
       <div style={linkRowStyle}>
-        {["About Us", "FAQ", "Terms", "Privacy", "Contact Us"].map((text) => (
-          <span
-            key={text}
-            style={linkStyle}
-            onMouseEnter={handleLinkMouseEnter}
-            onMouseLeave={handleLinkMouseLeave}
-          >
-            {text}
-          </span>
-        ))}
+        {links.map((text) => {
+          // If user clicks "About Us", navigate to /about
+          const handleClick = () => {
+            if (text === "About Us") {
+              navigate("/about");
+            } else {
+              // For now, just log a placeholder or do nothing
+              console.log(`${text} clicked (not yet implemented)`);
+            }
+          };
+
+          return (
+            <span
+              key={text}
+              style={linkStyle}
+              onMouseEnter={handleLinkMouseEnter}
+              onMouseLeave={handleLinkMouseLeave}
+              onClick={handleClick}
+            >
+              {text}
+            </span>
+          );
+        })}
       </div>
 
       {/* Disclaimer columns */}
       <div style={disclaimerContainerStyle}>
         <p style={paragraphStyle}>
           All the information presented is collected from official public documents 
-          such as: earnings presentations, 10-K, 10-Q, 8-K, proxy statements, press releases, and company
-          prospectuses or private offering documents for crowdfunded funds and REITs.
+          such as: earnings presentations, 10-K, 10-Q, 8-K, proxy statements, press releases, 
+          and company prospectuses or private offering documents for crowdfunded funds and REITs.
         </p>
         <p style={paragraphStyle}>
           The data displayed by viserra-group.com is solely for informational purposes. 
@@ -110,10 +128,11 @@ function BottomBanner() {
           Please consult a personal licensed financial advisor before making any investment decisions.
         </p>
       </div>
-       {/* Copyright Notice */}
-        <p style={{ textAlign: "center", fontSize: "0.8rem", marginTop: "18px", color: "#666" }}>
+
+      {/* Copyright Notice */}
+      <p style={{ textAlign: "center", fontSize: "0.8rem", marginTop: "18px", color: "#666" }}>
         © {new Date().getFullYear()} Viserra Group. All Rights Reserved.
-        </p>
+      </p>
     </div>
   );
 }
