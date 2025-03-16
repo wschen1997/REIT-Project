@@ -3,6 +3,8 @@ Company name: Viserra
 Add DDOT protection subscription.
 Add payment processing function
 After crowdfunding function, add automation through Python
+Add news room (drive traffic while adding a free tier function to the website)
+Add axis grid for REITs comparison
 
 
 REIT Data Cleaning
