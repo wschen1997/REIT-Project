@@ -146,7 +146,7 @@ function HomePage() {
           }}
         >
           <h2 style={{ fontSize: "2rem", color: "#5A153D", marginBottom: "50px" }}>
-            Powerful Analytics for Real Estate Investor
+            Powerful Analytics for Real Estate Investors
           </h2>
 
           <div
