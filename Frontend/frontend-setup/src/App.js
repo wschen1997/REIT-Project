@@ -1,4 +1,4 @@
-// App.js 
+// App.js
 import React, { useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
 import * as ReactGaModule from "react-ga4";
@@ -9,6 +9,7 @@ import DetailPage from "./pages/DetailPage.js";
 import CrowdfundingPage from "./pages/Crowdfunding.js";
 import RecDetailPage from "./pages/RecDetailPage.js";
 import AboutUs from "./pages/AboutUs.js";
+import ContactUs from "./pages/ContactUs.js";
 
 import "./App.css";
 
@@ -45,6 +46,8 @@ function App() {
           <Route path="/Crowdfunding/:vehicle" element={<RecDetailPage />} />
           {/* NEW: About Us route */}
           <Route path="/about" element={<AboutUs />} />
+          {/* NEW: Contact Us route */}
+          <Route path="/contact" element={<ContactUs />} />
         </Routes>
       </Router>
     </div>

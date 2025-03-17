@@ -346,6 +346,53 @@ def signup():
         db.session.rollback()
         return jsonify({"error": f"Database error: {str(e)}"}), 500
 
+class ContactMessage(db.Model):
+    __tablename__ = "contact_messages"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    first_name = db.Column(db.String(100), nullable=False)
+    last_name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(255), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.TIMESTAMP, server_default=db.func.current_timestamp())
+
+    def __init__(self, first_name, last_name, email, message):
+        self.first_name = first_name
+        self.last_name = last_name
+        self.email = email
+        self.message = message
+
+@app.route("/api/contact", methods=["POST"])
+def contact():
+    """
+    Handles new contact form submissions and stores them in the contact_messages table.
+    """
+    data = request.json
+    first_name = data.get("firstName")
+    last_name = data.get("lastName")
+    email = data.get("email")
+    message = data.get("message")
+
+    # Basic validation
+    if not all([first_name, last_name, email, message]):
+        return jsonify({"error": "Missing required fields"}), 400
+
+    try:
+        new_contact = ContactMessage(
+            first_name=first_name,
+            last_name=last_name,
+            email=email,
+            message=message
+        )
+        db.session.add(new_contact)
+        db.session.commit()
+
+        return jsonify({"message": "Contact message received!"}), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"Database error: {str(e)}"}), 500
+
 
 @app.route("/api/reits/<string:ticker>/price", methods=['GET'])
 def get_price_data(ticker):

@@ -83,7 +83,7 @@ function BottomBanner() {
   };
 
   // The nav link array
-  const links = ["About Us", "FAQ", "Terms", "Privacy", "Contact Us"];
+  const links = ["About Us", "Terms", "Privacy", "Contact Us"];
 
   // Handle link clicks
   const handleLinkClick = (text) => {
@@ -93,6 +93,8 @@ function BottomBanner() {
       setShowTnC(true);
     } else if (text === "Privacy") {
       setShowPrivacy(true);
+    } else if (text === "Contact Us") {
+      navigate("/contact");
     } else {
       console.log(`${text} clicked (not yet implemented)`);
     }
