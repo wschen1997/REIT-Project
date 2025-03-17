@@ -156,6 +156,15 @@ const Header = () => {
           >
             About Us
           </div>
+
+          {/* NEW: About Us link */}
+          <div
+            className="nav-link"
+            style={{ cursor: "pointer" }}
+            onClick={() => navigate("/contact")}
+          >
+            Contact Us
+          </div>
         </div>
       </nav>
 

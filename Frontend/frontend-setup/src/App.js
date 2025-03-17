@@ -44,9 +44,7 @@ function App() {
           <Route path="/reits/:ticker" element={<DetailPage />} />
           <Route path="/Crowdfunding" element={<CrowdfundingPage />} />
           <Route path="/Crowdfunding/:vehicle" element={<RecDetailPage />} />
-          {/* NEW: About Us route */}
           <Route path="/about" element={<AboutUs />} />
-          {/* NEW: Contact Us route */}
           <Route path="/contact" element={<ContactUs />} />
         </Routes>
       </Router>
