@@ -439,13 +439,11 @@ def get_price_data(ticker):
 @app.route('/api/create-checkout-session', methods=['POST'])
 def create_checkout_session():
     try:
-        data = request.get_json()
-
         session = stripe.checkout.Session.create(
             payment_method_types=['card'],
             mode='subscription',
             line_items=[{
-                'price': 'price_1R5VI2L1vfYfs767rG1UOcZ6',
+                'price': 'price_1R5VI2L1vfYfs767rG1UOcZ6',  
                 'quantity': 1,
             }],
             success_url='https://www.viserra-group.com/pricing?status=success',
@@ -457,9 +455,8 @@ def create_checkout_session():
     except Exception as e:
         import traceback
         print("Stripe Error:", str(e))
-        traceback.print_exc()  # ✅ Logs full error to console
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
-
 
 # -------------------------------------------------------------------------
 # ====================== REC ENDPOINTS ===============================
