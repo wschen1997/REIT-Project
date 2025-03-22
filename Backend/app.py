@@ -446,7 +446,7 @@ def create_checkout_session():
             payment_method_types=['card'],
             mode='subscription',  # or 'payment' for one-time charges
             line_items=[{
-                'price': 'prod_RzUGDLkINehZzZ',  
+                'price': 'price_1R5VI2L1vfYfs767rG1UOcZ6',  
                 'quantity': 1,
             }],
             success_url='https://www.viserra-group.com/pricing?status=success',  
