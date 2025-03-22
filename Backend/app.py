@@ -441,21 +441,23 @@ def create_checkout_session():
     try:
         data = request.get_json()
 
-        # Example item; later you can customize this per product
         session = stripe.checkout.Session.create(
             payment_method_types=['card'],
-            mode='subscription',  # or 'payment' for one-time charges
+            mode='subscription',
             line_items=[{
-                'price': 'price_1R5VI2L1vfYfs767rG1UOcZ6',  
+                'price': 'price_1R5VI2L1vfYfs767rG1UOcZ6',
                 'quantity': 1,
             }],
-            success_url='https://www.viserra-group.com/pricing?status=success',  
-            cancel_url='https://www.viserra-group.com/pricing?status=cancel',    
+            success_url='https://www.viserra-group.com/pricing?status=success',
+            cancel_url='https://www.viserra-group.com/pricing?status=cancel',
         )
 
         return jsonify({'url': session.url})
 
     except Exception as e:
+        import traceback
+        print("Stripe Error:", str(e))
+        traceback.print_exc()  # ✅ Logs full error to console
         return jsonify({'error': str(e)}), 500
 
 
