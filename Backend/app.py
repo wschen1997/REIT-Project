@@ -433,7 +433,34 @@ def get_price_data(ticker):
 
 
 # -------------------------------------------------------------------------
-# ====================== NEW: REC ENDPOINTS ===============================
+# ====================== Stripe ENDPOINTS ===============================
+# -------------------------------------------------------------------------
+
+@app.route('/api/create-checkout-session', methods=['POST'])
+def create_checkout_session():
+    try:
+        data = request.get_json()
+
+        # Example item; later you can customize this per product
+        session = stripe.checkout.Session.create(
+            payment_method_types=['card'],
+            mode='subscription',  # or 'payment' for one-time charges
+            line_items=[{
+                'price': 'prod_RzUGDLkINehZzZ',  
+                'quantity': 1,
+            }],
+            success_url='https://www.viserra-group.com/success',  
+            cancel_url='https://www.viserra-group.com/cancel',    
+        )
+
+        return jsonify({'url': session.url})
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# -------------------------------------------------------------------------
+# ====================== REC ENDPOINTS ===============================
 # -------------------------------------------------------------------------
 @app.route('/api/rec/universe', methods=['GET'])
 def get_rec_universe():
