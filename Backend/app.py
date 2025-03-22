@@ -5,6 +5,7 @@ from flask_cors import CORS
 from datetime import datetime
 import os
 from dotenv import load_dotenv
+import stripe
 
 # Explicitly load environment variables from the Credentials.env file
 dotenv_path = os.path.abspath(
@@ -14,6 +15,9 @@ load_dotenv(dotenv_path)
 
 app = Flask(__name__)
 CORS(app)
+
+# get the stripe secret key from the environment variables
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
 # Database credentials from environment variables
 DB_USERNAME = os.getenv("DB_USERNAME")
