@@ -10,6 +10,7 @@ import CrowdfundingPage from "./pages/Crowdfunding.js";
 import RecDetailPage from "./pages/RecDetailPage.js";
 import AboutUs from "./pages/AboutUs.js";
 import ContactUs from "./pages/ContactUs.js";
+import PricingPage from "./pages/Pricing.js";
 
 import "./App.css";
 
@@ -46,6 +47,7 @@ function App() {
           <Route path="/Crowdfunding/:vehicle" element={<RecDetailPage />} />
           <Route path="/about" element={<AboutUs />} />
           <Route path="/contact" element={<ContactUs />} />
+          <Route path="/pricing" element={<PricingPage />} />
         </Routes>
       </Router>
     </div>

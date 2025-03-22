@@ -449,8 +449,8 @@ def create_checkout_session():
                 'price': 'prod_RzUGDLkINehZzZ',  
                 'quantity': 1,
             }],
-            success_url='https://www.viserra-group.com/success',  
-            cancel_url='https://www.viserra-group.com/cancel',    
+            success_url='https://www.viserra-group.com/pricing?status=success',  
+            cancel_url='https://www.viserra-group.com/pricing?status=cancel',    
         )
 
         return jsonify({'url': session.url})

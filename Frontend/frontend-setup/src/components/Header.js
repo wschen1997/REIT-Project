@@ -147,8 +147,17 @@ const Header = () => {
           >
             Real Estate Crowdfundings
           </div>
+          
+          {/* Pricing link */}
+          <div
+            className="nav-link"
+            style={{ cursor: "pointer" }}
+            onClick={() => navigate("/pricing")}
+          >
+            Pricing
+          </div>
 
-          {/* NEW: About Us link */}
+          {/* About Us link */}
           <div
             className="nav-link"
             style={{ cursor: "pointer" }}
