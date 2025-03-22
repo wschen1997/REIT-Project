@@ -6,6 +6,9 @@ from datetime import datetime
 import os
 from dotenv import load_dotenv
 import stripe
+import bcrypt
+import jwt
+from datetime import timedelta
 
 # Explicitly load environment variables from the Credentials.env file
 dotenv_path = os.path.abspath(
@@ -18,6 +21,9 @@ CORS(app)
 
 # get the stripe secret key from the environment variables
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+
+# Load secret key for JWT auth (Log in and Sign up)
+app.config['SECRET_KEY'] = os.getenv("APP_SECRET_KEY")
 
 # Database credentials from environment variables
 DB_USERNAME = os.getenv("DB_USERNAME")
@@ -43,11 +49,95 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # Initialize SQLAlchemy with the updated configuration
 db = SQLAlchemy(app)
 
+# Define the User model
+class User(db.Model):
+    __tablename__ = 'users'
 
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    email = db.Column(db.String(255), unique=True, nullable=False)
+    password_hash = db.Column(db.String(255), nullable=False)
+    is_subscribed = db.Column(db.Boolean, default=False)
+
+    def __init__(self, email, password_hash, is_subscribed=False):
+        self.email = email
+        self.password_hash = password_hash
+        self.is_subscribed = is_subscribed
+
+# -------------------------------------------------------------------------
+# =========================== AUTHENTICATION ENDPOINTS =====================
+# -------------------------------------------------------------------------
+@app.route("/api/register", methods=["POST"])
+def register():
+    data = request.json
+    email = data.get("email")
+    password = data.get("password")
+
+    if not email or not password:
+        return jsonify({"error": "Email and password are required"}), 400
+
+    # Check if user already exists
+    existing_user = db.session.execute(
+        db.select(User).filter_by(email=email)
+    ).scalar_one_or_none()
+
+    if existing_user:
+        return jsonify({"error": "User already exists"}), 409
+
+    # Hash the password
+    salt = bcrypt.gensalt()
+    hashed_password = bcrypt.hashpw(password.encode("utf-8"), salt)
+
+    # Create new user
+    new_user = User(email=email, password_hash=hashed_password.decode("utf-8"))
+    db.session.add(new_user)
+    db.session.commit()
+
+    return jsonify({"message": "User registered successfully"}), 201
+
+# -------------------------------------------------------------------------
+# =========================== LOGIN ENDPOINT ==============================
+# -------------------------------------------------------------------------
+@app.route("/api/login", methods=["POST"])
+def login():
+    data = request.json
+    email = data.get("email")
+    password = data.get("password")
+
+    if not email or not password:
+        return jsonify({"error": "Email and password are required"}), 400
+
+    user = db.session.execute(
+        db.select(User).filter_by(email=email)
+    ).scalar_one_or_none()
+
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    # Compare password
+    if not bcrypt.checkpw(password.encode("utf-8"), user.password_hash.encode("utf-8")):
+        return jsonify({"error": "Incorrect password"}), 401
+
+    # Generate JWT token
+    token = jwt.encode(
+        {
+            "user_id": user.id,
+            "email": user.email,
+            "is_subscribed": user.is_subscribed,
+            "exp": datetime.utcnow() + timedelta(hours=12)
+        },
+        app.config["SECRET_KEY"],
+        algorithm="HS256"
+    )
+
+    return jsonify({"token": token}), 200
+
+
+# -------------------------------------------------------------------------
+# =========================== REIT ENDPOINTS ==============================
+# -------------------------------------------------------------------------
 @app.route('/')
 def index():
     return "REIT Screener API is running!"
-
 
 # -------------------------------------------------------------------------
 # =========================== REIT ENDPOINTS ==============================
@@ -443,7 +533,7 @@ def create_checkout_session():
             payment_method_types=['card'],
             mode='subscription',
             line_items=[{
-                'price': 'price_1R5VI2L1vfYfs767rG1UOcZ6',  
+                'price': 'price_1R5WryL1vfYfs767GYSqHKn0',  #Test Price ID
                 'quantity': 1,
             }],
             success_url='https://www.viserra-group.com/pricing?status=success',
