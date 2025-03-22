@@ -443,7 +443,7 @@ def create_checkout_session():
             payment_method_types=['card'],
             mode='subscription',
             line_items=[{
-                'price': 'price_1R5WryL1vfYfs767GYSqHKn0',  
+                'price': 'price_1R5VI2L1vfYfs767rG1UOcZ6',  
                 'quantity': 1,
             }],
             success_url='https://www.viserra-group.com/pricing?status=success',
