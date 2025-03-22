@@ -2,12 +2,14 @@
 import React, { useEffect, useState } from "react";
 import Header from "../components/Header.js";
 import BottomBanner from "../components/BottomBanner.js";
+import Loading from "../components/Loading.js";
 
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:5000";
 
 function PricingPage() {
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [showCancelPopup, setShowCancelPopup] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const query = new URLSearchParams(window.location.search);
@@ -19,6 +21,7 @@ function PricingPage() {
   }, []);
 
   const handleSubscribe = async () => {
+    setIsLoading(true); // show loading spinner
     try {
       const response = await fetch(`${API_BASE_URL}/api/create-checkout-session`, {
         method: "POST",
@@ -30,9 +33,11 @@ function PricingPage() {
         window.location.href = data.url;
       } else {
         alert("Unable to create Stripe session");
+        setIsLoading(false); // hide loading on failure
       }
     } catch (err) {
       console.error("Error:", err);
+      setIsLoading(false); // hide loading on error
     }
   };
 
@@ -158,7 +163,7 @@ function PricingPage() {
           </div>
         </div>
       )}
-
+      {isLoading && <Loading />}
       <BottomBanner />
     </div>
   );
