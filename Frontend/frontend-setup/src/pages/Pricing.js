@@ -12,7 +12,10 @@ function PricingPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    setIsLoading(false); // hide loading spinner
+    if (performance.getEntriesByType("navigation")[0]?.type === "back_forward") {
+        setIsLoading(false);
+      } 
+    
     const query = new URLSearchParams(window.location.search);
     if (query.get("status") === "success") {
       setShowSuccessPopup(true);
