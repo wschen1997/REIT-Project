@@ -12,6 +12,7 @@ function PricingPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
+    setIsLoading(false); // hide loading spinner
     const query = new URLSearchParams(window.location.search);
     if (query.get("status") === "success") {
       setShowSuccessPopup(true);
