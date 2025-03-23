@@ -540,6 +540,10 @@ def get_price_data(ticker):
 
 @app.route('/api/create-checkout-session', methods=['POST'])
 def create_checkout_session():
+    data = request.json or {}
+    success_url = data.get("success_url", "http://localhost:3000/pricing?status=success")
+    cancel_url = data.get("cancel_url", "http://localhost:3000/pricing?status=cancel")
+
     try:
         session = stripe.checkout.Session.create(
             payment_method_types=['card'],
@@ -548,8 +552,8 @@ def create_checkout_session():
                 'price': 'price_1R5WryL1vfYfs767GYSqHKn0',  #Test Price ID
                 'quantity': 1,
             }],
-            success_url='https://www.viserra-group.com/pricing?status=success',
-            cancel_url='https://www.viserra-group.com/pricing?status=cancel',
+            success_url=success_url,
+            cancel_url=cancel_url
         )
 
         return jsonify({'url': session.url})
