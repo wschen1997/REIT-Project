@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import Header from "../components/Header.js";
 import BottomBanner from "../components/BottomBanner.js";
+import Loading from "../components/Loading.js";  // <-- import your spinner
 
 // Adjust for your environment
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:5000";
@@ -11,7 +12,7 @@ const Signup = () => {
   const navigate = useNavigate();
 
   // Form fields
-  const [username, setUsername] = useState("");   // <-- Added
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPwd, setConfirmPwd] = useState("");
@@ -22,13 +23,12 @@ const Signup = () => {
   const [successMessage, setSuccessMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  // On mount, check if the URL indicates a Stripe checkout result
+  // 1) On mount, check if URL indicates a Stripe checkout result
   useEffect(() => {
     const query = new URLSearchParams(window.location.search);
     const status = query.get("status");
     // If user just returned from Stripe with "?status=success"
     if (status === "success") {
-      // Retrieve pending signup data
       const pendingData = localStorage.getItem("pendingSignupData");
       if (pendingData) {
         const { username, email, password } = JSON.parse(pendingData);
@@ -39,11 +39,12 @@ const Signup = () => {
     }
   }, []);
 
-  // Finish premium signup
+  // 2) Finish premium signup
   const finishPremiumSignup = async (uName, uEmail, uPassword) => {
     setIsLoading(true);
     setError("");
     setSuccessMessage("");
+
     try {
       const response = await axios.post(`${API_BASE_URL}/api/register`, {
         username: uName,
@@ -63,7 +64,7 @@ const Signup = () => {
     }
   };
 
-  // Handle the normal "Sign Up" button click
+  // 3) Handle normal sign up
   const handleSignup = async (e) => {
     e.preventDefault();
     setError("");
@@ -99,12 +100,12 @@ const Signup = () => {
         setIsLoading(false);
       }
     } else {
-      // plan === "premium"
+      // plan === "premium" -> run Stripe checkout first
       startPremiumCheckout();
     }
   };
 
-  // Start Premium checkout: store user data, create Stripe session, redirect
+  // 4) Start Premium checkout & redirect
   const startPremiumCheckout = async () => {
     setIsLoading(true);
     localStorage.setItem(
@@ -156,6 +157,9 @@ const Signup = () => {
   return (
     <>
       <Header />
+
+      {/* Render your full-screen Loading overlay if isLoading is true */}
+      {isLoading && <Loading />}
 
       {/* Full-page overlay with blur */}
       <div

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { jwtDecode } from "jwt-decode";  // <-- using the named export
+import { jwtDecode } from "jwt-decode"; // named import
 
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:5000";
 
@@ -17,17 +17,15 @@ const Header = () => {
   // REIT analytics dropdown
   const [showAnalyticsDropdown, setShowAnalyticsDropdown] = useState(false);
 
-  // Track logged-in username
+  // Logged-in username
   const [username, setUsername] = useState(null);
 
-  // On mount, decode token if present
+  // Decode token if present
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
       try {
-        // Use the named export function "jwtDecode" to decode
         const decoded = jwtDecode(token);
-        // The backend includes "username" in the token
         if (decoded.username) {
           setUsername(decoded.username);
         }
@@ -37,7 +35,7 @@ const Header = () => {
     }
   }, []);
 
-  // Listen for custom event from HomePage's REIT card
+  // Listen for "openSearchOverlay" from HomePage's REIT card
   useEffect(() => {
     const handleOpenOverlay = () => {
       setShowSearchOverlay(true);
@@ -49,19 +47,15 @@ const Header = () => {
     };
   }, []);
 
-  // Open search overlay
-  const handleSearchClick = () => {
-    setShowSearchOverlay(true);
-  };
-
-  // Close search overlay
+  // Open/Close search overlay
+  const handleSearchClick = () => setShowSearchOverlay(true);
   const handleCloseSearch = () => {
     setShowSearchOverlay(false);
     setSearchQuery("");
     setSuggestions([]);
   };
 
-  // Navigate to a REIT detail page
+  // Navigate to REIT detail
   const handleSelect = (ticker) => {
     setShowSearchOverlay(false);
     setSearchQuery("");
@@ -69,14 +63,14 @@ const Header = () => {
     navigate(`/reits/${ticker}`);
   };
 
-  // Logout function
+  // Logout
   const handleLogout = () => {
     localStorage.removeItem("token");
     setUsername(null);
     navigate("/");
   };
 
-  // Fetch search suggestions
+  // Fetch suggestions
   useEffect(() => {
     if (!searchQuery) {
       setSuggestions([]);
@@ -136,7 +130,7 @@ const Header = () => {
             marginRight: "80px",
           }}
         >
-          {/* "REITs Analytics" menu with dropdown */}
+          {/* "REITs Analytics" with dropdown */}
           <div
             className="nav-link dropdown-trigger"
             onMouseEnter={() => setShowAnalyticsDropdown(true)}
@@ -204,13 +198,28 @@ const Header = () => {
             Contact Us
           </div>
 
-          {/* If user is logged in => show username & logout;
-              else show "Login" button */}
+          {/* If user is logged in => show "Hello, username" & Logout;
+              else => show "Login" */}
           {username ? (
-            <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-              <span style={{ fontSize: "1rem", fontWeight: "bold" }}>
+            <div style={{ display: "flex", gap: "25px", alignItems: "center" }}>
+              {/* "Hello, username" as a non-clickable button with same style */}
+              <button
+                disabled
+                style={{
+                  padding: "8px 16px",
+                  fontSize: "1rem",
+                  border: "2px solid #5A153D",
+                  color: "#5A153D",
+                  backgroundColor: "transparent",
+                  borderRadius: "4px",
+                  cursor: "default",
+                  fontWeight: "bold",
+                }}
+              >
                 Hello, {username}
-              </span>
+              </button>
+
+              {/* Logout button */}
               <button
                 onClick={handleLogout}
                 style={{
