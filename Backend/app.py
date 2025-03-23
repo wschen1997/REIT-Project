@@ -55,6 +55,7 @@ class User(db.Model):
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     email = db.Column(db.String(255), unique=True, nullable=False)
+    username = db.Column(db.String(255), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     is_subscribed = db.Column(db.Boolean, default=False)
 
@@ -69,35 +70,38 @@ class User(db.Model):
 @app.route("/api/register", methods=["POST"])
 def register():
     """
-    Creates a new user with the provided email, password, and plan.
+    Creates a new user with the provided username, email, password, and plan.
     If plan="premium", set is_subscribed=True; otherwise, is_subscribed=False.
     """
     data = request.json
+    username = data.get("username")
     email = data.get("email")
     password = data.get("password")
-    plan = data.get("plan", "free")  # default to 'free' if not provided
+    plan = data.get("plan", "free")
 
-    if not email or not password:
-        return jsonify({"error": "Email and password are required"}), 400
+    # Check required fields
+    if not (username and email and password):
+        return jsonify({"error": "Username, email, and password are required"}), 400
 
-    # Check if user already exists
+    # Check if username or email is taken
+    # Optionally, do two queries or a single query that checks or_(username==.., email==..)
     existing_user = db.session.execute(
-        db.select(User).filter_by(email=email)
+        db.select(User).filter((User.email == email) | (User.username == username))
     ).scalar_one_or_none()
 
     if existing_user:
-        return jsonify({"error": "User already exists"}), 409
+        return jsonify({"error": "That username or email is already in use"}), 409
 
     # Hash the password
     salt = bcrypt.gensalt()
     hashed_password = bcrypt.hashpw(password.encode("utf-8"), salt)
 
-    # Decide subscription status based on the plan
-    is_subscribed = True if plan.lower() == "premium" else False
+    # Decide subscription status
+    is_subscribed = (plan.lower() == "premium")
 
-    # Create new user
     new_user = User(
         email=email,
+        username=username,
         password_hash=hashed_password.decode("utf-8"),
         is_subscribed=is_subscribed
     )
@@ -129,10 +133,11 @@ def login():
     if not bcrypt.checkpw(password.encode("utf-8"), user.password_hash.encode("utf-8")):
         return jsonify({"error": "Incorrect password"}), 401
 
-    # Generate JWT token
+    # Generate JWT token (include username)
     token = jwt.encode(
         {
             "user_id": user.id,
+            "username": user.username,
             "email": user.email,
             "is_subscribed": user.is_subscribed,
             "exp": datetime.utcnow() + timedelta(hours=12)
@@ -142,7 +147,6 @@ def login():
     )
 
     return jsonify({"token": token}), 200
-
 
 # -------------------------------------------------------------------------
 # =========================== REIT ENDPOINTS ==============================

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { jwtDecode } from "jwt-decode";
 
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:5000";
 
@@ -16,7 +17,26 @@ const Header = () => {
   // REIT analytics dropdown
   const [showAnalyticsDropdown, setShowAnalyticsDropdown] = useState(false);
 
-  // Listen for the custom event from HomePage's REIT card
+  // NEW: track logged-in username
+  const [username, setUsername] = useState(null);
+
+  // On mount, decode token if present
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      try {
+        const decoded = jwt_decode(token);
+        // The backend includes "username" in the token
+        if (decoded.username) {
+          setUsername(decoded.username);
+        }
+      } catch (err) {
+        console.error("Invalid token:", err);
+      }
+    }
+  }, []);
+
+  // Listen for custom event from HomePage's REIT card
   useEffect(() => {
     const handleOpenOverlay = () => {
       setShowSearchOverlay(true);
@@ -46,6 +66,13 @@ const Header = () => {
     setSearchQuery("");
     setSuggestions([]);
     navigate(`/reits/${ticker}`);
+  };
+
+  // Logout function
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    setUsername(null);
+    navigate("/");
   };
 
   // Fetch search suggestions
@@ -148,7 +175,7 @@ const Header = () => {
           >
             Real Estate Crowdfundings
           </div>
-          
+
           {/* Pricing link */}
           <div
             className="nav-link"
@@ -176,25 +203,54 @@ const Header = () => {
             Contact Us
           </div>
 
-          <div style={{ marginLeft: "10px" }}>
-            <button
-              onClick={() => navigate("/login")}
-              style={{
-                padding: "8px 16px",
-                fontSize: "1rem",
-                border: "2px solid #5A153D",
-                color: "#5A153D",
-                backgroundColor: "transparent",
-                borderRadius: "4px",
-                cursor: "pointer",
-                transition: "all 0.3s ease",
-              }}
-              onMouseEnter={(e) => (e.target.style.backgroundColor = "#fcebf4")}
-              onMouseLeave={(e) => (e.target.style.backgroundColor = "transparent")}
-            >
-              Login
-            </button>
-          </div>
+          {/* If user is logged in => show username & logout;
+              else show "Login" button */}
+          {username ? (
+            <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+              <span style={{ fontSize: "1rem", fontWeight: "bold" }}>
+                Hello, {username}
+              </span>
+              <button
+                onClick={handleLogout}
+                style={{
+                  padding: "8px 16px",
+                  fontSize: "1rem",
+                  border: "2px solid #B12D78",
+                  color: "#fff",
+                  backgroundColor: "#B12D78",
+                  borderRadius: "4px",
+                  cursor: "pointer",
+                  transition: "all 0.3s ease",
+                }}
+              >
+                Logout
+              </button>
+            </div>
+          ) : (
+            <div style={{ marginLeft: "10px" }}>
+              <button
+                onClick={() => navigate("/login")}
+                style={{
+                  padding: "8px 16px",
+                  fontSize: "1rem",
+                  border: "2px solid #5A153D",
+                  color: "#5A153D",
+                  backgroundColor: "transparent",
+                  borderRadius: "4px",
+                  cursor: "pointer",
+                  transition: "all 0.3s ease",
+                }}
+                onMouseEnter={(e) =>
+                  (e.target.style.backgroundColor = "#fcebf4")
+                }
+                onMouseLeave={(e) =>
+                  (e.target.style.backgroundColor = "transparent")
+                }
+              >
+                Login
+              </button>
+            </div>
+          )}
         </div>
       </nav>
 

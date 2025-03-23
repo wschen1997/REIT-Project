@@ -11,6 +11,7 @@ const Signup = () => {
   const navigate = useNavigate();
 
   // Form fields
+  const [username, setUsername] = useState("");   // <-- Added
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPwd, setConfirmPwd] = useState("");
@@ -21,39 +22,37 @@ const Signup = () => {
   const [successMessage, setSuccessMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  // 1) On mount, check if the URL indicates a Stripe checkout result
+  // On mount, check if the URL indicates a Stripe checkout result
   useEffect(() => {
     const query = new URLSearchParams(window.location.search);
     const status = query.get("status");
     // If user just returned from Stripe with "?status=success"
     if (status === "success") {
-      // Retrieve the pending data from localStorage
+      // Retrieve pending signup data
       const pendingData = localStorage.getItem("pendingSignupData");
       if (pendingData) {
-        const { email, password } = JSON.parse(pendingData);
-        // Register user with plan = "premium"
-        finishPremiumSignup(email, password);
+        const { username, email, password } = JSON.parse(pendingData);
+        finishPremiumSignup(username, email, password);
       }
     } else if (status === "cancel") {
       setError("Payment was canceled. Please try again or choose Free plan.");
     }
   }, []);
 
-  // 2) Function to finalize Premium signup
-  const finishPremiumSignup = async (userEmail, userPassword) => {
+  // Finish premium signup
+  const finishPremiumSignup = async (uName, uEmail, uPassword) => {
     setIsLoading(true);
     setError("");
     setSuccessMessage("");
     try {
       const response = await axios.post(`${API_BASE_URL}/api/register`, {
-        email: userEmail,
-        password: userPassword,
+        username: uName,
+        email: uEmail,
+        password: uPassword,
         plan: "premium",
       });
       setSuccessMessage("Signup success! You are now Premium.");
-      // Clear the local storage so we don't re-signup on refresh
       localStorage.removeItem("pendingSignupData");
-      // Optionally, redirect to login after short delay
       setTimeout(() => {
         navigate("/login");
       }, 2000);
@@ -64,12 +63,17 @@ const Signup = () => {
     }
   };
 
-  // 3) Handle the normal "Sign Up" button click
+  // Handle the normal "Sign Up" button click
   const handleSignup = async (e) => {
     e.preventDefault();
     setError("");
     setSuccessMessage("");
 
+    // Basic checks
+    if (!username.trim()) {
+      setError("Username is required");
+      return;
+    }
     if (password !== confirmPwd) {
       setError("Passwords do not match");
       return;
@@ -80,12 +84,12 @@ const Signup = () => {
       try {
         setIsLoading(true);
         const response = await axios.post(`${API_BASE_URL}/api/register`, {
+          username,
           email,
           password,
           plan: "free",
         });
         setSuccessMessage(response.data.message || "Signup success!");
-        // After short delay, go to Login
         setTimeout(() => {
           navigate("/login");
         }, 1500);
@@ -95,33 +99,29 @@ const Signup = () => {
         setIsLoading(false);
       }
     } else {
-      // plan === "premium" -> run Stripe checkout first
+      // plan === "premium"
       startPremiumCheckout();
     }
   };
 
-  // 4) Start Premium checkout: store user data, create Stripe session, redirect
+  // Start Premium checkout: store user data, create Stripe session, redirect
   const startPremiumCheckout = async () => {
     setIsLoading(true);
-    // Save the user data so we can do final registration after successful payment
     localStorage.setItem(
       "pendingSignupData",
-      JSON.stringify({ email, password })
+      JSON.stringify({ username, email, password })
     );
     try {
-      // Create a special checkout session with success/cancel pointing to /signup
       const response = await fetch(`${API_BASE_URL}/api/create-checkout-session`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          // You can pass different success/cancel URLs if needed
           success_url: "http://www.viserra-group.com/signup?status=success",
           cancel_url: "http://www.viserra-group.com/signup?status=cancel",
         }),
       });
       const data = await response.json();
       if (data.url) {
-        // Redirect to Stripe
         window.location.href = data.url;
       } else {
         setError("Unable to create Stripe session. Please try again.");
@@ -169,17 +169,16 @@ const Signup = () => {
           backdropFilter: "blur(4px)",
           WebkitBackdropFilter: "blur(4px)",
           zIndex: 9999,
-          overflowY: "auto", // so we can scroll if form is too tall
+          overflowY: "auto",
         }}
         onClick={() => navigate("/")}
       >
-        {/* White box (stopPropagation so clicks inside won't go home) */}
         <div
           onClick={(e) => e.stopPropagation()}
           style={{
             width: "clamp(320px, 40%, 600px)",
             backgroundColor: "#fff",
-            margin: "2rem auto 4rem auto", // extra bottom margin
+            margin: "2rem auto 4rem auto",
             borderRadius: "12px",
             boxShadow: "0 4px 10px rgba(0, 0, 0, 0.15)",
             display: "flex",
@@ -187,8 +186,8 @@ const Signup = () => {
             justifyContent: "flex-start",
             alignItems: "center",
             padding: "3rem",
-            maxHeight: "90vh",     // doesn't extend all the way down
-            overflowY: "auto",     // if content is taller, scroll
+            maxHeight: "90vh",
+            overflowY: "auto",
           }}
         >
           <form
@@ -213,6 +212,31 @@ const Signup = () => {
             <p style={{ color: "#666", marginBottom: "1.5rem" }}>
               Join Viserra Analytics today.
             </p>
+
+            {/* Username field */}
+            <label
+              style={{
+                marginBottom: "0.3rem",
+                fontWeight: "bold",
+                color: "#333",
+              }}
+            >
+              Username
+            </label>
+            <input
+              type="text"
+              placeholder="Choose a unique username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+              style={{
+                marginBottom: "1rem",
+                padding: "0.6rem 0.9rem",
+                fontSize: "1rem",
+                borderRadius: "6px",
+                border: "1px solid #ccc",
+              }}
+            />
 
             <label
               style={{
@@ -375,7 +399,6 @@ const Signup = () => {
               </div>
             </div>
 
-            {/* Display error or success */}
             {error && (
               <div
                 style={{
