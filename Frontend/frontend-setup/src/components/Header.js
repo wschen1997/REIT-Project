@@ -103,6 +103,7 @@ const Header = () => {
             display: "flex",
             gap: "25px",
             flexWrap: "wrap",
+            alignItems: "center",
             justifyContent: "flex-end",
             marginRight: "80px",
           }}
@@ -166,13 +167,33 @@ const Header = () => {
             About Us
           </div>
 
-          {/* NEW: About Us link */}
+          {/* Contact Us link */}
           <div
             className="nav-link"
             style={{ cursor: "pointer" }}
             onClick={() => navigate("/contact")}
           >
             Contact Us
+          </div>
+
+          <div style={{ marginLeft: "10px" }}>
+            <button
+              onClick={() => navigate("/login")}
+              style={{
+                padding: "8px 16px",
+                fontSize: "1rem",
+                border: "2px solid #5A153D",
+                color: "#5A153D",
+                backgroundColor: "transparent",
+                borderRadius: "4px",
+                cursor: "pointer",
+                transition: "all 0.3s ease",
+              }}
+              onMouseEnter={(e) => (e.target.style.backgroundColor = "#fcebf4")}
+              onMouseLeave={(e) => (e.target.style.backgroundColor = "transparent")}
+            >
+              Login
+            </button>
           </div>
         </div>
       </nav>

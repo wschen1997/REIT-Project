@@ -68,9 +68,14 @@ class User(db.Model):
 # -------------------------------------------------------------------------
 @app.route("/api/register", methods=["POST"])
 def register():
+    """
+    Creates a new user with the provided email, password, and plan.
+    If plan="premium", set is_subscribed=True; otherwise, is_subscribed=False.
+    """
     data = request.json
     email = data.get("email")
     password = data.get("password")
+    plan = data.get("plan", "free")  # default to 'free' if not provided
 
     if not email or not password:
         return jsonify({"error": "Email and password are required"}), 400
@@ -87,8 +92,15 @@ def register():
     salt = bcrypt.gensalt()
     hashed_password = bcrypt.hashpw(password.encode("utf-8"), salt)
 
+    # Decide subscription status based on the plan
+    is_subscribed = True if plan.lower() == "premium" else False
+
     # Create new user
-    new_user = User(email=email, password_hash=hashed_password.decode("utf-8"))
+    new_user = User(
+        email=email,
+        password_hash=hashed_password.decode("utf-8"),
+        is_subscribed=is_subscribed
+    )
     db.session.add(new_user)
     db.session.commit()
 
