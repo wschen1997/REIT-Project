@@ -115,8 +115,8 @@ const Signup = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           // You can pass different success/cancel URLs if needed
-          success_url: "http://localhost:3000/signup?status=success",
-          cancel_url: "http://localhost:3000/signup?status=cancel",
+          success_url: "http://www.viserra-group.com/signup?status=success",
+          cancel_url: "http://www.viserra-group.com/signup?status=cancel",
         }),
       });
       const data = await response.json();

@@ -541,8 +541,10 @@ def get_price_data(ticker):
 @app.route('/api/create-checkout-session', methods=['POST'])
 def create_checkout_session():
     data = request.json or {}
-    success_url = data.get("success_url", "http://localhost:3000/pricing?status=success")
-    cancel_url = data.get("cancel_url", "http://localhost:3000/pricing?status=cancel")
+
+    # If not provided by the frontend, default to these:
+    success_url = data.get("success_url", "https://www.viserra-group.com/signup?status=success")
+    cancel_url = data.get("cancel_url", "https://www.viserra-group.com/signup?status=cancel")
 
     try:
         session = stripe.checkout.Session.create(
@@ -559,9 +561,7 @@ def create_checkout_session():
         return jsonify({'url': session.url})
 
     except Exception as e:
-        import traceback
         print("Stripe Error:", str(e))
-        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 # -------------------------------------------------------------------------
