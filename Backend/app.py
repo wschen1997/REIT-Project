@@ -59,8 +59,9 @@ class User(db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     is_subscribed = db.Column(db.Boolean, default=False)
 
-    def __init__(self, email, password_hash, is_subscribed=False):
+    def __init__(self, email, password_hash, username, is_subscribed=False):
         self.email = email
+        self.username = username
         self.password_hash = password_hash
         self.is_subscribed = is_subscribed
 

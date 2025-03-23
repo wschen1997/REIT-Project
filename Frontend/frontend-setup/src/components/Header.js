@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { jwtDecode } from "jwt-decode";
+import { jwtDecode } from "jwt-decode";  // <-- using the named export
 
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:5000";
 
@@ -17,7 +17,7 @@ const Header = () => {
   // REIT analytics dropdown
   const [showAnalyticsDropdown, setShowAnalyticsDropdown] = useState(false);
 
-  // NEW: track logged-in username
+  // Track logged-in username
   const [username, setUsername] = useState(null);
 
   // On mount, decode token if present
@@ -25,7 +25,8 @@ const Header = () => {
     const token = localStorage.getItem("token");
     if (token) {
       try {
-        const decoded = jwt_decode(token);
+        // Use the named export function "jwtDecode" to decode
+        const decoded = jwtDecode(token);
         // The backend includes "username" in the token
         if (decoded.username) {
           setUsername(decoded.username);
