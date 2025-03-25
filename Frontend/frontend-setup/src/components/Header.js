@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { jwtDecode } from "jwt-decode"; // named import
+import { useAuth0 } from "@auth0/auth0-react";
 
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:5000";
 
 const Header = () => {
   const navigate = useNavigate();
 
-  // Search overlay
+  // Auth0
+  const { isAuthenticated, user, loginWithRedirect, logout } = useAuth0();
+
+  // For search overlay
   const [showSearchOverlay, setShowSearchOverlay] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [suggestions, setSuggestions] = useState([]);
@@ -17,25 +20,7 @@ const Header = () => {
   // REIT analytics dropdown
   const [showAnalyticsDropdown, setShowAnalyticsDropdown] = useState(false);
 
-  // Logged-in username
-  const [username, setUsername] = useState(null);
-
-  // Decode token if present
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      try {
-        const decoded = jwtDecode(token);
-        if (decoded.username) {
-          setUsername(decoded.username);
-        }
-      } catch (err) {
-        console.error("Invalid token:", err);
-      }
-    }
-  }, []);
-
-  // Listen for "openSearchOverlay" from HomePage's REIT card
+  // Listen for "openSearchOverlay" custom event
   useEffect(() => {
     const handleOpenOverlay = () => {
       setShowSearchOverlay(true);
@@ -47,7 +32,7 @@ const Header = () => {
     };
   }, []);
 
-  // Open/Close search overlay
+  // Search overlay open/close
   const handleSearchClick = () => setShowSearchOverlay(true);
   const handleCloseSearch = () => {
     setShowSearchOverlay(false);
@@ -55,19 +40,12 @@ const Header = () => {
     setSuggestions([]);
   };
 
-  // Navigate to REIT detail
+  // On selecting a REIT
   const handleSelect = (ticker) => {
     setShowSearchOverlay(false);
     setSearchQuery("");
     setSuggestions([]);
     navigate(`/reits/${ticker}`);
-  };
-
-  // Logout
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    setUsername(null);
-    navigate("/");
   };
 
   // Fetch suggestions
@@ -93,9 +71,85 @@ const Header = () => {
     fetchSuggestions();
   }, [searchQuery]);
 
+  // Decide what to show in top-right: "Hello, user" or "Login"
+  const renderAuthSection = () => {
+    if (isAuthenticated && user) {
+      // user.name or user.email from Auth0
+      const displayName = user.name || user.email || "User";
+
+      return (
+        <div style={{ display: "flex", gap: "25px", alignItems: "center" }}>
+          <button
+            disabled
+            style={{
+              padding: "8px 16px",
+              fontSize: "1rem",
+              border: "2px solid #5A153D",
+              color: "#5A153D",
+              backgroundColor: "transparent",
+              borderRadius: "4px",
+              cursor: "default",
+              fontWeight: "bold",
+            }}
+          >
+            Hello, {displayName}
+          </button>
+
+          <button
+            onClick={() => {
+              console.log("Logout button clicked");
+              logout({ returnTo: window.location.origin });
+            }}
+            style={{
+              padding: "8px 16px",
+              fontSize: "1rem",
+              border: "2px solid #B12D78",
+              color: "#fff",
+              backgroundColor: "#B12D78",
+              borderRadius: "4px",
+              cursor: "pointer",
+              transition: "all 0.3s ease",
+            }}
+          >
+            Logout
+          </button>
+        </div>
+      );
+    } else {
+      // Not logged in => show "Login" button
+      return (
+        <div style={{ marginLeft: "10px" }}>
+          <button
+            onClick={() => {
+              console.log("Login button clicked");
+              loginWithRedirect({
+                authorizationParams: {
+                  redirect_uri: window.location.origin,
+                },
+              });
+            }}
+            style={{
+              padding: "8px 16px",
+              fontSize: "1rem",
+              border: "2px solid #5A153D",
+              color: "#5A153D",
+              backgroundColor: "transparent",
+              borderRadius: "4px",
+              cursor: "pointer",
+              transition: "all 0.3s ease",
+            }}
+            onMouseEnter={(e) => (e.target.style.backgroundColor = "#fcebf4")}
+            onMouseLeave={(e) => (e.target.style.backgroundColor = "transparent")}
+          >
+            Login
+          </button>
+        </div>
+      );
+    }
+  };
+
   return (
     <>
-      {/* Navigation Bar */}
       <nav
         style={{
           position: "fixed",
@@ -130,7 +184,7 @@ const Header = () => {
             marginRight: "80px",
           }}
         >
-          {/* "REITs Analytics" with dropdown */}
+          {/* Analytics dropdown */}
           <div
             className="nav-link dropdown-trigger"
             onMouseEnter={() => setShowAnalyticsDropdown(true)}
@@ -138,9 +192,7 @@ const Header = () => {
             style={{ cursor: "pointer" }}
           >
             REITs Analytics
-            <div
-              className={`dropdown-menu ${showAnalyticsDropdown ? "show" : ""}`}
-            >
+            <div className={`dropdown-menu ${showAnalyticsDropdown ? "show" : ""}`}>
               <div
                 className="dropdown-item"
                 onClick={() => {
@@ -198,73 +250,12 @@ const Header = () => {
             Contact Us
           </div>
 
-          {/* If user is logged in => show "Hello, username" & Logout;
-              else => show "Login" */}
-          {username ? (
-            <div style={{ display: "flex", gap: "25px", alignItems: "center" }}>
-              {/* "Hello, username" as a non-clickable button with same style */}
-              <button
-                disabled
-                style={{
-                  padding: "8px 16px",
-                  fontSize: "1rem",
-                  border: "2px solid #5A153D",
-                  color: "#5A153D",
-                  backgroundColor: "transparent",
-                  borderRadius: "4px",
-                  cursor: "default",
-                  fontWeight: "bold",
-                }}
-              >
-                Hello, {username}
-              </button>
-
-              {/* Logout button */}
-              <button
-                onClick={handleLogout}
-                style={{
-                  padding: "8px 16px",
-                  fontSize: "1rem",
-                  border: "2px solid #B12D78",
-                  color: "#fff",
-                  backgroundColor: "#B12D78",
-                  borderRadius: "4px",
-                  cursor: "pointer",
-                  transition: "all 0.3s ease",
-                }}
-              >
-                Logout
-              </button>
-            </div>
-          ) : (
-            <div style={{ marginLeft: "10px" }}>
-              <button
-                onClick={() => navigate("/login")}
-                style={{
-                  padding: "8px 16px",
-                  fontSize: "1rem",
-                  border: "2px solid #5A153D",
-                  color: "#5A153D",
-                  backgroundColor: "transparent",
-                  borderRadius: "4px",
-                  cursor: "pointer",
-                  transition: "all 0.3s ease",
-                }}
-                onMouseEnter={(e) =>
-                  (e.target.style.backgroundColor = "#fcebf4")
-                }
-                onMouseLeave={(e) =>
-                  (e.target.style.backgroundColor = "transparent")
-                }
-              >
-                Login
-              </button>
-            </div>
-          )}
+          {/* Auth section */}
+          {renderAuthSection()}
         </div>
       </nav>
 
-      {/* Full-Screen Search Overlay */}
+      {/* Search overlay */}
       {showSearchOverlay && (
         <div
           style={{
@@ -282,7 +273,6 @@ const Header = () => {
             alignItems: "center",
           }}
         >
-          {/* Centered box */}
           <div
             style={{
               backgroundColor: "#fff",
@@ -364,8 +354,7 @@ const Header = () => {
                       }}
                     >
                       <p style={{ margin: 0 }}>
-                        No REIT found for "<strong>{searchQuery}</strong>".
-                        Please try another ticker or name.
+                        No REIT found for "<strong>{searchQuery}</strong>". Please try another ticker or name.
                       </p>
                     </div>
                   )
