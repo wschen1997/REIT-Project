@@ -56,7 +56,14 @@ function SignupOrPlanPage() {
             </p>
             
             <button
-              onClick={() => loginWithRedirect()}
+              onClick={() =>
+                loginWithRedirect({
+                  authorizationParams: {
+                    redirect_uri: window.location.origin,
+                    audience: "https://viserra-api", // 👈 Replace with your actual API identifier
+                  },
+                })
+              }              
               style={{
                 padding: "0.75rem 1.5rem",
                 backgroundColor: "#5A153D",

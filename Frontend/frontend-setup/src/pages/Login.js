@@ -64,7 +64,14 @@ const Login = () => {
           </p>
 
           <button
-            onClick={() => loginWithRedirect()}
+            onClick={() =>
+              loginWithRedirect({
+                authorizationParams: {
+                  redirect_uri: window.location.origin,
+                  audience: "https://viserra-api", // 👈 Use the exact API identifier you created
+                },
+              })
+            }            
             style={{
               width: "100%",
               padding: "0.75rem",
@@ -108,7 +115,15 @@ const Login = () => {
             Don&apos;t have an account?
             <span
               style={{ color: "#5A153D", cursor: "pointer", fontWeight: "bold", marginLeft: "4px" }}
-              onClick={() => loginWithRedirect({ screen_hint: "signup" })}
+              onClick={() =>
+                loginWithRedirect({
+                  authorizationParams: {
+                    redirect_uri: window.location.origin,
+                    audience: "https://viserra-api",
+                    screen_hint: "signup",
+                  },
+                })
+              }              
             >
               Sign Up
             </span>

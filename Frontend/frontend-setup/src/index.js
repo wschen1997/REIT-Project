@@ -6,9 +6,10 @@ import App from './App.js';
 const rootElement = document.getElementById('root');
 const root = createRoot(rootElement);
 
-// Use your actual Auth0 values here
+// Auth0 settings
 const domain = "dev-f76bvg6s71ylnhnz.us.auth0.com";
 const clientId = "wWv9bQrDxrfWKJ6RKYBQ0augXG8NCBaG";
+const audience = "https://viserra-api"; // ✅ Replace this if your actual identifier is different
 
 // Enable debugging logs in the browser console
 localStorage.setItem("auth0.debug", "true");
@@ -19,11 +20,10 @@ root.render(
     clientId={clientId}
     authorizationParams={{
       redirect_uri: window.location.origin,
-      // Uncomment and set if you're using an API (very likely needed)
-      // audience: "https://your-api-identifier"
+      audience: audience,
     }}
-    cacheLocation="localstorage"      // So refresh tokens work reliably
-    useRefreshTokens={true}           // Recommended for SPAs
+    cacheLocation="localstorage"
+    useRefreshTokens={true}
   >
     <App />
   </Auth0Provider>

@@ -125,6 +125,7 @@ const Header = () => {
               loginWithRedirect({
                 authorizationParams: {
                   redirect_uri: window.location.origin,
+                  audience: "https://viserra-api",
                 },
               });
             }}
