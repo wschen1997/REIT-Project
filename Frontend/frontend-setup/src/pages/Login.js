@@ -27,7 +27,6 @@ const Login = () => {
 
   return (
     <>
-      <Header />
 
       <div
         style={{
@@ -68,7 +67,7 @@ const Login = () => {
               loginWithRedirect({
                 authorizationParams: {
                   redirect_uri: window.location.origin,
-                  audience: "https://viserra-api", // 👈 Use the exact API identifier you created
+                  audience: "https://viserra-api", 
                 },
               })
             }            

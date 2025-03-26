@@ -1,15 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { useAuth0 } from "@auth0/auth0-react";
 
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:5000";
 
 const Header = () => {
   const navigate = useNavigate();
-
-  // Auth0
-  const { isAuthenticated, user, loginWithRedirect, logout } = useAuth0();
+  console.log("Header rendered. Current URL:", window.location.href);
 
   // For search overlay
   const [showSearchOverlay, setShowSearchOverlay] = useState(false);
@@ -23,6 +20,7 @@ const Header = () => {
   // Listen for "openSearchOverlay" custom event
   useEffect(() => {
     const handleOpenOverlay = () => {
+      console.log("Received openSearchOverlay event");
       setShowSearchOverlay(true);
     };
     window.addEventListener("openSearchOverlay", handleOpenOverlay);
@@ -33,8 +31,12 @@ const Header = () => {
   }, []);
 
   // Search overlay open/close
-  const handleSearchClick = () => setShowSearchOverlay(true);
+  const handleSearchClick = () => {
+    console.log("Search overlay triggered");
+    setShowSearchOverlay(true);
+  };
   const handleCloseSearch = () => {
+    console.log("Closing search overlay");
     setShowSearchOverlay(false);
     setSearchQuery("");
     setSuggestions([]);
@@ -42,6 +44,7 @@ const Header = () => {
 
   // On selecting a REIT
   const handleSelect = (ticker) => {
+    console.log("REIT selected:", ticker);
     setShowSearchOverlay(false);
     setSearchQuery("");
     setSuggestions([]);
@@ -71,84 +74,6 @@ const Header = () => {
     fetchSuggestions();
   }, [searchQuery]);
 
-  // Decide what to show in top-right: "Hello, user" or "Login"
-  const renderAuthSection = () => {
-    if (isAuthenticated && user) {
-      // user.name or user.email from Auth0
-      const displayName = user.name || user.email || "User";
-
-      return (
-        <div style={{ display: "flex", gap: "25px", alignItems: "center" }}>
-          <button
-            disabled
-            style={{
-              padding: "8px 16px",
-              fontSize: "1rem",
-              border: "2px solid #5A153D",
-              color: "#5A153D",
-              backgroundColor: "transparent",
-              borderRadius: "4px",
-              cursor: "default",
-              fontWeight: "bold",
-            }}
-          >
-            Hello, {displayName}
-          </button>
-
-          <button
-            onClick={() => {
-              console.log("Logout button clicked");
-              logout({ returnTo: window.location.origin });
-            }}
-            style={{
-              padding: "8px 16px",
-              fontSize: "1rem",
-              border: "2px solid #B12D78",
-              color: "#fff",
-              backgroundColor: "#B12D78",
-              borderRadius: "4px",
-              cursor: "pointer",
-              transition: "all 0.3s ease",
-            }}
-          >
-            Logout
-          </button>
-        </div>
-      );
-    } else {
-      // Not logged in => show "Login" button
-      return (
-        <div style={{ marginLeft: "10px" }}>
-          <button
-            onClick={() => {
-              console.log("Login button clicked");
-              loginWithRedirect({
-                authorizationParams: {
-                  redirect_uri: window.location.origin,
-                  audience: "https://viserra-api",
-                },
-              });
-            }}
-            style={{
-              padding: "8px 16px",
-              fontSize: "1rem",
-              border: "2px solid #5A153D",
-              color: "#5A153D",
-              backgroundColor: "transparent",
-              borderRadius: "4px",
-              cursor: "pointer",
-              transition: "all 0.3s ease",
-            }}
-            onMouseEnter={(e) => (e.target.style.backgroundColor = "#fcebf4")}
-            onMouseLeave={(e) => (e.target.style.backgroundColor = "transparent")}
-          >
-            Login
-          </button>
-        </div>
-      );
-    }
-  };
-
   return (
     <>
       <nav
@@ -172,7 +97,10 @@ const Header = () => {
           src="/logo-crop.PNG"
           alt="Viserra Logo"
           style={{ maxHeight: "90px", cursor: "pointer" }}
-          onClick={() => navigate("/")}
+          onClick={() => {
+            console.log("Logo clicked, navigating to home");
+            navigate("/");
+          }}
         />
 
         <div
@@ -188,8 +116,14 @@ const Header = () => {
           {/* Analytics dropdown */}
           <div
             className="nav-link dropdown-trigger"
-            onMouseEnter={() => setShowAnalyticsDropdown(true)}
-            onMouseLeave={() => setShowAnalyticsDropdown(false)}
+            onMouseEnter={() => {
+              console.log("Analytics dropdown mouse enter");
+              setShowAnalyticsDropdown(true);
+            }}
+            onMouseLeave={() => {
+              console.log("Analytics dropdown mouse leave");
+              setShowAnalyticsDropdown(false);
+            }}
             style={{ cursor: "pointer" }}
           >
             REITs Analytics
@@ -197,6 +131,7 @@ const Header = () => {
               <div
                 className="dropdown-item"
                 onClick={() => {
+                  console.log("Dropdown item: Search for a REIT clicked");
                   handleSearchClick();
                   setShowAnalyticsDropdown(false);
                 }}
@@ -206,6 +141,7 @@ const Header = () => {
               <div
                 className="dropdown-item"
                 onClick={() => {
+                  console.log("Dropdown item: REITs Screening clicked");
                   navigate("/filter");
                   setShowAnalyticsDropdown(false);
                 }}
@@ -219,7 +155,10 @@ const Header = () => {
           <div
             className="nav-link"
             style={{ cursor: "pointer" }}
-            onClick={() => navigate("/Crowdfunding")}
+            onClick={() => {
+              console.log("Navigating to Crowdfunding");
+              navigate("/Crowdfunding");
+            }}
           >
             Real Estate Crowdfundings
           </div>
@@ -228,7 +167,10 @@ const Header = () => {
           <div
             className="nav-link"
             style={{ cursor: "pointer" }}
-            onClick={() => navigate("/pricing")}
+            onClick={() => {
+              console.log("Navigating to Pricing");
+              navigate("/pricing");
+            }}
           >
             Pricing
           </div>
@@ -237,7 +179,10 @@ const Header = () => {
           <div
             className="nav-link"
             style={{ cursor: "pointer" }}
-            onClick={() => navigate("/about")}
+            onClick={() => {
+              console.log("Navigating to About Us");
+              navigate("/about");
+            }}
           >
             About Us
           </div>
@@ -246,13 +191,13 @@ const Header = () => {
           <div
             className="nav-link"
             style={{ cursor: "pointer" }}
-            onClick={() => navigate("/contact")}
+            onClick={() => {
+              console.log("Navigating to Contact Us");
+              navigate("/contact");
+            }}
           >
             Contact Us
           </div>
-
-          {/* Auth section */}
-          {renderAuthSection()}
         </div>
       </nav>
 
@@ -326,6 +271,7 @@ const Header = () => {
                       <li
                         key={reit.Ticker}
                         onClick={() => {
+                          console.log("Suggestion clicked for ticker:", reit.Ticker);
                           handleSelect(reit.Ticker);
                         }}
                         style={{

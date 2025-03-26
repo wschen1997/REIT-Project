@@ -60,7 +60,7 @@ function SignupOrPlanPage() {
                 loginWithRedirect({
                   authorizationParams: {
                     redirect_uri: window.location.origin,
-                    audience: "https://viserra-api", // 👈 Replace with your actual API identifier
+                    audience: "https://viserra-api",
                   },
                 })
               }              
