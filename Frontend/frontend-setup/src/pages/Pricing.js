@@ -30,6 +30,7 @@ function PricingPage() {
       const response = await fetch(`${API_BASE_URL}/api/create-checkout-session`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({})
       });
 
       const data = await response.json();
