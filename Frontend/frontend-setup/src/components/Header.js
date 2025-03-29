@@ -1,12 +1,49 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { auth } from "../firebase.js";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import { db } from "../firebase.js";
+import { collection, query, where, getDocs } from "firebase/firestore";
+
 
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:5000";
 
 const Header = () => {
   const navigate = useNavigate();
   console.log("Header rendered. Current URL:", window.location.href);
+
+  // Firebase authentication state
+  const [currentUser, setCurrentUser] = useState(null);
+  const [username, setUsername] = useState("");
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+      if (user) {
+        const q = query(collection(db, "users"), where("email", "==", user.email));
+        getDocs(q)
+          .then((querySnapshot) => {
+            if (!querySnapshot.empty) {
+              const userData = querySnapshot.docs[0].data();
+              if (userData.plan === "premium" || userData.plan === "free") {
+                setUsername(userData.username || "");
+              } else {
+                console.warn("Unauthorized plan. Logging out.");
+                signOut(auth);
+              }
+            } else {
+              console.warn("No user document found in Firestore. Logging out.");
+              signOut(auth);
+            }
+          })
+          .catch((err) => {
+            console.error("Error fetching username:", err);
+          });
+      }          
+    });
+    return () => unsubscribe();
+  }, []);
 
   // For search overlay
   const [showSearchOverlay, setShowSearchOverlay] = useState(false);
@@ -198,6 +235,50 @@ const Header = () => {
           >
             Contact Us
           </div>
+          {currentUser ? (
+            <div style={{ display: "flex", gap: "15px", alignItems: "center" }}>
+              <span
+                style={{
+                  fontWeight: "bold",
+                  color: "#5A153D",
+                  border: "2px solid #5A153D",
+                  padding: "6px 14px",
+                  borderRadius: "4px",
+                }}
+              >
+                Hello, {username || currentUser.email}
+              </span>
+              <button
+                onClick={() => signOut(auth)}
+                style={{
+                  padding: "8px 16px",
+                  fontSize: "1rem",
+                  border: "2px solid #B12D78",
+                  color: "#fff",
+                  backgroundColor: "#B12D78",
+                  borderRadius: "4px",
+                  cursor: "pointer",
+                }}
+              >
+                Logout
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => navigate("/login")}
+              style={{
+                padding: "8px 16px",
+                fontSize: "1rem",
+                border: "2px solid #5A153D",
+                color: "#5A153D",
+                backgroundColor: "transparent",
+                borderRadius: "4px",
+                cursor: "pointer",
+              }}
+            >
+              Login
+            </button>
+          )}  
         </div>
       </nav>
 

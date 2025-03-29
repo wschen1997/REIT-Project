@@ -49,22 +49,6 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # Initialize SQLAlchemy with the updated configuration
 db = SQLAlchemy(app)
 
-# Define the User model
-class User(db.Model):
-    __tablename__ = 'users'
-
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    email = db.Column(db.String(255), unique=True, nullable=False)
-    username = db.Column(db.String(255), unique=True, nullable=False)
-    password_hash = db.Column(db.String(255), nullable=False)
-    is_subscribed = db.Column(db.Boolean, default=False)
-
-    def __init__(self, email, password_hash, username, is_subscribed=False):
-        self.email = email
-        self.username = username
-        self.password_hash = password_hash
-        self.is_subscribed = is_subscribed
-
 # -------------------------------------------------------------------------
 # =========================== REIT ENDPOINTS ==============================
 # -------------------------------------------------------------------------
@@ -484,6 +468,47 @@ def create_checkout_session():
     except Exception as e:
         print("Stripe Error:", str(e))
         return jsonify({'error': str(e)}), 500
+
+# -------------------------------------------------------------------------
+# ====================== premium user registration ===================
+# -------------------------------------------------------------------------
+@app.route('/api/register-premium-user', methods=['POST'])
+def register_premium_user():
+    """
+    This is called from the frontend AFTER payment succeeds to store premium user in Firestore.
+    """
+    from google.cloud import firestore
+    import firebase_admin
+    from firebase_admin import credentials
+
+    # Avoid re-initializing Firebase if already initialized
+    if not firebase_admin._apps:
+        cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+        cred = credentials.Certificate(cred_path)
+        firebase_admin.initialize_app(cred)
+
+    db_fs = firestore.client()
+
+    data = request.get_json()
+    email = data.get("email")
+    username = data.get("username")
+    plan = "premium"
+
+    if not email or not username:
+        return jsonify({"error": "Missing required fields"}), 400
+
+    try:
+        doc_ref = db_fs.collection("users").document(email)
+        doc_ref.set({
+            "email": email,
+            "username": username,
+            "plan": plan,
+            "createdAt": datetime.utcnow().isoformat()
+        })
+        return jsonify({"message": "Premium user successfully registered."}), 200
+    except Exception as e:
+        return jsonify({"error": f"Failed to save user: {str(e)}"}), 500
+
 
 # -------------------------------------------------------------------------
 # ====================== REC ENDPOINTS ===============================

@@ -1,135 +1,170 @@
-import React, { useEffect } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Header from "../components/Header.js";
-import { useAuth0 } from "@auth0/auth0-react";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "../firebase.js";
+import { signOut } from "firebase/auth";
+import { db } from "../firebase.js";
+import { collection, query, where, getDocs } from "firebase/firestore";
 
 const Login = () => {
-  const { loginWithRedirect } = useAuth0();
   const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
 
-  useEffect(() => {
-    const appDiv = document.querySelector(".App");
-    if (appDiv) {
-      appDiv.style.background = "transparent";
-      appDiv.style.boxShadow = "none";
-      appDiv.style.margin = "0";
-      appDiv.style.padding = "0";
+const handleLogin = async () => {
+  try {
+    const userCred = await signInWithEmailAndPassword(auth, email, password);
+
+    if (!userCred.user.emailVerified) {
+      setError("Please verify your email before logging in.");
+      return;
     }
-    return () => {
-      if (appDiv) {
-        appDiv.style.background = "white";
-        appDiv.style.boxShadow = "0px 4px 10px rgba(0,0,0,0.1)";
-        appDiv.style.margin = "40px auto";
-        appDiv.style.padding = "30px";
-      }
-    };
-  }, []);
+
+    // 🔐 Check if user exists in Firestore
+    const q = query(collection(db, "users"), where("email", "==", email));
+    const snapshot = await getDocs(q);
+
+    if (snapshot.empty) {
+      // User hasn’t completed payment, so log them out
+      setError("Your account is not active yet. Please complete payment.");
+      await signOut(auth);
+      return;
+    }
+
+    // ✅ User exists and is verified
+    navigate("/");
+
+  } catch (err) {
+    setError("Invalid email or password");
+    console.error("Login error:", err);
+  }
+};
 
   return (
-    <>
-
+    <div
+      style={{
+        position: "fixed",
+        top: 0, left: 0,
+        width: "100vw", height: "100vh",
+        backgroundColor: "rgba(0, 0, 0, 0.1)",
+        backdropFilter: "blur(4px)",
+        zIndex: 9999, overflowY: "auto",
+      }}
+      onClick={() => navigate("/")}
+    >
       <div
+        onClick={(e) => e.stopPropagation()}
         style={{
-          position: "fixed",
-          top: 0, left: 0,
-          width: "100vw", height: "100vh",
-          backgroundColor: "rgba(0, 0, 0, 0.1)",
-          backdropFilter: "blur(4px)",
-          zIndex: 9999, overflowY: "auto",
+          width: "clamp(320px, 40%, 600px)",
+          backgroundColor: "#fff",
+          margin: "2rem auto",
+          minHeight: "80vh",
+          borderRadius: "12px",
+          boxShadow: "0 4px 10px rgba(0,0,0,0.15)",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          alignItems: "center",
+          padding: "3rem",
         }}
-        onClick={() => navigate("/")}
       >
-        <div
-          onClick={(e) => e.stopPropagation()}
+        <h2 style={{ marginBottom: "0.5rem", fontSize: "1.8rem", color: "#333" }}>
+          Sign In
+        </h2>
+        <p style={{ marginBottom: "1.5rem", color: "#666" }}>
+          Access personalized content and exclusive features
+        </p>
+
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
           style={{
-            width: "clamp(320px, 40%, 600px)",
-            backgroundColor: "#fff",
-            margin: "2rem auto",
-            minHeight: "80vh",
-            borderRadius: "12px",
-            boxShadow: "0 4px 10px rgba(0,0,0,0.15)",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "center",
-            alignItems: "center",
-            padding: "3rem",
+            width: "100%",
+            padding: "0.75rem",
+            marginBottom: "1rem",
+            fontSize: "1rem",
+            borderRadius: "6px",
+            border: "1px solid #ccc",
+          }}
+        />
+
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          style={{
+            width: "100%",
+            padding: "0.75rem",
+            marginBottom: "1rem",
+            fontSize: "1rem",
+            borderRadius: "6px",
+            border: "1px solid #ccc",
+          }}
+        />
+
+        {error && (
+          <p style={{ color: "red", marginBottom: "1rem" }}>{error}</p>
+        )}
+
+        <button
+          onClick={handleLogin}
+          style={{
+            width: "100%",
+            padding: "0.75rem",
+            backgroundColor: "#5A153D",
+            color: "#fff",
+            border: "none",
+            borderRadius: "6px",
+            fontSize: "1rem",
+            cursor: "pointer",
           }}
         >
-          <h2 style={{ marginBottom: "0.5rem", fontSize: "1.8rem", color: "#333" }}>
-            Sign In
-          </h2>
-          <p style={{ marginBottom: "1.5rem", color: "#666" }}>
-            Access personalized content and exclusive features
-          </p>
+          Login
+        </button>
 
-          <button
-            onClick={() =>
-              loginWithRedirect({
-                authorizationParams: {
-                  redirect_uri: window.location.origin,
-                  audience: "https://viserra-api", 
-                },
-              })
-            }            
+        <button
+          onClick={() => navigate("/")}
+          style={{
+            marginTop: "1rem",
+            padding: "0.6rem 1rem",
+            backgroundColor: "#ddd",
+            color: "#333",
+            border: "none",
+            borderRadius: "6px",
+            fontSize: "0.9rem",
+            cursor: "pointer",
+          }}
+        >
+          Return Home
+        </button>
+
+        <div
+          style={{
+            marginTop: "1.2rem",
+            fontSize: "0.9rem",
+            textAlign: "center",
+            color: "#333",
+          }}
+        >
+          Don&apos;t have an account?
+          <span
             style={{
-              width: "100%",
-              padding: "0.75rem",
-              backgroundColor: "#5A153D",
-              color: "#fff",
-              border: "none",
-              borderRadius: "6px",
-              fontSize: "1rem",
+              color: "#5A153D",
               cursor: "pointer",
-              marginTop: "0.5rem",
+              fontWeight: "bold",
+              marginLeft: "4px",
             }}
+            onClick={() => navigate("/signup")}
           >
-            Continue with Auth0
-          </button>
-
-          <button
-            type="button"
-            onClick={() => navigate("/")}
-            style={{
-              marginTop: "1rem",
-              padding: "0.6rem 1rem",
-              backgroundColor: "#ddd",
-              color: "#333",
-              border: "none",
-              borderRadius: "6px",
-              fontSize: "0.9rem",
-              cursor: "pointer",
-            }}
-          >
-            Return Home
-          </button>
-
-          <div
-            style={{
-              marginTop: "1.2rem",
-              fontSize: "0.9rem",
-              textAlign: "center",
-              color: "#333",
-            }}
-          >
-            Don&apos;t have an account?
-            <span
-              style={{ color: "#5A153D", cursor: "pointer", fontWeight: "bold", marginLeft: "4px" }}
-              onClick={() =>
-                loginWithRedirect({
-                  authorizationParams: {
-                    redirect_uri: window.location.origin,
-                    audience: "https://viserra-api",
-                    screen_hint: "signup",
-                  },
-                })
-              }              
-            >
-              Sign Up
-            </span>
-          </div>
+            Sign Up
+          </span>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 
