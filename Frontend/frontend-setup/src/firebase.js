@@ -1,11 +1,10 @@
-// src/firebase.js
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore"; // 👈 Firestore import
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDAGt6yiJuuqTNGeMNYXaFscKW90wiQrnU",
-  authDomain: "viserra-auth.firebaseapp.com",
+  apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
+  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
   projectId: "viserra-auth",
   storageBucket: "viserra-auth.firebasestorage.app",
   messagingSenderId: "344987597703",
