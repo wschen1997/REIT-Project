@@ -482,23 +482,31 @@ def register_premium_user():
     import firebase_admin
     from firebase_admin import credentials
 
-    # Avoid re-initializing Firebase if already initialized
-    if not firebase_admin._apps:
-        cred_json = json.loads(os.getenv("FIREBASE_SERVICE_ACCOUNT"))
-        cred = credentials.Certificate(cred_json)
-        firebase_admin.initialize_app(cred)
-
-    db_fs = firestore.client()
-
-    data = request.get_json()
-    email = data.get("email")
-    username = data.get("username")
-    plan = "premium"
-
-    if not email or not username:
-        return jsonify({"error": "Missing required fields"}), 400
-
     try:
+        if not firebase_admin._apps:
+            raw_cred = os.getenv("FIREBASE_SERVICE_ACCOUNT")
+            if not raw_cred:
+                print("🔥 Missing FIREBASE_SERVICE_ACCOUNT environment variable")
+                return jsonify({"error": "Server misconfiguration: Firebase credentials missing."}), 500
+
+            # Try parsing it
+            cred_json = json.loads(raw_cred)
+            print("✅ FIREBASE_SERVICE_ACCOUNT keys loaded:", list(cred_json.keys()))
+
+            cred = credentials.Certificate(cred_json)
+            firebase_admin.initialize_app(cred)
+
+        db_fs = firestore.client()
+
+        data = request.get_json()
+        email = data.get("email")
+        username = data.get("username")
+        plan = "premium"
+
+        if not email or not username:
+            print("Missing email or username in request body")
+            return jsonify({"error": "Missing required fields"}), 400
+
         doc_ref = db_fs.collection("users").document(email)
         doc_ref.set({
             "email": email,
@@ -506,10 +514,13 @@ def register_premium_user():
             "plan": plan,
             "createdAt": datetime.utcnow().isoformat()
         })
-        return jsonify({"message": "Premium user successfully registered."}), 200
-    except Exception as e:
-        return jsonify({"error": f"Failed to save user: {str(e)}"}), 500
 
+        print(f"✅ Premium user created in Firestore: {email}")
+        return jsonify({"message": "Premium user successfully registered."}), 200
+
+    except Exception as e:
+        print("🔥 Exception while registering premium user:", str(e))
+        return jsonify({"error": f"Failed to save user: {str(e)}"}), 500
 
 # -------------------------------------------------------------------------
 # ====================== REC ENDPOINTS ===============================
