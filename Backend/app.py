@@ -480,7 +480,7 @@ def register_premium_user():
     """
     from google.cloud import firestore
     import firebase_admin
-    from firebase_admin import credentials
+    from firebase_admin import credentials, firestore as admin_firestore
 
     try:
         if not firebase_admin._apps:
@@ -496,7 +496,7 @@ def register_premium_user():
             cred = credentials.Certificate(cred_json)
             firebase_admin.initialize_app(cred)
 
-        db_fs = firestore.client()
+        db_fs = admin_firestore.client()
 
         data = request.get_json()
         email = data.get("email")
