@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../firebase.js";
@@ -11,6 +11,16 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const status = urlParams.get("status");
+    if (status === "activated") {
+      setSuccessMessage("✅ Your account has been activated. Please log in.");
+      window.history.replaceState({}, document.title, "/login"); // clean URL
+    }
+  }, []);  
 
 const handleLogin = async () => {
   try {
@@ -106,6 +116,9 @@ const handleLogin = async () => {
           }}
         />
 
+        {successMessage && (
+          <p style={{ color: "green", marginBottom: "1rem" }}>{successMessage}</p>
+        )}
         {error && (
           <p style={{ color: "red", marginBottom: "1rem" }}>{error}</p>
         )}

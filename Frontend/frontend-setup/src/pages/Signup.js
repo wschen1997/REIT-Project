@@ -57,8 +57,7 @@ function Signup() {
           const result = await response.json();
           if (!response.ok) throw new Error(result.error || "Failed to register");
 
-          setSuccessMessage("Your account has been activated. Please log in to continue.");
-          window.history.replaceState({}, document.title, "/signup");
+          navigate(`/login?status=activated`);
         } catch (err) {
           console.error("Post-payment setup error:", err);
           setError("Payment succeeded but account setup failed. Please contact support.");
