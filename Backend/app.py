@@ -9,6 +9,7 @@ import stripe
 import bcrypt
 import jwt
 from datetime import timedelta
+import json
 
 # Explicitly load environment variables from the Credentials.env file
 dotenv_path = os.path.abspath(
@@ -483,8 +484,8 @@ def register_premium_user():
 
     # Avoid re-initializing Firebase if already initialized
     if not firebase_admin._apps:
-        cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-        cred = credentials.Certificate(cred_path)
+        cred_json = json.loads(os.getenv("FIREBASE_SERVICE_ACCOUNT"))
+        cred = credentials.Certificate(cred_json)
         firebase_admin.initialize_app(cred)
 
     db_fs = firestore.client()

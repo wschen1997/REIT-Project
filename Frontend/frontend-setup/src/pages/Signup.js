@@ -8,7 +8,7 @@ import {
   fetchSignInMethodsForEmail,
   signInWithEmailAndPassword,
 } from "firebase/auth";
-import { collection, addDoc, getDocs, query, where, deleteDoc, doc } from "firebase/firestore";
+import { collection, addDoc, getDocs, query, where } from "firebase/firestore";
 import { auth, db } from "../firebase.js";
 import Header from "../components/Header.js";
 import BottomBanner from "../components/BottomBanner.js";
@@ -30,6 +30,7 @@ function Signup() {
   const [plan, setPlan] = useState(null); // "free" or "premium"
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
     let timer;
@@ -38,6 +39,34 @@ function Signup() {
     }
     return () => clearTimeout(timer);
   }, [resendCooldown]);
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const status = urlParams.get("status");
+    const emailFromURL = urlParams.get("email");
+    const usernameFromURL = urlParams.get("username");
+
+    if (status === "success" && emailFromURL && usernameFromURL) {
+      const registerUser = async () => {
+        try {
+          const response = await fetch(`${API_BASE_URL}/api/register-premium-user`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: emailFromURL, username: usernameFromURL }),
+          });
+          const result = await response.json();
+          if (!response.ok) throw new Error(result.error || "Failed to register");
+
+          setSuccessMessage("Your account has been activated. Please log in to continue.");
+          window.history.replaceState({}, document.title, "/signup");
+        } catch (err) {
+          console.error("Post-payment setup error:", err);
+          setError("Payment succeeded but account setup failed. Please contact support.");
+        }
+      };
+      registerUser();
+    }
+  }, []);
 
   const handleSendVerification = async () => {
     if (!email || !password) {
@@ -126,7 +155,7 @@ function Signup() {
           return;
         } else {
           throw new Error("Stripe session creation failed");
-        }      
+        }
       } else {
         if (!alreadyExists) {
           await addDoc(usersRef, {
@@ -180,6 +209,7 @@ function Signup() {
           }}
         >
           <h2>Sign Up</h2>
+          {successMessage && <p style={{ color: "green" }}>{successMessage}</p>}
           {error && <p style={{ color: "red" }}>{error}</p>}
 
           <input type="text" placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} style={inputStyle} />
