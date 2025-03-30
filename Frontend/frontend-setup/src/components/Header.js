@@ -6,23 +6,23 @@ import { onAuthStateChanged, signOut } from "firebase/auth";
 import { db } from "../firebase.js";
 import { collection, query, where, getDocs } from "firebase/firestore";
 
-
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:5000";
 
-const Header = () => {
+// Accept userPlan and setUserPlan as props from App.js
+const Header = ({ userPlan, setUserPlan }) => {
   const navigate = useNavigate();
   console.log("Header rendered. Current URL:", window.location.href);
 
-  // Firebase authentication state
+  // Local states
   const [currentUser, setCurrentUser] = useState(null);
   const [username, setUsername] = useState("");
-  // State for the Login button hover effect
   const [loginHovered, setLoginHovered] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
       console.log("Firebase Auth state changed. User:", user);
+
       if (user) {
         console.log("Checking Firestore for user with email:", user.email);
         const q = query(collection(db, "users"), where("email", "==", user.email));
@@ -31,42 +31,48 @@ const Header = () => {
             if (!querySnapshot.empty) {
               const userData = querySnapshot.docs[0].data();
               console.log("Firestore user document found:", userData);
-            
+
               if (!["free", "premium"].includes(userData.plan)) {
                 console.warn("Unauthorized plan. Logging out.");
                 setUsername("");
                 signOut(auth);
+                setUserPlan(null); // Clear plan
                 return;
               }
-            
-              // only set username when plan is valid
+
+              // Valid plan => set username & update plan in App
               setUsername(userData.username || "");
-            
+              setUserPlan(userData.plan);
             } else {
-              // <=== We get here when Firestore has NO doc for this user
+              // No Firestore doc
               if (window.location.pathname === "/signup") {
-                console.log("No user doc found, but user is on /signup => skipping auto-logout");
-                // 1) pretend user is not logged in so the header doesn't show "Hello, user"
-                setCurrentUser(null); 
+                console.log("No doc found, user is on /signup => skip auto-logout");
+                setCurrentUser(null);
                 setUsername("");
-                return; 
+                setUserPlan(null);
+                return;
               }
-              
-              console.warn("No user document found in Firestore. Logging out.");
+              console.warn("No user doc found => logging out.");
               setUsername("");
+              setUserPlan(null);
               signOut(auth);
-            }            
+            }
           })
           .catch((err) => {
             console.error("Error fetching username:", err);
-            setUsername(""); // also clear on error
+            setUsername("");
+            setUserPlan(null);
           });
       } else {
-        setUsername(""); // user signed out, clear it
-      }                
+        // user signed out
+        setUsername("");
+        setUserPlan(null);
+      }
     });
+
+    // Cleanup subscription
     return () => unsubscribe();
-  }, []);
+  }, [setUserPlan]); // re-run effect if setUserPlan changes
 
   // For search overlay
   const [showSearchOverlay, setShowSearchOverlay] = useState(false);
@@ -77,7 +83,7 @@ const Header = () => {
   // REIT analytics dropdown
   const [showAnalyticsDropdown, setShowAnalyticsDropdown] = useState(false);
 
-  // Listen for "openSearchOverlay" custom event
+  // Listen for "openSearchOverlay" event
   useEffect(() => {
     const handleOpenOverlay = () => {
       console.log("Received openSearchOverlay event");
@@ -102,7 +108,7 @@ const Header = () => {
     setSuggestions([]);
   };
 
-  // On selecting a REIT
+  // On selecting a REIT from suggestions
   const handleSelect = (ticker) => {
     console.log("REIT selected:", ticker);
     setShowSearchOverlay(false);
@@ -111,7 +117,7 @@ const Header = () => {
     navigate(`/reits/${ticker}`);
   };
 
-  // Fetch suggestions
+  // Fetch search suggestions
   useEffect(() => {
     if (!searchQuery) {
       setSuggestions([]);
@@ -258,6 +264,7 @@ const Header = () => {
           >
             Contact Us
           </div>
+
           {currentUser ? (
             <div style={{ display: "flex", gap: "15px", alignItems: "center" }}>
               <span
@@ -273,15 +280,23 @@ const Header = () => {
               </span>
               <button
                 onClick={() => {
-                  setUsername(""); // optional but safe
+                  setUsername("");
                   signOut(auth);
-                }}                
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "#faf0fb";
+                  e.currentTarget.style.color = "#5A153D";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "#5A153D";
+                  e.currentTarget.style.color = "#fff";
+                }}
                 style={{
                   padding: "8px 16px",
                   fontSize: "1rem",
-                  border: "2px solid #B12D78",
+                  border: "none",
                   color: "#fff",
-                  backgroundColor: "#B12D78",
+                  backgroundColor: "#5A153D",
                   borderRadius: "4px",
                   cursor: "pointer",
                 }}
@@ -292,7 +307,6 @@ const Header = () => {
           ) : (
             <button
               onClick={() => navigate("/login")}
-              // Capture mouse enter/leave
               onMouseEnter={(e) => {
                 e.currentTarget.style.backgroundColor = "#faf0fb";
               }}
@@ -305,14 +319,13 @@ const Header = () => {
                 border: "2px solid #5A153D",
                 borderRadius: "4px",
                 cursor: "pointer",
-                // Conditionally change the text color and background color
                 color: loginHovered ? "#fff" : "#5A153D",
                 backgroundColor: loginHovered ? "#B12D78" : "transparent",
               }}
             >
               Sign In
             </button>
-          )}  
+          )}
         </div>
       </nav>
 
@@ -416,7 +429,8 @@ const Header = () => {
                       }}
                     >
                       <p style={{ margin: 0 }}>
-                        No REIT found for "<strong>{searchQuery}</strong>". Please try another ticker or name.
+                        No REIT found for "<strong>{searchQuery}</strong>". Please try another
+                        ticker or name.
                       </p>
                     </div>
                   )

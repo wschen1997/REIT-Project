@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Bar, Doughnut } from "react-chartjs-2";
-import Header from "../components/Header.js";
 import BottomBanner from "../components/BottomBanner.js";
 import { ComposableMap, Geographies, Geography } from "react-simple-maps";
 import { feature } from "topojson-client";
@@ -38,7 +37,7 @@ ChartJS.register(
 
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:5000";
 
-function DetailPage() {
+function DetailPage({ userPlan }) {
   const { ticker } = useParams();
   const navigate = useNavigate();
 
@@ -181,7 +180,6 @@ function DetailPage() {
   if (loading) {
     return (
       <div className="detail-page" style={{ padding: "20px" }}>
-        <Header />
         <h2>{ticker} - Analytics Dashboard</h2>
         <p>Loading Analytics Dashboard...</p>
         <button className="back-button" onClick={() => navigate(-1)}>
@@ -194,7 +192,6 @@ function DetailPage() {
   if (error || !Array.isArray(financialData) || financialData.length === 0) {
     return (
       <div className="detail-page" style={{ padding: "20px" }}>
-        <Header />
         <h2>{ticker} - Analytics Dashboard</h2>
         <p>{error || "Financial data is unavailable for this REIT."}</p>
         <button className="back-button" onClick={() => navigate(-1)}>
@@ -468,13 +465,11 @@ function DetailPage() {
 
   return (
     <div className="detail-page" style={{ padding: "20px" }}>
-      <Header />
       {/* Name & description */}
       <div style={{ marginBottom: "20px" }}>
         <h2 style={{ margin: 0, fontSize: "1.5rem" }}>{companyName}</h2>
         <p style={{ marginTop: "10px" }}>{businessDescription}</p>
       </div>
-
       {/* Business Statistics Table (Now inside Grey Background) */}
       <div style={sectionContainer}>
         <h3 style={{ marginTop: 0, marginBottom: "10px" }}>Business Statistics</h3>
@@ -696,107 +691,125 @@ function DetailPage() {
       </div>
 
       {/* ============== DIVERSIFICATION MAP SECTION ============== */}
-      <div style={{ ...sectionContainer, position: "relative" }}>
-        <h3 style={{ marginTop: 0, marginBottom: "10px" }}>Geographical Diversification</h3>
+      {userPlan === "premium" ? (
+        <div style={{ ...sectionContainer, position: "relative" }}>
+          <h3 style={{ marginTop: 0, marginBottom: "10px" }}>Geographical Diversification</h3>
 
-        {/* White box wrapper for the map */}
-        <div style={{ 
-          backgroundColor: "#fff", 
-          padding: "20px", 
-          borderRadius: "8px", 
-          boxShadow: "0 2px 6px rgba(0,0,0,0.1)" 
-        }}>
-          <div style={{ textAlign: "center" }}>
-            <ComposableMap projectionConfig={{ scale: 100 }} width={800} height={400}>
-              <Geographies geography={geoUrl}>
-                {({ geographies }) =>
-                  geographies.map((geo) => {
-                    const countryName = geo.properties.name;
-                    const isInvested =
-                      overseasInvestment.includes(countryName) ||
-                      (countryName === "United States of America" && usInvestmentRegions.length > 0);
-
-                    return (
-                      <Geography
-                        key={geo.rsmKey}
-                        geography={geo}
-                        fill={isInvested ? "#b12d78" : "#D6D6DA"}
-                        stroke="#FFFFFF"
-                        strokeWidth={0.5}
-                        onMouseEnter={(event) => {
-                          setTooltipPosition({ 
-                            x: event.clientX + 10, // Add small offset to prevent overlap
-                            y: event.clientY - 30  // Position tooltip slightly above cursor
-                          });
-                        
-                          setHoveredCountry(
-                            countryName === "United States of America" && usInvestmentRegions.length > 0
-                              ? `States invested: ${usInvestmentRegions.join(", ")}`
-                              : overseasInvestment.includes(countryName)
-                              ? `${countryName}`
-                              : null
-                          );
-                        }}                        
-                        onMouseMove={(event) => {
-                          setTooltipPosition({ 
-                            x: event.clientX + 10, // Keeps tooltip next to cursor
-                            y: event.clientY - 30  
-                          });
-                        }}                                             
-                        onMouseLeave={() => setHoveredCountry(null)}
-                        
-                        style={{
-                          default: { outline: "none" },
-                          hover: { fill: "#5A153D", outline: "none" },
-                          pressed: { fill: "#2A0920", outline: "none" },
-                        }}
-                      />
-                    );
-                  })
-                }
-              </Geographies>
-            </ComposableMap>
-          </div>
-        </div>
-
-        {/* Floating Tooltip */}
-        {hoveredCountry && (
+          {/* White box wrapper for the map */}
           <div
-          style={{
-            position: "fixed", // Use `fixed` instead of `absolute` for better positioning
-            left: `${tooltipPosition.x}px`,
-            top: `${tooltipPosition.y}px`,
-            backgroundColor: "#fff",
-            padding: "8px",
-            borderRadius: "5px",
-            boxShadow: "0 2px 5px rgba(0,0,0,0.2)",
-            fontSize: "14px",
-            pointerEvents: "none",
-            maxWidth: "200px",
-            wordWrap: "break-word",
-            whiteSpace: "normal",
-            textAlign: "left",
-            zIndex: 1000, // Ensure tooltip is above other elements
-          }}
-        >             
-            {hoveredCountry}
-          </div>
-        )}
-      </div>
+            style={{
+              backgroundColor: "#fff",
+              padding: "20px",
+              borderRadius: "8px",
+              boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+            }}
+          >
+            <div style={{ textAlign: "center" }}>
+              <ComposableMap projectionConfig={{ scale: 100 }} width={800} height={400}>
+                <Geographies geography={geoUrl}>
+                  {({ geographies }) =>
+                    geographies.map((geo) => {
+                      const countryName = geo.properties.name;
+                      const isInvested =
+                        overseasInvestment.includes(countryName) ||
+                        (countryName === "United States of America" && usInvestmentRegions.length > 0);
 
-      {/* ============== Go back to filter ============== */}
-      <button
-        className="back-button"
-        onClick={() => {
-          if (window.history.length > 2) {
-            navigate("/filter"); 
-          } else {
-            navigate("/filter"); // Otherwise, go directly to the filter page
-          }
-        }}
-      >
-        Go to Screener Page
-      </button>
+                      return (
+                        <Geography
+                          key={geo.rsmKey}
+                          geography={geo}
+                          fill={isInvested ? "#b12d78" : "#D6D6DA"}
+                          stroke="#FFFFFF"
+                          strokeWidth={0.5}
+                          onMouseEnter={(event) => {
+                            setTooltipPosition({
+                              x: event.clientX + 10,
+                              y: event.clientY - 30,
+                            });
+                            setHoveredCountry(
+                              countryName === "United States of America" && usInvestmentRegions.length > 0
+                                ? `States invested: ${usInvestmentRegions.join(", ")}`
+                                : overseasInvestment.includes(countryName)
+                                ? `${countryName}`
+                                : null
+                            );
+                          }}
+                          onMouseMove={(event) => {
+                            setTooltipPosition({
+                              x: event.clientX + 10,
+                              y: event.clientY - 30,
+                            });
+                          }}
+                          onMouseLeave={() => setHoveredCountry(null)}
+                          style={{
+                            default: { outline: "none" },
+                            hover: { fill: "#5A153D", outline: "none" },
+                            pressed: { fill: "#2A0920", outline: "none" },
+                          }}
+                        />
+                      );
+                    })
+                  }
+                </Geographies>
+              </ComposableMap>
+            </div>
+          </div>
+
+          {/* Floating Tooltip */}
+          {hoveredCountry && (
+            <div
+              style={{
+                position: "fixed", // Use `fixed` so it stays with the cursor
+                left: `${tooltipPosition.x}px`,
+                top: `${tooltipPosition.y}px`,
+                backgroundColor: "#fff",
+                padding: "8px",
+                borderRadius: "5px",
+                boxShadow: "0 2px 5px rgba(0,0,0,0.2)",
+                fontSize: "14px",
+                pointerEvents: "none",
+                maxWidth: "200px",
+                wordWrap: "break-word",
+                whiteSpace: "normal",
+                textAlign: "left",
+                zIndex: 1000,
+              }}
+            >
+              {hoveredCountry}
+            </div>
+          )}
+        </div>
+      ) : (
+        // Non-premium fallback
+        <div style={sectionContainer}>
+          <h3 style={{ marginTop: 0, marginBottom: "10px" }}>Geographical Diversification</h3>
+          <p style={{ color: "#5A153D", fontWeight: "bold" }}>
+            This content is available to Premium members only.
+          </p>
+          <button
+            onClick={() => navigate("/pricing")}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "#faf0fb";
+              e.currentTarget.style.color = "#5A153D";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "#5A153D";
+              e.currentTarget.style.color = "#fff";
+            }}
+            style={{
+              marginTop: "1rem",
+              padding: "8px 16px",
+              backgroundColor: "#5A153D",
+              color: "#fff",
+              border: "none",
+              borderRadius: "4px",
+              cursor: "pointer",
+            }}
+          >
+            Upgrade to Premium
+          </button>
+        </div>
+      )}
        {/* The new bottom banner that slides up at scroll-bottom */}
       <BottomBanner /> 
     </div>

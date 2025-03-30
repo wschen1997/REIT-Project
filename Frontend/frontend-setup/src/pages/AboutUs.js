@@ -1,11 +1,9 @@
 import React from "react";
-import Header from "../components/Header.js";
 import BottomBanner from "../components/BottomBanner.js";
 
 function AboutUs() {
   return (
     <>
-      <Header />
       <div
         style={{
           backgroundColor: "#fff",

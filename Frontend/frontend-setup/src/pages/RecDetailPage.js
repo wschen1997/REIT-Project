@@ -14,7 +14,6 @@ import {
 } from "chart.js";
 import 'chartjs-adapter-date-fns';
 import { Bar } from "react-chartjs-2";
-import Header from "../components/Header.js";
 import BottomBanner from "../components/BottomBanner.js";
 
 ChartJS.register(
@@ -202,7 +201,6 @@ function RecDetailPage() {
   if (loading) {
     return (
       <div className="detail-page" style={{ padding: "20px" }}>
-        <Header />
         <h2>{vehicle} - Crowdfunding Dashboard</h2>
         <p>Loading vehicle data...</p>
         <button className="back-button" onClick={() => navigate("/Crowdfunding")}>
@@ -215,7 +213,6 @@ function RecDetailPage() {
   if (error) {
     return (
       <div className="detail-page" style={{ padding: "20px" }}>
-        <Header />
         <h2>{vehicle} - Crowdfunding Dashboard</h2>
         <p>{error}</p>
         <button className="back-button" onClick={() => navigate("/Crowdfunding")}>
@@ -235,7 +232,6 @@ function RecDetailPage() {
 
   return (
     <div className="detail-page" style={{ padding: "20px" }}>
-      <Header />
 
       {/* Title */}
       <div style={{ marginBottom: "20px" }}>

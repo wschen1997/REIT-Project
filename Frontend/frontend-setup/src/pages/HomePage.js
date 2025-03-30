@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Header from "../components/Header.js";
 import BottomBanner from "../components/BottomBanner.js";
 
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:5000";
@@ -68,9 +67,6 @@ function HomePage() {
 
   return (
     <>
-      {/* Reusable Header Component */}
-      <Header />
-
       {/* MAIN CONTAINER */}
       <div className="home" style={{ fontFamily: "Arial, sans-serif" }}>
         {/* HERO SECTION */}

@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Header from "../components/Header.js";
 import BottomBanner from "../components/BottomBanner.js";
 
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:5000";
@@ -60,8 +59,6 @@ function ContactUs() {
 
   return (
     <>
-      <Header />
-
       {/* Main Container */}
       <div
         style={{
@@ -260,11 +257,20 @@ function ContactUs() {
               {/* Submit Button */}
               <button
                 type="submit"
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "#faf0fb";
+                  e.currentTarget.style.color = "#5A153D";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "#5A153D";
+                  e.currentTarget.style.color = "#fff";
+                }}
                 style={{
                   backgroundColor: "#5A153D",
                   color: "#fff",
                   padding: "10px 20px",
                   fontSize: "1rem",
+                  border: "none",
                   borderRadius: "5px",
                   cursor: "pointer",
                   alignSelf: "flex-start",

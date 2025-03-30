@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import Header from "../components/Header.js";
 import BottomBanner from "../components/BottomBanner.js";
 
 // Load backend URL from environment variable
@@ -54,8 +53,6 @@ function CrowdfundingPage() {
 
   return (
     <div className="crowdfunding-page filter-page">
-      <Header />
-
       <h2 style={{ marginBottom: "20px" }}>US Real Estate Crowdfunding Vehicles</h2>
 
       {isLoading ? (

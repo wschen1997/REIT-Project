@@ -1,6 +1,4 @@
-// Pricing.js
 import React, { useEffect, useState } from "react";
-import Header from "../components/Header.js";
 import BottomBanner from "../components/BottomBanner.js";
 import Loading from "../components/Loading.js";
 
@@ -48,8 +46,6 @@ function PricingPage() {
 
   return (
     <div>
-      <Header />
-
       <div style={{ padding: "80px 20px", textAlign: "center" }}>
         <h1 style={{ color: "#5A153D", fontSize: "2.5rem" }}>Unlock Premium Access</h1>
         <p style={{ fontSize: "1.2rem", color: "#333" }}>

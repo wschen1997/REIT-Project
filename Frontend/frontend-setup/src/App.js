@@ -1,5 +1,5 @@
 // App.js
-import React, { useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
 import * as ReactGaModule from "react-ga4";
 
@@ -13,6 +13,7 @@ import ContactUs from "./pages/ContactUs.js";
 import PricingPage from "./pages/Pricing.js";
 import Login from "./pages/Login.js";
 import Signup from "./pages/Signup.js";
+import Header from "./components/Header.js";
 
 import "./App.css";
 
@@ -37,16 +38,25 @@ function AnalyticsTracker() {
 }
 
 function App() {
+  // Track the user's plan here in App, so Header can fill it, and DetailPage can use it
+  const [userPlan, setUserPlan] = useState(null);
+
   return (
     <div className="App">
       <Router>
         <AnalyticsTracker />
+
+        {/* 1) Render Header, passing userPlan & setUserPlan so it can update the plan */}
+        <Header userPlan={userPlan} setUserPlan={setUserPlan} />
+
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/filter" element={<FilterPage />} />
-          <Route path="/reits/:ticker" element={<DetailPage />} />
+
+          {/* 2) Pass userPlan to DetailPage for content gating */}
+          <Route path="/reits/:ticker" element={<DetailPage userPlan={userPlan} />} />
           <Route path="/Crowdfunding" element={<CrowdfundingPage />} />
-          <Route path="/Crowdfunding/:vehicle" element={<RecDetailPage />} />
+          <Route path="/Crowdfunding/:vehicle" element={<RecDetailPage userPlan={userPlan} />} />
           <Route path="/about" element={<AboutUs />} />
           <Route path="/contact" element={<ContactUs />} />
           <Route path="/pricing" element={<PricingPage />} />

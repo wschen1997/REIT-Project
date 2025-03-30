@@ -16,7 +16,6 @@ import {
   where,
 } from "firebase/firestore";
 import { auth, db } from "../firebase.js";
-import Header from "../components/Header.js";
 import BottomBanner from "../components/BottomBanner.js";
 import Loading from "../components/Loading.js";
 
@@ -291,7 +290,6 @@ function Signup() {
 
   return (
     <>
-      <Header />
       {isLoading && <Loading />}
 
       {/* Plain white background (no blur), fill at least full screen */}

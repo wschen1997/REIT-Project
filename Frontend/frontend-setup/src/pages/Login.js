@@ -5,7 +5,6 @@ import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { auth } from "../firebase.js";
 import { db } from "../firebase.js";
 import { collection, query, where, getDocs } from "firebase/firestore";
-import Header from "../components/Header.js";
 import BottomBanner from "../components/BottomBanner.js";
 
 const Login = () => {
@@ -61,9 +60,6 @@ const Login = () => {
 
   return (
     <>
-      {/* 1) Normal page with Header at the top */}
-      <Header />
-
       {/* 2) Plain white background for the entire page */}
       <div style={{ backgroundColor: "#fff", minHeight: "100vh" }}>
         {/* Centered login box */}
