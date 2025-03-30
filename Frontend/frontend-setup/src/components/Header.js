@@ -16,6 +16,8 @@ const Header = () => {
   // Firebase authentication state
   const [currentUser, setCurrentUser] = useState(null);
   const [username, setUsername] = useState("");
+  // State for the Login button hover effect
+  const [loginHovered, setLoginHovered] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -29,31 +31,38 @@ const Header = () => {
             if (!querySnapshot.empty) {
               const userData = querySnapshot.docs[0].data();
               console.log("Firestore user document found:", userData);
+            
               if (!["free", "premium"].includes(userData.plan)) {
                 console.warn("Unauthorized plan. Logging out.");
                 setUsername("");
                 signOut(auth);
                 return;
               }
-              
-              // ✅ only set username when plan is valid
-              setUsername(userData.username || "");                          
+            
+              // only set username when plan is valid
+              setUsername(userData.username || "");
+            
             } else {
+              // <=== We get here when Firestore has NO doc for this user
               if (window.location.pathname === "/signup") {
                 console.log("No user doc found, but user is on /signup => skipping auto-logout");
-                return; // Just return, do NOT sign them out
+                // 1) pretend user is not logged in so the header doesn't show "Hello, user"
+                setCurrentUser(null); 
+                setUsername("");
+                return; 
               }
+              
               console.warn("No user document found in Firestore. Logging out.");
               setUsername("");
               signOut(auth);
-            }
+            }            
           })
           .catch((err) => {
             console.error("Error fetching username:", err);
-            setUsername(""); // 🧼 also clear on error
+            setUsername(""); // also clear on error
           });
       } else {
-        setUsername(""); // 🧼 user signed out, clear it
+        setUsername(""); // user signed out, clear it
       }                
     });
     return () => unsubscribe();
@@ -264,7 +273,7 @@ const Header = () => {
               </span>
               <button
                 onClick={() => {
-                  setUsername(""); // 🧼 optional but safe
+                  setUsername(""); // optional but safe
                   signOut(auth);
                 }}                
                 style={{
@@ -283,17 +292,25 @@ const Header = () => {
           ) : (
             <button
               onClick={() => navigate("/login")}
+              // Capture mouse enter/leave
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "#faf0fb";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "#fff";
+              }}
               style={{
                 padding: "8px 16px",
                 fontSize: "1rem",
                 border: "2px solid #5A153D",
-                color: "#5A153D",
-                backgroundColor: "transparent",
                 borderRadius: "4px",
                 cursor: "pointer",
+                // Conditionally change the text color and background color
+                color: loginHovered ? "#fff" : "#5A153D",
+                backgroundColor: loginHovered ? "#B12D78" : "transparent",
               }}
             >
-              Login
+              Sign In
             </button>
           )}  
         </div>
