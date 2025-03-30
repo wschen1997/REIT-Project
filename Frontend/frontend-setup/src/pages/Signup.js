@@ -31,7 +31,8 @@ const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
 function Signup() {
   const navigate = useNavigate();
-
+  // hover state for plan buttons
+  const [hoveredPlan, setHoveredPlan] = useState(null);
   // states
   const [emailVerified, setEmailVerified] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
@@ -420,25 +421,30 @@ function Signup() {
           <div style={{ display: "flex", gap: "1rem", marginTop: "1rem" }}>
             <button
               onClick={() => setPlan("free")}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = "#faf0fb";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = "#fff";
-              }}
-              style={plan === "free" ? activePlanStyle : inactivePlanStyle}
+              onMouseEnter={() => setHoveredPlan("free")}
+              onMouseLeave={() => setHoveredPlan(null)}
+              style={
+                plan === "free"
+                  ? activePlanStyle
+                  : hoveredPlan === "free"
+                  ? { ...inactivePlanStyle, backgroundColor: "#faf0fb" }
+                  : inactivePlanStyle
+              }
             >
               Free
             </button>
+
             <button
               onClick={() => setPlan("premium")}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = "#faf0fb";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = "#fff";
-              }}
-              style={plan === "premium" ? activePlanStyle : inactivePlanStyle}
+              onMouseEnter={() => setHoveredPlan("premium")}
+              onMouseLeave={() => setHoveredPlan(null)}
+              style={
+                plan === "premium"
+                  ? activePlanStyle
+                  : hoveredPlan === "premium"
+                  ? { ...inactivePlanStyle, backgroundColor: "#faf0fb" }
+                  : inactivePlanStyle
+              }
             >
               Premium
             </button>
@@ -509,8 +515,8 @@ const inputStyle = {
 const activePlanStyle = {
   padding: "0.75rem 1.25rem",
   border: "2px solid #5A153D",
-  backgroundColor: "#5A153D",
-  color: "white",
+  backgroundColor: "#faf0fb",
+  color: "#5A153D",
   borderRadius: "6px",
   cursor: "pointer",
 };
