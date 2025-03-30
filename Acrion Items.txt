@@ -69,5 +69,11 @@ FAQ - Why not single RE? (REC offers thoseas well - diversification)
 
 Long term path - automate data fetching
 
+Use Test
+Free works
+Premium works
+username double count works
+email  double count works
+
 
 

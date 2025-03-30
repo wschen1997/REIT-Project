@@ -20,27 +20,41 @@ const Header = () => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
+      console.log("Firebase Auth state changed. User:", user);
       if (user) {
+        console.log("Checking Firestore for user with email:", user.email);
         const q = query(collection(db, "users"), where("email", "==", user.email));
         getDocs(q)
           .then((querySnapshot) => {
             if (!querySnapshot.empty) {
               const userData = querySnapshot.docs[0].data();
-              if (userData.plan === "premium" || userData.plan === "free") {
-                setUsername(userData.username || "");
-              } else {
+              console.log("Firestore user document found:", userData);
+              if (!["free", "premium"].includes(userData.plan)) {
                 console.warn("Unauthorized plan. Logging out.");
+                setUsername("");
                 signOut(auth);
+                return;
               }
+              
+              // ✅ only set username when plan is valid
+              setUsername(userData.username || "");                          
             } else {
+              if (window.location.pathname === "/signup") {
+                console.log("No user doc found, but user is on /signup => skipping auto-logout");
+                return; // Just return, do NOT sign them out
+              }
               console.warn("No user document found in Firestore. Logging out.");
+              setUsername("");
               signOut(auth);
             }
           })
           .catch((err) => {
             console.error("Error fetching username:", err);
+            setUsername(""); // 🧼 also clear on error
           });
-      }          
+      } else {
+        setUsername(""); // 🧼 user signed out, clear it
+      }                
     });
     return () => unsubscribe();
   }, []);
@@ -249,7 +263,10 @@ const Header = () => {
                 Hello, {username || currentUser.email}
               </span>
               <button
-                onClick={() => signOut(auth)}
+                onClick={() => {
+                  setUsername(""); // 🧼 optional but safe
+                  signOut(auth);
+                }}                
                 style={{
                   padding: "8px 16px",
                   fontSize: "1rem",

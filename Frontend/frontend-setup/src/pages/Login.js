@@ -18,6 +18,7 @@ const Login = () => {
     const status = urlParams.get("status");
     if (status === "activated") {
       setSuccessMessage("✅ Your account has been activated. Please log in.");
+      signOut(auth); // Clear any previous user cache before login
       window.history.replaceState({}, document.title, "/login"); // clean URL
     }
   }, []);  
