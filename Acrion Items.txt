@@ -72,8 +72,12 @@ Long term path - automate data fetching
 Use Test
 Free works
 Premium works
-username double count works
-email  double count works
+Email verification works
+Username double count prevention works
+Email double count prevention works
+Password characters rule work
+Real time check on email verification work
+
 
 
 

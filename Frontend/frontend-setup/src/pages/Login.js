@@ -113,6 +113,14 @@ const Login = () => {
 
           <button
             onClick={handleLogin}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "#faf0fb";
+              e.currentTarget.style.color = "#5A153D";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "#5A153D";
+              e.currentTarget.style.color = "#fff";
+            }}
             style={{
               width: "100%",
               padding: "0.75rem",
@@ -129,6 +137,14 @@ const Login = () => {
 
           <button
             onClick={() => navigate("/")}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "#faf0fb";
+              e.currentTarget.style.color = "#5A153D";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "#ddd";
+              e.currentTarget.style.color = "#333";
+            }}
             style={{
               marginTop: "1rem",
               padding: "0.6rem 1rem",
