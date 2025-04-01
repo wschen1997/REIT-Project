@@ -28,9 +28,11 @@ const Loading = () => {
           fontSize: "1.2rem",
           fontWeight: "bold",
           color: "#5A153D",
+          textAlign: "center",
         }}
       >
         Loading, please wait...
+        <br />
       </div>
     </div>
   );

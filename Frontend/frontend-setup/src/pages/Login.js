@@ -1,7 +1,11 @@
-// Login.js
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { signInWithEmailAndPassword, signOut } from "firebase/auth";
+import {
+  signInWithEmailAndPassword,
+  signOut,
+  GoogleAuthProvider,
+  signInWithPopup,
+} from "firebase/auth";
 import { auth } from "../firebase.js";
 import { db } from "../firebase.js";
 import { collection, query, where, getDocs } from "firebase/firestore";
@@ -13,13 +17,15 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+
   const inputStyle = {
     width: "95%",
     padding: "0.75rem",
     fontSize: "1rem",
     borderRadius: "6px",
     marginBottom: "1.3rem",
-  };  
+    border: "1px solid #ccc",
+  };
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -31,8 +37,10 @@ const Login = () => {
     }
   }, []);
 
+  // Existing email/password login
   const handleLogin = async () => {
     try {
+      setError("");
       const userCred = await signInWithEmailAndPassword(auth, email, password);
 
       if (!userCred.user.emailVerified) {
@@ -58,11 +66,45 @@ const Login = () => {
     }
   };
 
+  // Google login logic
+  const googleProvider = new GoogleAuthProvider();
+
+  const handleGoogleLogin = async () => {
+    try {
+      setError("");
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+      console.log("Google user is:", user);
+
+      // Check if Firestore doc exists
+      const q = query(collection(db, "users"), where("email", "==", user.email));
+      const snap = await getDocs(q);
+      if (snap.empty) {
+        // Means user doc doesn't exist => not fully registered
+        setError("Your account is not active yet. Please complete the signup process.");
+        await signOut(auth);
+        return;
+      }
+
+      // If doc found, check plan
+      const userDoc = snap.docs[0].data();
+      if (!["free", "premium"].includes(userDoc.plan)) {
+        setError("Your account is not active yet. Please complete payment or signup.");
+        await signOut(auth);
+        return;
+      }
+
+      // plan is valid => navigate home
+      navigate("/");
+    } catch (err) {
+      console.error("Google login error:", err);
+      setError("Failed to log in with Google. Please try again or use email/password.");
+    }
+  };
+
   return (
     <>
-      {/* 2) Plain white background for the entire page */}
       <div style={{ backgroundColor: "#fff", minHeight: "100vh" }}>
-        {/* Centered login box */}
         <div
           style={{
             width: "clamp(320px, 40%, 600px)",
@@ -89,7 +131,7 @@ const Login = () => {
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            style={{ ...inputStyle, border: "1px solid #ccc" }}
+            style={inputStyle}
           />
 
           <input
@@ -97,7 +139,7 @@ const Login = () => {
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            style={{ ...inputStyle, border: "1px solid #ccc" }}
+            style={inputStyle}
           />
 
           {successMessage && (
@@ -107,6 +149,7 @@ const Login = () => {
             <p style={{ color: "red", marginBottom: "1rem" }}>{error}</p>
           )}
 
+          {/* Email/Password login button */}
           <button
             onClick={handleLogin}
             onMouseEnter={(e) => {
@@ -131,6 +174,49 @@ const Login = () => {
             Login
           </button>
 
+          {/* Divider line with text "Or login using" */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              width: "100%",
+              margin: "1.5rem 0",
+            }}
+          >
+            <div style={{ flex: 1, height: "1px", backgroundColor: "#ccc" }} />
+            <span style={{ margin: "0 10px", color: "#666", fontSize: "0.9rem" }}>
+              Or login using
+            </span>
+            <div style={{ flex: 1, height: "1px", backgroundColor: "#ccc" }} />
+          </div>
+
+          {/* Google Login button, same style as "Sign up with Google" from Signup */}
+          <button
+            onClick={handleGoogleLogin}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "#faf0fb";
+              e.currentTarget.style.color = "#5A153D";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "#fff";
+              e.currentTarget.style.color = "#5A153D";
+            }}
+            style={{
+              width: "100%",
+              padding: "0.75rem",
+              backgroundColor: "#fff",
+              color: "#5A153D",
+              border: "2px solid #5A153D",
+              borderRadius: "6px",
+              fontSize: "1rem",
+              cursor: "pointer",
+              marginBottom: "1rem",
+            }}
+          >
+            Google Account
+          </button>
+
+          {/* Return Home button, matching same style & width */}
           <button
             onClick={() => navigate("/")}
             onMouseEnter={(e) => {
@@ -142,13 +228,13 @@ const Login = () => {
               e.currentTarget.style.color = "#333";
             }}
             style={{
-              marginTop: "1rem",
-              padding: "0.6rem 1rem",
+              width: "100%",
+              padding: "0.75rem",
               backgroundColor: "#ddd",
               color: "#333",
               border: "none",
               borderRadius: "6px",
-              fontSize: "0.9rem",
+              fontSize: "1rem",
               cursor: "pointer",
             }}
           >
@@ -185,7 +271,6 @@ const Login = () => {
         </div>
       </div>
 
-      {/* 3) BottomBanner at the end */}
       <BottomBanner />
     </>
   );

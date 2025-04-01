@@ -65,6 +65,18 @@ function HomePage() {
     transition: "background-color 0.2s, transform 0.2s",
   };
 
+  // A single style object for all form controls so they line up identically
+  const commonFormControlStyle = {
+    width: "600px",
+    height: "45px",
+    boxSizing: "border-box",
+    padding: "10px",
+    border: "1px solid #ccc",
+    borderRadius: "5px",
+    fontSize: "1rem",
+    fontFamily: "inherit",
+  };
+
   return (
     <>
       {/* MAIN CONTAINER */}
@@ -256,7 +268,16 @@ function HomePage() {
 
           {/* SIGN-UP FORM */}
           {!submitted ? (
-            <form onSubmit={handleSubmit} style={{ marginTop: "20px" }}>
+            <form
+              onSubmit={handleSubmit}
+              style={{
+                marginTop: "20px",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: "15px",
+              }}
+            >
               {/* Email Input */}
               <input
                 type="email"
@@ -265,14 +286,7 @@ function HomePage() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 style={{
-                  padding: "10px",
-                  width: "280px",
-                  border: "1px solid #ccc",
-                  borderRadius: "5px",
-                  marginBottom: "10px",
-                  marginRight: "10px",
-                  fontSize: "1rem",
-                  fontFamily: "inherit",
+                  ...commonFormControlStyle,
                 }}
               />
 
@@ -282,13 +296,9 @@ function HomePage() {
                 onChange={(e) => setInterest(e.target.value)}
                 required
                 style={{
-                  padding: "8px",
-                  borderRadius: "5px",
-                  width: "260px", // Widened further to avoid text cutoff
-                  marginBottom: "10px",
-                  marginRight: "10px",
-                  fontSize: "1rem",
-                  fontFamily: "inherit",
+                  ...commonFormControlStyle,
+                  // We want the select text to be left-aligned inside
+                  textAlignLast: "left",
                 }}
               >
                 <option value="">What are you interested in?</option>
@@ -297,38 +307,41 @@ function HomePage() {
                 <option value="Both">Both</option>
               </select>
 
-              <br />
-
               {/* Feedback */}
               <textarea
                 placeholder="Any feedback or features you'd love to see?"
                 value={feedback}
                 onChange={(e) => setFeedback(e.target.value)}
                 style={{
-                  display: "block",
-                  margin: "10px auto",
-                  width: "300px",
-                  height: "60px",
-                  padding: "10px",
-                  border: "1px solid #ccc",
-                  borderRadius: "5px",
-                  fontSize: "1rem",
-                  fontFamily: "inherit",
+                  ...commonFormControlStyle,
+                  boxSizing: "border-box",
+                  padding: "10px",  
+                  // For textarea, we might let it be taller
+                  height: "100px", // slightly taller than 45px
+                  resize: "vertical", // user can still resize if they want
+                  marginTop: "-10px",
+                  marginBottom: "5px",
                 }}
               />
 
               {/* Submit Button */}
               <button
                 type="submit"
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "#faf0fb";
+                  e.currentTarget.style.color = "#5A153D";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "#5A153D";
+                  e.currentTarget.style.color = "#fff";
+                }}
                 style={{
+                  ...commonFormControlStyle,
                   backgroundColor: "#5A153D",
-                  color: "white",
-                  padding: "10px 15px",
+                  color: "#fff",
                   border: "none",
                   cursor: "pointer",
-                  borderRadius: "5px",
-                  marginTop: "10px",
-                  fontSize: "1rem",
+                  // Adjust the button's height so it matches the inputs
                 }}
               >
                 Sign Up
@@ -358,7 +371,7 @@ function HomePage() {
             left: 0,
             width: "100%",
             height: "100%",
-            backgroundColor: "rgba(0, 0, 0, 0.5)", // Dim background
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",

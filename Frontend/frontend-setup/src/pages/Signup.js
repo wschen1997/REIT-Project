@@ -1,4 +1,3 @@
-// Signup.js
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -7,6 +6,8 @@ import {
   signInWithEmailAndPassword,
   fetchSignInMethodsForEmail,
   signOut,
+  GoogleAuthProvider,
+  signInWithPopup,
 } from "firebase/auth";
 import {
   collection,
@@ -14,7 +15,9 @@ import {
   getDocs,
   query,
   where,
-} from "firebase/firestore";
+  doc,
+  updateDoc,
+} from "firebase/firestore"; // doc, updateDoc for updates
 import { auth, db } from "../firebase.js";
 import BottomBanner from "../components/BottomBanner.js";
 import Loading from "../components/Loading.js";
@@ -30,36 +33,38 @@ const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
 function Signup() {
   const navigate = useNavigate();
-  // hover state for plan buttons
+
+  // -------------- Local UI States --------------
   const [hoveredPlan, setHoveredPlan] = useState(null);
-  // states
   const [emailVerified, setEmailVerified] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [emailSent, setEmailSent] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
+  // -------------- Form Fields --------------
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [plan, setPlan] = useState(null); // "free" or "premium"
 
-  // top-level error (for final signup or other actions)
+  // -------------- Validation & Error States --------------
   const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
-
-  // local validation states
   const [usernameError, setUsernameError] = useState("");
   const [emailError, setEmailError] = useState("");
-
-  // For password format checks
   const [passMinLength, setPassMinLength] = useState(false);
   const [passHasLetter, setPassHasLetter] = useState(false);
   const [passHasNumber, setPassHasNumber] = useState(false);
   const [passHasSpecial, setPassHasSpecial] = useState(false);
   const [passwordTouched, setPasswordTouched] = useState(false);
 
-  // handle Stripe success from URL
+  // -------------- Track if user is from Google --------------
+  const [isGoogleUser, setIsGoogleUser] = useState(false);
+
+  // --------------------------------------
+  //  Handle Stripe success from ?status=success
+  // --------------------------------------
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const status = urlParams.get("status");
@@ -76,7 +81,9 @@ function Signup() {
           });
           const result = await response.json();
           if (!response.ok) throw new Error(result.error || "Failed to register");
-          navigate(`/login?status=activated`);
+
+          // On success, direct to login
+          navigate("/login?status=activated");
         } catch (err) {
           console.error("Post-payment setup error:", err);
           setError("Payment succeeded but account setup failed. Please contact support.");
@@ -86,8 +93,9 @@ function Signup() {
     }
   }, [navigate]);
 
-  // POLL FOR EMAIL VERIFICATION: every 5s, reload user data
-  // if not verified, keep polling. If verified, stop.
+  // --------------------------------------
+  //  Poll for email verification if using normal email flow
+  // --------------------------------------
   useEffect(() => {
     if (emailSent && !emailVerified) {
       const intervalId = setInterval(async () => {
@@ -103,7 +111,9 @@ function Signup() {
     }
   }, [emailSent, emailVerified]);
 
-  // resend cooldown
+  // --------------------------------------
+  //  Resend verification cooldown
+  // --------------------------------------
   useEffect(() => {
     let timer;
     if (resendCooldown > 0) {
@@ -112,9 +122,9 @@ function Signup() {
     return () => clearTimeout(timer);
   }, [resendCooldown]);
 
-  // ----- "Instant" checks (onBlur / onChange) -----
-
-  // 1) Check if username is taken
+  // --------------------------------------
+  //  Username check
+  // --------------------------------------
   async function checkUsernameInUse() {
     setUsernameError("");
     if (!username) return;
@@ -131,7 +141,9 @@ function Signup() {
     }
   }
 
-  // 2) Check if email is taken
+  // --------------------------------------
+  //  Email check
+  // --------------------------------------
   async function checkEmailInUse() {
     setEmailError("");
     if (!email) return;
@@ -154,7 +166,9 @@ function Signup() {
     }
   }
 
-  // 3) Validate password format on each keystroke
+  // --------------------------------------
+  //  Validate password format
+  // --------------------------------------
   function validatePasswordFormat(newPass) {
     setPassMinLength(newPass.length >= 8);
     setPassHasLetter(/[A-Za-z]/.test(newPass));
@@ -162,9 +176,9 @@ function Signup() {
     setPassHasSpecial(/[^A-Za-z0-9]/.test(newPass));
   }
 
-  // ---------------
-
-  // handle sending verification email
+  // --------------------------------------
+  //  Send verification email (normal email flow)
+  // --------------------------------------
   const handleSendVerification = async () => {
     if (!email || !password) {
       setError("Email and password are required for verification.");
@@ -177,14 +191,13 @@ function Signup() {
       const methods = await fetchSignInMethodsForEmail(auth, email);
 
       if (methods.length === 0) {
-        // no user in Firebase Auth => create
+        // No user => create in Firebase Auth
         const userCred = await createUserWithEmailAndPassword(auth, email, password);
         await sendEmailVerification(userCred.user);
-        // remain signed in so we can poll .reload()
         setEmailSent(true);
         setResendCooldown(50);
       } else {
-        // user in Auth => sign in to check if verified
+        // There's a user => sign in to see if verified
         const userCred = await signInWithEmailAndPassword(auth, email, password);
         if (userCred.user.emailVerified) {
           setEmailVerified(true);
@@ -202,27 +215,80 @@ function Signup() {
     }
   };
 
-  // final signup
-  const handleSignup = async () => {
-    if (
-      usernameError ||
-      emailError ||
-      !passMinLength ||
-      !passHasLetter ||
-      !passHasNumber ||
-      !passHasSpecial
-    ) {
-      setError("Please fix the errors above before continuing.");
-      return;
-    }
+  // --------------------------------------
+  //  Google sign-up logic
+  // --------------------------------------
+  const googleProvider = new GoogleAuthProvider();
 
-    if (!emailVerified) {
-      setError("Please verify your email before continuing.");
-      return;
+  const handleGoogleSignup = async () => {
+    try {
+      setError("");
+      setIsLoading(true);
+
+      // 1) Sign in with Google (pop-up)
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+      console.log("Google user is:", user);
+
+      setIsGoogleUser(true);
+
+      // If user.displayName is present, auto-populate
+      if (user.displayName) {
+        setUsername(user.displayName.replace(/\s+/g, ""));
+      }
+      setEmail(user.email);
+
+      // We do NOT create Firestore doc here yet. We'll create/update on plan selection.
+      setSuccessMessage(
+        "Google sign-in successful. Please select a plan (free or premium) below."
+      );
+    } catch (err) {
+      console.error("Google signup error:", err);
+      if (err.code === "auth/popup-closed-by-user") {
+        setError("You closed the Google popup before choosing an account.");
+      } else {
+        setError("Failed to sign up with Google. Please try again or use email/password.");
+      }
+    } finally {
+      setIsLoading(false);
     }
-    if (!username || !email || !password || !plan) {
-      setError("All fields are required.");
-      return;
+  };
+
+  // --------------------------------------
+  //  Final signup logic
+  // --------------------------------------
+  const handleSignup = async () => {
+    // If not google user => normal checks
+    if (!isGoogleUser) {
+      if (
+        usernameError ||
+        emailError ||
+        !passMinLength ||
+        !passHasLetter ||
+        !passHasNumber ||
+        !passHasSpecial
+      ) {
+        setError("Please fix the errors above before continuing.");
+        return;
+      }
+      if (!emailVerified) {
+        setError("Please verify your email before continuing.");
+        return;
+      }
+      if (!username || !email || !password || !plan) {
+        setError("All fields are required.");
+        return;
+      }
+    } else {
+      // If google user => skip password & email verification
+      if (!username) {
+        setError("Please set a username before continuing.");
+        return;
+      }
+      if (!plan) {
+        setError("Please select a plan (free or premium) before continuing.");
+        return;
+      }
     }
 
     try {
@@ -231,27 +297,7 @@ function Signup() {
 
       const usersRef = collection(db, "users");
 
-      // double-check email in Firestore
-      const emailQuery = query(usersRef, where("email", "==", email));
-      const emailSnap = await getDocs(emailQuery);
-      if (!emailSnap.empty) {
-        setError(
-          "An account with this email already exists. If this is you, please log in or reset your password."
-        );
-        setIsLoading(false);
-        return;
-      }
-
-      // double-check username in Firestore
-      const usernameQuery = query(usersRef, where("username", "==", username));
-      const usernameSnap = await getDocs(usernameQuery);
-      if (!usernameSnap.empty) {
-        setError("This username is already taken. Please choose a different one.");
-        setIsLoading(false);
-        return;
-      }
-
-      // In a real app, do NOT store plaintext passwords in Firestore.
+      // 1) If plan === premium => stripe checkout
       if (plan === "premium") {
         const response = await fetch(`${API_BASE_URL}/api/create-checkout-session`, {
           method: "POST",
@@ -269,32 +315,50 @@ function Signup() {
           throw new Error("Stripe session creation failed");
         }
       } else {
-        // plan === "free"
-        await addDoc(usersRef, {
-          username,
-          email,
-          password, // demonstration only
-          plan,
-          createdAt: new Date().toISOString(),
-        });
+        // 2) plan === "free"
+        const emailQuery = query(usersRef, where("email", "==", email));
+        const emailSnap = await getDocs(emailQuery);
+
+        if (emailSnap.empty) {
+          // No doc => create
+          await addDoc(usersRef, {
+            username,
+            email,
+            password: isGoogleUser ? "" : password,
+            plan,
+            createdAt: new Date().toISOString(),
+          });
+        } else {
+          // doc exist => update
+          const existingDoc = emailSnap.docs[0];
+          const docRef = existingDoc.ref;
+          await updateDoc(docRef, {
+            username,
+            plan,
+            password: isGoogleUser ? "" : password,
+          });
+        }
+
+        // sign out from Firebase so user can log in again
         await signOut(auth);
         navigate("/login?status=activated");
       }
     } catch (err) {
-      setError(err.message);
       console.error("Signup error:", err);
+      setError(err.message);
     } finally {
       setIsLoading(false);
     }
   };
 
+  // --------------------------------------
+  //  Render
+  // --------------------------------------
   return (
     <>
       {isLoading && <Loading />}
 
-      {/* Plain white background (no blur), fill at least full screen */}
       <div style={{ backgroundColor: "#fff", minHeight: "100vh" }}>
-        {/* Centered sign-up box */}
         <div
           style={{
             width: "clamp(320px, 40%, 600px)",
@@ -319,7 +383,7 @@ function Signup() {
             value={username}
             onChange={(e) => {
               setUsername(e.target.value);
-              setUsernameError(""); // reset if user changes
+              setUsernameError("");
             }}
             onBlur={checkUsernameInUse}
             style={inputStyle}
@@ -328,39 +392,43 @@ function Signup() {
             <p style={{ color: "red", marginTop: "-0.5rem" }}>{usernameError}</p>
           )}
 
-          {/* PASSWORD */}
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => {
-              const newPass = e.target.value;
-              setPassword(newPass);
-              setPasswordTouched(true);
-              validatePasswordFormat(newPass);
-            }}
-            style={inputStyle}
-          />
-          {passwordTouched && (
-            <div style={{ textAlign: "left", marginBottom: "1.3rem" }}>
-              <p style={{ margin: "0 0 0.25rem", fontWeight: "bold" }}>
-                Password Requirements:
-              </p>
-              <ul style={{ listStyleType: "disc", paddingLeft: "1.25rem", margin: 0 }}>
-                <li style={{ color: passMinLength ? "green" : "red" }}>
-                  At least 8 characters
-                </li>
-                <li style={{ color: passHasLetter ? "green" : "red" }}>
-                  At least one letter
-                </li>
-                <li style={{ color: passHasNumber ? "green" : "red" }}>
-                  At least one digit
-                </li>
-                <li style={{ color: passHasSpecial ? "green" : "red" }}>
-                  At least one special character
-                </li>
-              </ul>
-            </div>
+          {/* PASSWORD (hidden for google user) */}
+          {!isGoogleUser && (
+            <>
+              <input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => {
+                  const newPass = e.target.value;
+                  setPassword(newPass);
+                  setPasswordTouched(true);
+                  validatePasswordFormat(newPass);
+                }}
+                style={inputStyle}
+              />
+              {passwordTouched && (
+                <div style={{ textAlign: "left", marginBottom: "1.3rem" }}>
+                  <p style={{ margin: "0 0 0.25rem", fontWeight: "bold" }}>
+                    Password Requirements:
+                  </p>
+                  <ul style={{ listStyleType: "disc", paddingLeft: "1.25rem", margin: 0 }}>
+                    <li style={{ color: passMinLength ? "green" : "red" }}>
+                      At least 8 characters
+                    </li>
+                    <li style={{ color: passHasLetter ? "green" : "red" }}>
+                      At least one letter
+                    </li>
+                    <li style={{ color: passHasNumber ? "green" : "red" }}>
+                      At least one digit
+                    </li>
+                    <li style={{ color: passHasSpecial ? "green" : "red" }}>
+                      At least one special character
+                    </li>
+                  </ul>
+                </div>
+              )}
+            </>
           )}
 
           {/* EMAIL */}
@@ -374,60 +442,123 @@ function Signup() {
             }}
             onBlur={checkEmailInUse}
             style={inputStyle}
+            disabled={isGoogleUser}
           />
           {emailError && (
             <p style={{ color: "red", marginTop: "-0.5rem" }}>{emailError}</p>
           )}
 
-          {/* SEND VERIFICATION */}
-          <button
-            onClick={handleSendVerification}
-            disabled={resendCooldown > 0 || sendingEmail || emailVerified}
-            onMouseEnter={(e) => {
-              // Only apply hover color if the button isn't disabled
-              if (!emailVerified && !sendingEmail && resendCooldown === 0) {
-                e.currentTarget.style.color = "#B12D78";
-              }
-            }}
-            onMouseLeave={(e) => {
-              // Revert to default color logic
-              if (!emailVerified && !sendingEmail && resendCooldown === 0) {
+          {/* SEND VERIFICATION (hidden if google user) */}
+          {!isGoogleUser && (
+            <button
+              onClick={handleSendVerification}
+              disabled={resendCooldown > 0 || sendingEmail || emailVerified}
+              onMouseEnter={(e) => {
+                if (!emailVerified && !sendingEmail && resendCooldown === 0) {
+                  e.currentTarget.style.color = "#B12D78";
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!emailVerified && !sendingEmail && resendCooldown === 0) {
+                  e.currentTarget.style.color = "#5A153D";
+                }
+              }}
+              style={{
+                marginBottom: "0.5rem",
+                color: emailVerified ? "green" : resendCooldown > 0 ? "#333" : "#5A153D",
+                backgroundColor: "transparent",
+                border: "none",
+                fontWeight: "bold",
+                cursor: emailVerified ? "default" : "pointer",
+              }}
+            >
+              {emailVerified
+                ? "Email Verified"
+                : sendingEmail
+                ? "Sending..."
+                : resendCooldown > 0
+                ? `Verification Sent (${resendCooldown}s)`
+                : emailSent
+                ? "Resend Verification Email"
+                : "Click here to verify your email"}
+            </button>
+          )}
+
+          {/* Google Sign-Up Button */}
+          {!isGoogleUser && (
+            <button
+              onClick={handleGoogleSignup}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "#faf0fb";
                 e.currentTarget.style.color = "#5A153D";
-              }
-            }}
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "#fff";
+                e.currentTarget.style.color = "#5A153D";
+              }}
+              style={{
+                margin: "1rem 0",
+                padding: "0.75rem 1.5rem",
+                backgroundColor: "#fff",
+                color: "#5A153D",
+                border: "2px solid #5A153D",
+                borderRadius: "6px",
+                fontSize: "1rem",
+                width: "105%",
+                height: "45px",
+                cursor: "pointer",
+              }}
+            >
+              Sign Up with Google
+            </button>
+          )}
+
+          {/* Divider line + small text for plan explanation */}
+          <div
             style={{
-              marginBottom: "0.5rem",
-              color: emailVerified ? "green" : resendCooldown > 0 ? "#333" : "#5A153D",
-              backgroundColor: "transparent",
-              border: "none",
-              fontWeight: "bold",
-              cursor: emailVerified ? "default" : "pointer",
+              display: "flex",
+              alignItems: "center",
+              width: "100%",
+              margin: "1.5rem 0 1rem 0",
             }}
           >
-            {emailVerified
-              ? "Email Verified"
-              : sendingEmail
-              ? "Sending..."
-              : resendCooldown > 0
-              ? `Verification Sent (${resendCooldown}s)`
-              : emailSent
-              ? "Resend Verification Email"
-              : "Send Verification Email"}
-          </button>
+            <div style={{ flex: 1, height: "1px", backgroundColor: "#ccc" }} />
+            <span style={{ margin: "0 10px", color: "#666", fontSize: "0.9rem" }}>
+              Choose Your Plan
+            </span>
+            <div style={{ flex: 1, height: "1px", backgroundColor: "#ccc" }} />
+          </div>
 
-          {/* PLAN SELECTOR */}
-          <div style={{ display: "flex", gap: "1rem", marginTop: "1rem" }}>
+          {/* Short explanation of free vs premium */}
+          <p style={{ color: "#555", fontSize: "0.85rem", textAlign: "center", margin: "0 0 1rem" }}>
+            <strong>Free</strong>: Basic features at no cost.  
+            <br />
+            <strong>Premium</strong>: Advanced analytics and full access.
+          </p>
+
+          {/* PLAN SELECTOR (evenly spaced) */}
+          <div
+            style={{
+              display: "flex",
+              gap: "1rem",
+              justifyContent: "center",
+              width: "105%",
+              height: "45px",
+              marginTop: "0.5rem",
+            }}
+          >
             <button
               onClick={() => setPlan("free")}
               onMouseEnter={() => setHoveredPlan("free")}
               onMouseLeave={() => setHoveredPlan(null)}
-              style={
-                plan === "free"
+              style={{
+                ...planButtonStyle,
+                ...(plan === "free"
                   ? activePlanStyle
                   : hoveredPlan === "free"
                   ? { ...inactivePlanStyle, backgroundColor: "#faf0fb" }
-                  : inactivePlanStyle
-              }
+                  : inactivePlanStyle),
+              }}
             >
               Free
             </button>
@@ -436,19 +567,20 @@ function Signup() {
               onClick={() => setPlan("premium")}
               onMouseEnter={() => setHoveredPlan("premium")}
               onMouseLeave={() => setHoveredPlan(null)}
-              style={
-                plan === "premium"
+              style={{
+                ...planButtonStyle,
+                ...(plan === "premium"
                   ? activePlanStyle
                   : hoveredPlan === "premium"
                   ? { ...inactivePlanStyle, backgroundColor: "#faf0fb" }
-                  : inactivePlanStyle
-              }
+                  : inactivePlanStyle),
+              }}
             >
               Premium
             </button>
           </div>
 
-          {/* CONTINUE BUTTON with hover fill effect */}
+          {/* CONTINUE BUTTON */}
           <button
             onClick={handleSignup}
             onMouseEnter={(e) => {
@@ -464,7 +596,7 @@ function Signup() {
             Continue
           </button>
 
-          {/*  "Already have an account?" prompt */}
+          {/* "Already have an account?" */}
           <div
             style={{
               marginTop: "1.5rem",
@@ -510,17 +642,23 @@ const inputStyle = {
   border: "1px solid #ccc",
 };
 
-const activePlanStyle = {
+// Reused style for plan buttons
+const planButtonStyle = {
+  flex: 1,
   padding: "0.75rem 1.25rem",
-  border: "2px solid #5A153D",
-  backgroundColor: "#faf0fb",
-  color: "#5A153D",
   borderRadius: "6px",
   cursor: "pointer",
+  border: "2px solid #5A153D",
+  textAlign: "center",
+  fontSize: "1rem",
+};
+
+const activePlanStyle = {
+  backgroundColor: "#faf0fb",
+  color: "#5A153D",
 };
 
 const inactivePlanStyle = {
-  ...activePlanStyle,
   backgroundColor: "white",
   color: "#5A153D",
 };
@@ -531,6 +669,8 @@ const signupBtn = {
   backgroundColor: "#5A153D",
   color: "#fff",
   border: "none",
+  width: "105%",
+  height: "45px",
   borderRadius: "6px",
   fontSize: "1rem",
   cursor: "pointer",
