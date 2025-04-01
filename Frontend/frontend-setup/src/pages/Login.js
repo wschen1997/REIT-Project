@@ -185,7 +185,7 @@ const Login = () => {
           >
             <div style={{ flex: 1, height: "1px", backgroundColor: "#ccc" }} />
             <span style={{ margin: "0 10px", color: "#666", fontSize: "0.9rem" }}>
-              Or login using
+              Or sign in using
             </span>
             <div style={{ flex: 1, height: "1px", backgroundColor: "#ccc" }} />
           </div>

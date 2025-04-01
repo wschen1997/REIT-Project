@@ -20,7 +20,6 @@ import {
 } from "firebase/firestore"; // doc, updateDoc for updates
 import { auth, db } from "../firebase.js";
 import BottomBanner from "../components/BottomBanner.js";
-import Loading from "../components/Loading.js";
 
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:5000";
 
@@ -40,7 +39,6 @@ function Signup() {
   const [resendCooldown, setResendCooldown] = useState(0);
   const [emailSent, setEmailSent] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
 
   // -------------- Form Fields --------------
   const [username, setUsername] = useState("");
@@ -223,34 +221,19 @@ function Signup() {
   const handleGoogleSignup = async () => {
     try {
       setError("");
-      setIsLoading(true);
-
-      // 1) Sign in with Google (pop-up)
       const result = await signInWithPopup(auth, googleProvider);
-      const user = result.user;
-      console.log("Google user is:", user);
 
       setIsGoogleUser(true);
-
-      // If user.displayName is present, auto-populate
-      if (user.displayName) {
-        setUsername(user.displayName.replace(/\s+/g, ""));
+      if (result.user.displayName) {
+        setUsername(result.user.displayName.replace(/\s+/g, ""));
       }
-      setEmail(user.email);
-
-      // We do NOT create Firestore doc here yet. We'll create/update on plan selection.
+      setEmail(result.user.email);
       setSuccessMessage(
         "Google sign-in successful. Please select a plan (free or premium) below."
       );
     } catch (err) {
       console.error("Google signup error:", err);
-      if (err.code === "auth/popup-closed-by-user") {
-        setError("You closed the Google popup before choosing an account.");
-      } else {
-        setError("Failed to sign up with Google. Please try again or use email/password.");
-      }
-    } finally {
-      setIsLoading(false);
+      setError("Failed to sign up with Google. Please try again or use email/password.");
     }
   };
 
@@ -292,7 +275,6 @@ function Signup() {
     }
 
     try {
-      setIsLoading(true);
       setError("");
 
       const usersRef = collection(db, "users");
@@ -346,8 +328,6 @@ function Signup() {
     } catch (err) {
       console.error("Signup error:", err);
       setError(err.message);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -356,8 +336,6 @@ function Signup() {
   // --------------------------------------
   return (
     <>
-      {isLoading && <Loading />}
-
       <div style={{ backgroundColor: "#fff", minHeight: "100vh" }}>
         <div
           style={{
@@ -484,33 +462,51 @@ function Signup() {
             </button>
           )}
 
-          {/* Google Sign-Up Button */}
+          {/* "Or sign up using" + Google button => hidden if isGoogleUser is true */}
           {!isGoogleUser && (
-            <button
-              onClick={handleGoogleSignup}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = "#faf0fb";
-                e.currentTarget.style.color = "#5A153D";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = "#fff";
-                e.currentTarget.style.color = "#5A153D";
-              }}
-              style={{
-                margin: "1rem 0",
-                padding: "0.75rem 1.5rem",
-                backgroundColor: "#fff",
-                color: "#5A153D",
-                border: "2px solid #5A153D",
-                borderRadius: "6px",
-                fontSize: "1rem",
-                width: "105%",
-                height: "45px",
-                cursor: "pointer",
-              }}
-            >
-              Sign Up with Google
-            </button>
+            <>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  width: "100%",
+                  margin: "0.5rem 0 0.5rem 0",
+                }}
+              >
+                <div style={{ flex: 1, height: "1px", backgroundColor: "#ccc" }} />
+                <span style={{ margin: "0 10px", color: "#666", fontSize: "0.9rem" }}>
+                  Or sign up using
+                </span>
+                <div style={{ flex: 1, height: "1px", backgroundColor: "#ccc" }} />
+              </div>
+
+              {/* Google Sign-Up Button */}
+              <button
+                onClick={handleGoogleSignup}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "#faf0fb";
+                  e.currentTarget.style.color = "#5A153D";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "#fff";
+                  e.currentTarget.style.color = "#5A153D";
+                }}
+                style={{
+                  margin: "1rem 0",
+                  padding: "0.75rem 1.5rem",
+                  backgroundColor: "#fff",
+                  color: "#5A153D",
+                  border: "2px solid #5A153D",
+                  borderRadius: "6px",
+                  fontSize: "1rem",
+                  width: "105%",
+                  height: "45px",
+                  cursor: "pointer",
+                }}
+              >
+                Google Account
+              </button>
+            </>
           )}
 
           {/* Divider line + small text for plan explanation */}
@@ -519,7 +515,7 @@ function Signup() {
               display: "flex",
               alignItems: "center",
               width: "100%",
-              margin: "1.5rem 0 1rem 0",
+              margin: "0.5rem 0 0.8rem 0",
             }}
           >
             <div style={{ flex: 1, height: "1px", backgroundColor: "#ccc" }} />
@@ -528,13 +524,6 @@ function Signup() {
             </span>
             <div style={{ flex: 1, height: "1px", backgroundColor: "#ccc" }} />
           </div>
-
-          {/* Short explanation of free vs premium */}
-          <p style={{ color: "#555", fontSize: "0.85rem", textAlign: "center", margin: "0 0 1rem" }}>
-            <strong>Free</strong>: Basic features at no cost.  
-            <br />
-            <strong>Premium</strong>: Advanced analytics and full access.
-          </p>
 
           {/* PLAN SELECTOR (evenly spaced) */}
           <div
