@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import BottomBanner from "../components/BottomBanner.js";
+import Loading from "../components/Loading.js"; // <-- Added import for Loading
 
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:5000";
 
@@ -13,6 +14,7 @@ function HomePage() {
   const [interest, setInterest] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [showPopup, setShowPopup] = useState(false); // Controls popup visibility
+  const [isLoading, setIsLoading] = useState(false); // <-- Added loading state
 
   // Handle form submission
   const handleSubmit = async (e) => {
@@ -22,6 +24,8 @@ function HomePage() {
       alert("Please select your investment interest before submitting.");
       return;
     }
+
+    setIsLoading(true); // <-- Show Loading before fetch
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/signup`, {
@@ -41,6 +45,8 @@ function HomePage() {
       }
     } catch (error) {
       console.error("Error submitting form:", error);
+    } finally {
+      setIsLoading(false); // <-- Hide Loading after fetch completes
     }
   };
 
@@ -297,7 +303,6 @@ function HomePage() {
                 required
                 style={{
                   ...commonFormControlStyle,
-                  // We want the select text to be left-aligned inside
                   textAlignLast: "left",
                 }}
               >
@@ -315,10 +320,9 @@ function HomePage() {
                 style={{
                   ...commonFormControlStyle,
                   boxSizing: "border-box",
-                  padding: "10px",  
-                  // For textarea, we might let it be taller
-                  height: "100px", // slightly taller than 45px
-                  resize: "vertical", // user can still resize if they want
+                  padding: "10px",
+                  height: "100px",
+                  resize: "vertical",
                   marginTop: "-10px",
                   marginBottom: "5px",
                 }}
@@ -341,7 +345,6 @@ function HomePage() {
                   color: "#fff",
                   border: "none",
                   cursor: "pointer",
-                  // Adjust the button's height so it matches the inputs
                 }}
               >
                 Sign Up
@@ -395,6 +398,14 @@ function HomePage() {
             </p>
             <button
               onClick={() => setShowPopup(false)}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "#faf0fb";
+                e.currentTarget.style.color = "#5A153D";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "#5A153D";
+                e.currentTarget.style.color = "#fff";
+              }}
               style={{
                 backgroundColor: "#5A153D",
                 color: "white",
@@ -410,6 +421,9 @@ function HomePage() {
           </div>
         </div>
       )}
+
+      {/* Show Loading overlay if isLoading is true */}
+      {isLoading && <Loading />}
 
       {/* The new bottom banner that slides up at scroll-bottom */}
       <BottomBanner />
