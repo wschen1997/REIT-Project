@@ -1,7 +1,10 @@
 Company name: Viserra
 
 Add DDOT protection subscription.
-Add payment processing function
+Real Estate ETF
+Crowdfunding?
+
+
 After crowdfunding function, add automation through Python
 Add axis grid for REITs comparison
 Portfolio Simulation/Tracking: Allowing users to build/test portfolios?
@@ -77,6 +80,7 @@ Username double count prevention works
 Email double count prevention works
 Password characters rule work
 Real time check on email verification work
+Google signup works, but if using existing user gmail to sign up, then system will not detect that, it'll actually log them in, and ask them to choose a plan as if they're first time signing up, need to gate duplicate email like we did for traditional email signup
 
 
 

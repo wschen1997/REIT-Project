@@ -222,20 +222,32 @@ function Signup() {
     try {
       setError("");
       const result = await signInWithPopup(auth, googleProvider);
-
+  
+      // --- Duplicate Email Check Start ---
+      const usersRef = collection(db, "users");
+      const emailQuery = query(usersRef, where("email", "==", result.user.email));
+      const emailSnap = await getDocs(emailQuery);
+      if (!emailSnap.empty) {
+        setError("This email is already associated with an account. Please log in instead.");
+        await signOut(auth); // Optionally sign the user out
+        return; // Stop further execution
+      }
+      // --- Duplicate Email Check End ---
+  
+      // Proceed with Google sign-up if no duplicate found
       setIsGoogleUser(true);
       if (result.user.displayName) {
         setUsername(result.user.displayName.replace(/\s+/g, ""));
       }
       setEmail(result.user.email);
       setSuccessMessage(
-        "Google sign-in successful. Please select a plan (free or premium) below."
+        "Google sign-up successful. Please select a plan (free or premium) below."
       );
     } catch (err) {
       console.error("Google signup error:", err);
       setError("Failed to sign up with Google. Please try again or use email/password.");
     }
-  };
+  };  
 
   // --------------------------------------
   //  Final signup logic
