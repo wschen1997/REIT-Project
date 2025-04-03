@@ -146,23 +146,28 @@ function Signup() {
     setEmailError("");
     if (!email) return;
     try {
-      const methods = await fetchSignInMethodsForEmail(auth, email);
-      if (methods.length > 0) {
-        setEmailError("This email is already associated with an account.");
-        return;
-      }
-      // Check Firestore too
+      // First, check Firestore for a user document with the given email.
       const usersRef = collection(db, "users");
       const qEmail = query(usersRef, where("email", "==", email));
       const snap = await getDocs(qEmail);
       if (!snap.empty) {
         setEmailError("An account with this email already exists.");
+        return;
       }
+      
+      // Optionally, if you want additional info from Auth, you can fetch the sign-in methods.
+      // But in this case, if no Firestore doc exists, we allow the user to proceed,
+      // even if there's an Auth record from an incomplete signup.
+      // const methods = await fetchSignInMethodsForEmail(auth, email);
+      // if (methods.length > 0) {
+      //   setEmailError("This email is associated with an incomplete signup. Please complete your verification.");
+      //   return;
+      // }
     } catch (err) {
       console.error("Error checking email:", err);
       setEmailError("Unable to check email right now.");
     }
-  }
+  }  
 
   // --------------------------------------
   //  Validate password format
@@ -212,7 +217,7 @@ function Signup() {
       setSendingEmail(false);
     }
   };
-
+  
   // --------------------------------------
   //  Google sign-up logic
   // --------------------------------------

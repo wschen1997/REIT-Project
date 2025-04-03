@@ -80,7 +80,13 @@ Username double count prevention works
 Email double count prevention works
 Password characters rule work
 Real time check on email verification work
-Google signup works, but if using existing user gmail to sign up, then system will not detect that, it'll actually log them in, and ask them to choose a plan as if they're first time signing up, need to gate duplicate email like we did for traditional email signup
+Google signup works
+
+O1 to resolve: 
+If a user half sign-up using traditional method, back out, try to use the same email again (trad method), it'll fail, they can use gmail signup the second time with the same email, the traditional auth will be overwritten
+And half sign-up using gmail does not prevent a second attempt using gmail, again, the auth will be overwritten.
+
+
 
 
 

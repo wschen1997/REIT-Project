@@ -17,6 +17,7 @@ const Header = ({ userPlan, setUserPlan }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [username, setUsername] = useState("");
   const [loginHovered, setLoginHovered] = useState(false);
+  const [showAccountDropdown, setShowAccountDropdown] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -52,6 +53,7 @@ const Header = ({ userPlan, setUserPlan }) => {
                 setUserPlan(null);
                 return;
               }
+                          
               console.warn("No user doc found => logging out.");
               setUsername("");
               setUserPlan(null);
@@ -266,44 +268,54 @@ const Header = ({ userPlan, setUserPlan }) => {
           </div>
 
           {currentUser ? (
-            <div style={{ display: "flex", gap: "15px", alignItems: "center" }}>
-              <span
-                style={{
-                  fontWeight: "bold",
-                  color: "#5A153D",
-                  border: "2px solid #5A153D",
-                  padding: "6px 14px",
-                  borderRadius: "4px",
-                }}
-              >
-                Hello, {username || currentUser.email}
-              </span>
-              <button
-                onClick={() => {
-                  setUsername("");
-                  signOut(auth);
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = "#faf0fb";
-                  e.currentTarget.style.color = "#5A153D";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = "#5A153D";
-                  e.currentTarget.style.color = "#fff";
-                }}
-                style={{
-                  padding: "8px 16px",
-                  fontSize: "1rem",
-                  border: "none",
-                  color: "#fff",
-                  backgroundColor: "#5A153D",
-                  borderRadius: "4px",
-                  cursor: "pointer",
-                }}
-              >
-                Logout
-              </button>
+            <div style={{ display: "flex", gap: "25px", alignItems: "center" }}>
+            {/* Greeting as a dropdown trigger, exactly like REITs Analytics */}
+            <div
+              className="nav-link dropdown-trigger"
+              onMouseEnter={() => setShowAccountDropdown(true)}
+              onMouseLeave={() => setShowAccountDropdown(false)}
+              style={{ cursor: "pointer" }}  // No extra styles; let the CSS do its work
+            >
+              {/* Direct text node without a span */}
+              Hello, {username || currentUser.email}
+              <div className={`dropdown-menu ${showAccountDropdown ? "show" : ""}`}>
+                <div
+                  className="dropdown-item"
+                  onClick={() => {
+                    navigate("/user");
+                    setShowAccountDropdown(false);
+                  }}
+                >
+                  My Account
+                </div>
+              </div>
             </div>
+            <button
+              onClick={() => {
+                setUsername("");
+                signOut(auth);
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "#faf0fb";
+                e.currentTarget.style.color = "#5A153D";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "#5A153D";
+                e.currentTarget.style.color = "#fff";
+              }}
+              style={{
+                padding: "8px 16px",
+                fontSize: "1rem",
+                border: "none",
+                color: "#fff",
+                backgroundColor: "#5A153D",
+                borderRadius: "4px",
+                cursor: "pointer",
+              }}
+            >
+              Logout
+            </button>
+          </div>          
           ) : (
             <button
               onClick={() => navigate("/login")}

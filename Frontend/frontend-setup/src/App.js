@@ -13,6 +13,7 @@ import ContactUs from "./pages/ContactUs.js";
 import PricingPage from "./pages/Pricing.js";
 import Login from "./pages/Login.js";
 import Signup from "./pages/Signup.js";
+import Useraccount from "./pages/Useraccount.js";
 import Header from "./components/Header.js";
 
 import "./App.css";
@@ -60,6 +61,7 @@ function App() {
           <Route path="/about" element={<AboutUs />} />
           <Route path="/contact" element={<ContactUs />} />
           <Route path="/pricing" element={<PricingPage />} />
+          <Route path="/user" element={<Useraccount />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
         </Routes>
