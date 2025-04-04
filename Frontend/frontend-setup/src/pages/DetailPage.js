@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Bar, Doughnut } from "react-chartjs-2";
 import BottomBanner from "../components/BottomBanner.js";
+import ScatterPlotOverlay from "../components/ScatterPlotOverlay.js";
 import { ComposableMap, Geographies, Geography } from "react-simple-maps";
 import { feature } from "topojson-client";
 import { Line } from "react-chartjs-2";
@@ -84,6 +85,11 @@ function DetailPage({ userPlan }) {
   const [fundamentalScore, setFundamentalScore] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // Overlay for scatter plot
+  const [showOverlay, setShowOverlay] = useState(false);
+  const propertyTypeArray = propertyType ? propertyType.split(",").map(t => t.trim()) : [];
+
 
   // Utility: check if an array is entirely null/undefined
   const isAllNull = (arr) => arr.every((val) => val == null);
@@ -653,6 +659,32 @@ function DetailPage({ userPlan }) {
           </div>
         </div>
       </div>
+      <div style={{ textAlign: "center", marginTop: "20px" }}>
+        <button
+          onClick={() => setShowOverlay(true)}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = "#faf0fb";
+            e.currentTarget.style.color = "#5A153D";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = "#5A153D";
+            e.currentTarget.style.color = "#fff";
+          }}
+          style={{
+            padding: "10px 20px",
+            fontSize: "16px",
+            borderRadius: "5px",
+            backgroundColor: "#5A153D",
+            color: "#fff",
+            border: "none",
+            cursor: "pointer",
+            transition: "background-color 0.3s ease, color 0.3s ease",
+          }}
+        >
+          See Peer Comparison
+        </button>
+      </div>
+
 
       {/* ============== FINANCIAL DATA SECTION ============== */}
       <div style={sectionContainer}>
@@ -812,6 +844,28 @@ function DetailPage({ userPlan }) {
       )}
        {/* The new bottom banner that slides up at scroll-bottom */}
       <BottomBanner /> 
+      {showOverlay && (
+      <ScatterPlotOverlay
+        propertyTypes={propertyTypeArray}
+        onClose={() => setShowOverlay(false)}
+        currentREIT={{
+          ticker,
+          // Assuming stabilityScore and fundamentalScore are already normalized between 0 and 100:
+          xValue: stabilityScore !== null ? Math.round(stabilityScore) : 50, // Default to 50 if missing
+          yValue: fundamentalScore !== null ? Math.round(fundamentalScore) : 50, // Default to 50 if missing
+        }}        
+        fetchPeerData={(selectedType) => {
+          // Replace this with your actual API call; below is dummy data for demonstration.
+          return new Promise((resolve) => {
+            resolve([
+              { x: Math.random() * 100, y: Math.random() * 100 },
+              { x: Math.random() * 100, y: Math.random() * 100 },
+              { x: Math.random() * 100, y: Math.random() * 100 },
+            ]);
+          });
+        }}
+      />
+    )}
     </div>
   );
 }

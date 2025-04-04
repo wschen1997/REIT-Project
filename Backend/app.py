@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 import pandas as pd
+from sqlalchemy import text
 from flask_cors import CORS
 from datetime import datetime
 import os
@@ -521,6 +522,62 @@ def register_premium_user():
     except Exception as e:
         print("🔥 Exception while registering premium user:", str(e))
         return jsonify({"error": f"Failed to save user: {str(e)}"}), 500
+
+# -------------------------------------------------------------------------
+# =========================== Peer Scatter ENDPOINTS ==============================
+# -------------------------------------------------------------------------
+
+@app.route("/api/peer-scatter", methods=["GET"])
+def get_peer_scatter():
+    """
+    Returns peer scatter data for all REITs whose Property_Type includes the requested property type.
+    The endpoint expects a query parameter 'property_type'.
+    It returns an array of objects: { "ticker": <Ticker>, "x": <Stability Percentile>, "y": <Fundamental Percentile> }
+    """
+    property_type = request.args.get("property_type")
+    if not property_type:
+        return jsonify({"error": "property_type parameter is required"}), 400
+
+    try:
+        with db.engine.connect() as conn:
+            # Query business data to get tickers matching the property type (using a LIKE query)
+            query_business = text("""
+                SELECT Ticker
+                FROM reit_business_data
+                WHERE Property_Type LIKE :prop
+            """)
+            business_df = pd.read_sql(query_business, conn, params={"prop": f"%{property_type}%"})
+            
+            if business_df.empty:
+                return jsonify([])  # No REITs found for this property type
+
+            # Get unique tickers
+            tickers = tuple(business_df["Ticker"].unique())
+            # Ensure tickers is a tuple (if only one, force a tuple with a trailing comma)
+            if len(tickers) == 1:
+                tickers = (tickers[0],)
+
+            # Query scoring analysis data for these tickers
+            query_scoring = text("""
+                SELECT Ticker, `Stability Percentile` AS stability, `Fundamental_Percentile` AS fundamental
+                FROM reit_scoring_analysis
+                WHERE Ticker IN :tickers
+            """)
+            scoring_df = pd.read_sql(query_scoring, conn, params={"tickers": tickers})
+
+            # Build the output list
+            result = []
+            for _, row in scoring_df.iterrows():
+                if row["stability"] is not None and row["fundamental"] is not None:
+                    result.append({
+                        "ticker": row["Ticker"],
+                        "x": float(row["stability"]),
+                        "y": float(row["fundamental"])
+                    })
+            return jsonify(result)
+    except Exception as e:
+        app.logger.error("Error in get_peer_scatter: " + str(e))
+        return jsonify({"error": str(e)}), 500
 
 # -------------------------------------------------------------------------
 # ====================== REC ENDPOINTS ===============================
