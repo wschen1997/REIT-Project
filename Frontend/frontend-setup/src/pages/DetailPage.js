@@ -257,6 +257,9 @@ function DetailPage({ userPlan }) {
         label: "FFO PS",
         data: ffoData,
         backgroundColor: "rgba(177, 45, 120, 0.8)",
+        datalabels: {
+          display: false, // Turn off labels for this dataset
+        },
       },
     ],
   };
@@ -267,6 +270,9 @@ function DetailPage({ userPlan }) {
         label: "Dividend PS",
         data: dvdData,
         backgroundColor: "rgba(177, 45, 120, 0.8)",
+        datalabels: {
+          display: false, // Turn off labels for this dataset
+        },
       },
     ],
   };
@@ -277,6 +283,9 @@ function DetailPage({ userPlan }) {
         label: "NOI PS",
         data: noiData,
         backgroundColor: "rgba(177, 45, 120, 0.8)",
+        datalabels: {
+          display: false, // Turn off labels for this dataset
+        },
       },
     ],
   };
@@ -300,6 +309,9 @@ function DetailPage({ userPlan }) {
         tension: 0.2, // optional curve
         pointRadius: 0,       // Hides the normal dots
         pointHoverRadius: 5,  
+        datalabels: {
+          display: false, // Turn off labels for this dataset
+        }
       },
       {
         label: "Volume",
@@ -307,6 +319,9 @@ function DetailPage({ userPlan }) {
         type: "bar",
         backgroundColor: "rgba(90, 21, 61, 0.8)", // darker bar color
         yAxisID: "y-axis-volume",
+        datalabels: {
+          display: false, // Turn off labels for this dataset
+        }
       },
     ],
   };
@@ -378,6 +393,9 @@ function DetailPage({ userPlan }) {
         data: [stabilityVal, 100 - stabilityVal],
         backgroundColor: ["rgba(90, 21, 61, 0.8)", "#e0e0e0"],
         borderWidth: 0,
+        datalabels: {
+          display: false, // Turn off labels for this dataset
+        },
       },
     ],
   };
@@ -389,6 +407,9 @@ function DetailPage({ userPlan }) {
         data: [fundamentalVal, 100 - fundamentalVal],
         backgroundColor: ["rgba(90, 21, 61, 0.8)", "#e0e0e0"],
         borderWidth: 0,
+        datalabels: {
+          display: false, // Turn off labels for this dataset
+        },
       },
     ],
   };
@@ -459,7 +480,10 @@ function DetailPage({ userPlan }) {
     flexDirection: "column",
     justifyContent: "space-around",
     alignItems: "center",
-    minHeight: "320px" // ensures donut box matches bar box height
+    minHeight: "320px", // ensures donut box matches bar box height
+    datalabels: {
+      display: false, // Turn off labels for this dataset
+    }
   };
 
   const sectionContainer = {
@@ -586,7 +610,32 @@ function DetailPage({ userPlan }) {
 
       {/* ============== Quant SCORING SECTION ============== */}
       <div style={sectionContainer}>
-        <h3 style={{ marginTop: 0, marginBottom: "10px" }}>Quantitative Scoring</h3>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+        <h3 style={{ margin: 0 }}>Quantitative Scoring</h3>
+        <button
+          onClick={() => setShowOverlay(true)}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = "#faf0fb";
+            e.currentTarget.style.color = "#5A153D";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = "#5A153D";
+            e.currentTarget.style.color = "#fff";
+          }}
+          style={{
+            padding: "10px 20px",
+            fontSize: "16px",
+            borderRadius: "5px",
+            backgroundColor: "#5A153D",
+            color: "#fff",
+            border: "none",
+            cursor: "pointer",
+            transition: "background-color 0.3s ease, color 0.3s ease",
+          }}
+        >
+          See Peer Comparison
+        </button>
+      </div>
         <div style={gridStyle}>
           {/* Stability Percentile */}
           <div style={blockStyle}>
@@ -660,29 +709,6 @@ function DetailPage({ userPlan }) {
         </div>
       </div>
       <div style={{ textAlign: "center", marginTop: "20px" }}>
-        <button
-          onClick={() => setShowOverlay(true)}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = "#faf0fb";
-            e.currentTarget.style.color = "#5A153D";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = "#5A153D";
-            e.currentTarget.style.color = "#fff";
-          }}
-          style={{
-            padding: "10px 20px",
-            fontSize: "16px",
-            borderRadius: "5px",
-            backgroundColor: "#5A153D",
-            color: "#fff",
-            border: "none",
-            cursor: "pointer",
-            transition: "background-color 0.3s ease, color 0.3s ease",
-          }}
-        >
-          See Peer Comparison
-        </button>
       </div>
 
 
@@ -845,27 +871,17 @@ function DetailPage({ userPlan }) {
        {/* The new bottom banner that slides up at scroll-bottom */}
       <BottomBanner /> 
       {showOverlay && (
-      <ScatterPlotOverlay
-        propertyTypes={propertyTypeArray}
-        onClose={() => setShowOverlay(false)}
-        currentREIT={{
-          ticker,
-          // Assuming stabilityScore and fundamentalScore are already normalized between 0 and 100:
-          xValue: stabilityScore !== null ? Math.round(stabilityScore) : 50, // Default to 50 if missing
-          yValue: fundamentalScore !== null ? Math.round(fundamentalScore) : 50, // Default to 50 if missing
-        }}        
-        fetchPeerData={(selectedType) => {
-          // Replace this with your actual API call; below is dummy data for demonstration.
-          return new Promise((resolve) => {
-            resolve([
-              { x: Math.random() * 100, y: Math.random() * 100 },
-              { x: Math.random() * 100, y: Math.random() * 100 },
-              { x: Math.random() * 100, y: Math.random() * 100 },
-            ]);
-          });
-        }}
-      />
-    )}
+        <ScatterPlotOverlay
+          propertyTypes={propertyTypeArray}
+          onClose={() => setShowOverlay(false)}
+          currentREIT={{
+            ticker,
+            xValue: stabilityScore !== null ? Math.round(stabilityScore) : 50,
+            yValue: fundamentalScore !== null ? Math.round(fundamentalScore) : 50,
+          }}
+          API_BASE_URL={API_BASE_URL}
+        />
+      )}
     </div>
   );
 }

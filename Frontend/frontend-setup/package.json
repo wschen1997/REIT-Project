@@ -22,6 +22,8 @@
     "axios": "1.7.9",
     "chart.js": "4.1.1",
     "chartjs-adapter-date-fns": "^3.0.0",
+    "chartjs-plugin-annotation": "^3.1.0",
+    "chartjs-plugin-datalabels": "^2.2.0",
     "d3-geo": "^3.1.1",
     "d3-geo-projection": "^4.0.0",
     "firebase": "^11.5.0",

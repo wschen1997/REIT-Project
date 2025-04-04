@@ -136,18 +136,20 @@ function RecDetailPage() {
       datasets: [
         {
           label: labelText,
-          data: rawData.map((item) => item.value * 100), // multiply by 100 => 0.025 => 2.5
+          data: rawData.map((item) => item.value * 100),
           backgroundColor: (context) => {
-            // color bars pink if >= 0, maroon if < 0
             const val = context.parsed.y;
             return val >= 0
-              ? "rgba(177, 45, 120, 0.8)" // pinkish
-              : "rgba(90, 21, 61, 0.8)";  // deeper maroon
+              ? "rgba(177, 45, 120, 0.8)"
+              : "rgba(90, 21, 61, 0.8)";
+          },
+          datalabels: {
+            display: false, // This disables the labels on each bar.
           },
         },
       ],
     };
-  };
+  };  
 
   // Bar chart config
   const barOptions = {
