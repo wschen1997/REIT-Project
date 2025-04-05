@@ -254,7 +254,7 @@ function DetailPage({ userPlan }) {
     labels,
     datasets: [
       {
-        label: "FFO PS",
+        label: "FFO per Share",
         data: ffoData,
         backgroundColor: "rgba(177, 45, 120, 0.8)",
         datalabels: {
@@ -267,7 +267,7 @@ function DetailPage({ userPlan }) {
     labels,
     datasets: [
       {
-        label: "Dividend PS",
+        label: "Dividend per Share",
         data: dvdData,
         backgroundColor: "rgba(177, 45, 120, 0.8)",
         datalabels: {
@@ -280,7 +280,7 @@ function DetailPage({ userPlan }) {
     labels,
     datasets: [
       {
-        label: "NOI PS",
+        label: "NOI per Share",
         data: noiData,
         backgroundColor: "rgba(177, 45, 120, 0.8)",
         datalabels: {
@@ -463,6 +463,12 @@ function DetailPage({ userPlan }) {
   };
 
   // 2) & 3) Use minHeight + flex, and wrap the donut in a fixed-width container
+  const financialGridStyle = {
+    display: "flex",
+    flexDirection: "column", // Stack items vertically
+    gap: "20px",
+    margin: "20px 0",
+  };  
   const gridStyle = {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
@@ -715,41 +721,41 @@ function DetailPage({ userPlan }) {
       {/* ============== FINANCIAL DATA SECTION ============== */}
       <div style={sectionContainer}>
         <h3 style={{ marginTop: 0, marginBottom: "10px" }}>Financial Data</h3>
-        <div style={gridStyle}>
+        <div style={financialGridStyle}>
           {/* FFO per Share ($) */}
           <div style={blockStyle}>
-            <h4>FFO per Share ($)</h4>
+            <h4>FFO History</h4>
             {isAllNull(ffoData) ? (
               <p>No FFO data available.</p>
             ) : (
-              <Bar data={ffoChartData} options={ffoBarOptions} height={220} />
+              <Bar data={ffoChartData} options={ffoBarOptions} height={70} />
             )}
           </div>
 
           {/* Dividend per Share ($) */}
           <div style={blockStyle}>
-            <h4>Dividend per Share ($)</h4>
+            <h4>Dividend History</h4>
             {isAllNull(dvdData) ? (
               <p>No Dividend data available.</p>
             ) : (
-              <Bar data={dvdChartData} options={dvdBarOptions} height={220} />
+              <Bar data={dvdChartData} options={dvdBarOptions} height={70} />
             )}
           </div>
 
           {/* NOI per Share ($) */}
           <div style={blockStyle}>
-            <h4>NOI per Share ($)</h4>
+            <h4>NOI History</h4>
             {isAllNull(noiData) ? (
               <p>No NOI data available.</p>
             ) : (
-              <Bar data={noiChartData} options={noiBarOptions} height={220} />
+              <Bar data={noiChartData} options={noiBarOptions} height={70} />
             )}
           </div>
         </div>
       </div>
 
       {/* ============== DIVERSIFICATION MAP SECTION ============== */}
-      {userPlan === "premium" ? (
+      
         <div style={{ ...sectionContainer, position: "relative" }}>
           <h3 style={{ marginTop: 0, marginBottom: "10px" }}>Geographical Diversification</h3>
 
@@ -837,37 +843,7 @@ function DetailPage({ userPlan }) {
             </div>
           )}
         </div>
-      ) : (
-        // Non-premium fallback
-        <div style={sectionContainer}>
-          <h3 style={{ marginTop: 0, marginBottom: "10px" }}>Geographical Diversification</h3>
-          <p style={{ color: "#5A153D", fontWeight: "bold" }}>
-            This content is available to Premium members only.
-          </p>
-          <button
-            onClick={() => navigate("/pricing")}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = "#faf0fb";
-              e.currentTarget.style.color = "#5A153D";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "#5A153D";
-              e.currentTarget.style.color = "#fff";
-            }}
-            style={{
-              marginTop: "1rem",
-              padding: "8px 16px",
-              backgroundColor: "#5A153D",
-              color: "#fff",
-              border: "none",
-              borderRadius: "4px",
-              cursor: "pointer",
-            }}
-          >
-            Upgrade to Premium
-          </button>
-        </div>
-      )}
+      
        {/* The new bottom banner that slides up at scroll-bottom */}
       <BottomBanner /> 
       {showOverlay && (
