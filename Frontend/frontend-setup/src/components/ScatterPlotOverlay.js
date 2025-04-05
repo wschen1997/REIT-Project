@@ -211,7 +211,7 @@ const ScatterPlotOverlay = ({ propertyTypes = [], onClose, currentREIT, API_BASE
         </button>
 
         {/* Tabs if multiple property types */}
-        {propertyTypes.length > 1 && (
+        {propertyTypes.length > 0 && (
           <div
             style={{
               display: "flex",

@@ -262,7 +262,7 @@ def get_financials(ticker):
 
     filtered["Dates"] = pd.to_datetime(filtered["Dates"], errors="coerce")
     filtered.sort_values(by="Dates", ascending=False, inplace=True)
-    filtered = filtered.head(6)
+    filtered = filtered.head(20)
     filtered.sort_values(by="Dates", ascending=True, inplace=True)
     filtered["Quarter"] = filtered["Dates"].apply(convert_date_to_quarter)
 
