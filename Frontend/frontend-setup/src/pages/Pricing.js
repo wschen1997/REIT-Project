@@ -49,11 +49,19 @@ function PricingPage() {
       <div style={{ padding: "80px 20px", textAlign: "center" }}>
         <h1 style={{ color: "#5A153D", fontSize: "2.5rem" }}>Unlock Premium Access</h1>
         <p style={{ fontSize: "1.2rem", color: "#333" }}>
-          Subscribe to REIT Analytics for just <strong>$5/month</strong>.
+        We're still figuring out the best way to price Viserra to make it accessible. For now, everything's free. Just sign up and explore!
         </p>
 
         <button
           onClick={handleSubscribe}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = "#faf0fb";
+            e.currentTarget.style.color = "#5A153D";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = "#5A153D";
+            e.currentTarget.style.color = "#fff";
+          }}
           style={{
             backgroundColor: "#5A153D",
             color: "#fff",
