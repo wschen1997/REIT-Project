@@ -186,9 +186,90 @@ def get_reits():
 
     return jsonify(response)
 
+# -------------------------------------------------------------------------
+# QUARTERLY STATEMENTS ENDPOINT (Income Statement, Balance Sheet, Cash Flow)
+# -------------------------------------------------------------------------
+@app.route("/api/reits/<string:ticker>/statements/quarterly", methods=['GET'])
+def get_quarterly_statements(ticker):
+    """
+    Fetches quarterly financial statements for a given ticker from one of:
+      reit_income_statement (Income Statement)
+      reit_balance_sheet   (Balance Sheet)
+      reit_cash_flow       (Cash Flow)
+      reit_industry_metrics (Industry Specific)
+
+    Usage example:
+      GET /api/reits/WPC/statements/quarterly?type=is
+        => returns Income Statement rows for WPC
+
+      Optional query params:
+        limit -> # of rows to limit (e.g. ?limit=100)
+        from_year -> min year to filter
+        to_year -> max year to filter
+    """
+    statement_type = request.args.get("type", "is").lower()
+    limit = request.args.get("limit", default=None, type=int)
+    from_year = request.args.get("from_year", default=None, type=int)
+    to_year = request.args.get("to_year", default=None, type=int)
+
+    # Map type -> table name
+    table_map = {
+        "is": "reit_income_statement",
+        "bs": "reit_balance_sheet",
+        "cf": "reit_cash_flow",
+        "industry": "reit_industry_metrics",
+    }
+
+    table_name = table_map.get(statement_type)
+    if not table_name:
+        return jsonify({"error": "Invalid 'type' parameter. Must be one of is|bs|cf|industry."}), 400
+
+    # Build basic SQL
+    sql = f"""
+        SELECT line_item, fiscal_year, fiscal_quarter, value
+        FROM {table_name}
+        WHERE ticker = :ticker
+    """
+
+    # Build dynamic filters
+    params = {"ticker": ticker}
+    if from_year is not None:
+        sql += " AND fiscal_year >= :from_year"
+        params["from_year"] = from_year
+    if to_year is not None:
+        sql += " AND fiscal_year <= :to_year"
+        params["to_year"] = to_year
+
+    # Sort newest first, or oldest first—your choice
+    # We'll do newest first (descending)
+    sql += " ORDER BY fiscal_year DESC, fiscal_quarter DESC"
+
+    if limit is not None:
+        sql += " LIMIT :limit"
+        params["limit"] = limit
+
+    try:
+        with db.engine.connect() as conn:
+            df = pd.read_sql(text(sql), conn, params=params)
+    except Exception as e:
+        app.logger.error(f"Error fetching quarterly statements for {ticker}: {e}")
+        return jsonify({"error": "Failed to load statements"}), 500
+
+    if df.empty:
+        return jsonify({"message": f"No {statement_type.upper()} data found for ticker '{ticker}'"}), 200
+
+    # Convert DF to JSON-friendly output
+    df["fiscal_quarter"] = df["fiscal_quarter"].astype(object).where(pd.notna(df["fiscal_quarter"]), None)
+    records = df.to_dict(orient="records")
+
+    return jsonify({
+        "ticker": ticker,
+        "statement_type": statement_type,
+        "rows": records
+    })
 
 # -------------------------------------------------------------------------
-# FINANCIAL DATA ENDPOINT (Last 6 quarters) - optionally includes scoring info
+# OVERVIEW FINANCIAL DATA ENDPOINT (Last 6 quarters)
 # -------------------------------------------------------------------------
 def convert_date_to_quarter(date_obj):
     """

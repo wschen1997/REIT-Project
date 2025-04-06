@@ -1,12 +1,22 @@
-Company name: Viserra
+Viserra
+
+Action:
+1. improve UX (hide functions not developed yet, payment, crowdfunding, etc.)
+2. Need to display more granular data, start from company level statements and holdings (see if Cap IQ batch download possible)
+3. See if lease level data is possible to source and aggregate
+4. improve UI
+
+User feedback:
+Average lease duration, as well as how much they appreciate annually. A breakdown of the type of leases they have, NNN for example is a type of lease. Would be super nice to just quickly see something like 142 leases, 100% NNN, annual appreciation of 1.5%, average duration of 10 years. Those are just random numbers obviously but if you could quickly list all of that for any REIT that would be amazing. I also like to see the percentage of buildings currently occupied, and how many tenants have missed rent last month.
+
+A breakdown of the type of properties owned would also be great, for example 20% office buildings, 40% industrial, 40% farm land.
+
+Something else could be a chart that breaks down where the properties they own are, for example 25 in California, 10 in Washington, etc.
 
 Add DDOT protection subscription.
-Real Estate ETF
-Crowdfunding?
 
 
-After crowdfunding function, add automation through Python
-Add axis grid for REITs comparison
+
 Portfolio Simulation/Tracking: Allowing users to build/test portfolios?
 
 
@@ -29,10 +39,9 @@ Price volitility, extreme loss events, liquidity, expected price return, etc
 
 
 Website:
-Legal disclaimer on the website
 
 Marketing (Selling points):
-Data integraty  only track reit, handle and double check all data point
+Data integraty only track reit, handle and double check all data point
 handle anomaly, negative earnings growth
 REIT specific metrics
 Explain the ranking/scoring
