@@ -6,6 +6,8 @@ Action:
 3. See if lease level data is possible to source and aggregate
 4. improve UI
 
+Sort line items, clean up cap IQ notes, add currency, bold font, etc.
+
 User feedback:
 Average lease duration, as well as how much they appreciate annually. A breakdown of the type of leases they have, NNN for example is a type of lease. Would be super nice to just quickly see something like 142 leases, 100% NNN, annual appreciation of 1.5%, average duration of 10 years. Those are just random numbers obviously but if you could quickly list all of that for any REIT that would be amazing. I also like to see the percentage of buildings currently occupied, and how many tenants have missed rent last month.
 
