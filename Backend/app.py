@@ -224,16 +224,14 @@ def get_quarterly_statements(ticker):
     if not table_name:
         return jsonify({"error": "Invalid 'type' parameter. Must be one of is|bs|cf|industry."}), 400
 
-    # Build the base SELECT and WHERE – note the additional fields is_bold and display_format
+    # Build the base SELECT and WHERE
     sql = f"""
         SELECT
             line_item,
             fiscal_year,
             fiscal_quarter,
             value,
-            excel_row_index,
-            is_bold,
-            display_format
+            excel_row_index
         FROM {table_name}
         WHERE ticker = :ticker
     """

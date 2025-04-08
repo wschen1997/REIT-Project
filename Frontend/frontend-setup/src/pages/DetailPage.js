@@ -124,12 +124,7 @@ function FinancialsTable({ ticker, subTab }) {
     const qPart = fiscal_quarter ? `Q${fiscal_quarter}` : "Annual";
     const colLabel = `${qPart}-${fiscal_year}`;
   
-    // Store the value in the 'columns' sub-object
-    pivotMap[line_item].columns[colLabel] = {
-      value: value,
-      is_bold: r.is_bold,           // assuming 'is_bold' is returned by the endpoint
-      display_format: r.display_format // similarly, 'display_format' from the endpoint
-    };    
+    pivotMap[line_item].columns[colLabel] = value; 
   
     // Collect this colLabel for later sorting
     allCols.add(colLabel);
@@ -210,38 +205,15 @@ function FinancialsTable({ ticker, subTab }) {
                 </td>
                 {sortedCols.map((colLabel) => {
                   // Get the complete cell object instead of just a value
-                  const cellData = colMap[colLabel];
-                  let displayVal = "";
-
-                  // Only format if cellData exists and a value is present
-                  if (cellData && cellData.value != null) {
-                    // Check for custom formatting
-                    if (cellData.display_format === "$") {
-                      // For currency, prepend the "$"
-                      displayVal = `$${cellData.value.toLocaleString()}`;
-                    } else if (cellData.display_format === "%") {
-                      // For percentage: if the value is at least 1, assume it needs to be multiplied by 100,
-                      // otherwise, display as is.
-                      if (cellData.value >= 1) {
-                        displayVal = `${(cellData.value * 100).toLocaleString()}%`;
-                      } else {
-                        displayVal = `${cellData.value}%`;
-                      }
-                    } else {
-                      // Default behavior: just call toLocaleString
-                      displayVal = cellData.value.toLocaleString();
-                    }
-                  } else {
-                    displayVal = "";
-                  }
+                  const val = colMap[colLabel];
+                  const displayVal = val != null ? val.toLocaleString() : "";
                   return (
                     <td
                       key={colLabel}
                       style={{
                         border: "1px solid #ccc",
                         padding: "8px",
-                        minWidth: "100px",
-                        fontWeight: cellData && cellData.is_bold ? "bold" : "normal"
+                        minWidth: "100px"
                       }}
                     >
                       {displayVal}
