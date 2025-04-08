@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
+from openpyxl import load_workbook  # New import for formatting
 
 # ------------------------------------------------------------------
 # 1) Load DB credentials from env
@@ -27,7 +28,7 @@ engine = create_engine(
 # ------------------------------------------------------------------
 # 2) Prepare the user inputs: Ticker & file path
 # ------------------------------------------------------------------
-ticker = "AVB"  # Update this to the REIT you want to process
+ticker = "WPC"  # Update this to the REIT you want to process
 print(f"Processing data for Ticker={ticker}...")
 
 root_folder = os.getenv("REIT_RAW_FINANCIALS_PATH")
@@ -54,6 +55,7 @@ print(f"Using file: {file_path}")
 #    'fiscal_quarter' column. The unique constraint is now
 #    (ticker, line_item, fiscal_year, fiscal_quarter).
 #    ADDED: excel_row_index INT for preserving row order.
+#           is_bold (TINYINT) and display_format (VARCHAR) for cell formatting.
 # ------------------------------------------------------------------
 def create_reit_table_if_not_exists(table_name):
     create_query = f"""
@@ -65,6 +67,8 @@ def create_reit_table_if_not_exists(table_name):
         fiscal_quarter INT NULL,
         value FLOAT,
         excel_row_index INT,
+        is_bold TINYINT DEFAULT 0,
+        display_format VARCHAR(50),
         UNIQUE KEY unique_row (ticker, line_item, fiscal_year, fiscal_quarter)
     );
     """
@@ -113,86 +117,88 @@ def parse_year_quarter(col_name: str):
         quarter_str = q_match.group(1).upper()
         quarter = int(quarter_str[1])
     else:
-        # if no quarter found, we can store None or default to 4, etc.
         quarter = None
 
     return (year, quarter)
 
 # ------------------------------------------------------------------
-# 5) Function to process a single sheet (DataFrame) & insert
+# 5) Function to process a single sheet (using openpyxl to preserve formatting)
 #    ADDED: preserve original Excel row order via excel_row_index.
+#           Captures the bold state and number format.
 # ------------------------------------------------------------------
-def process_financial_sheet(df_raw, sheet_name, ticker):
+def process_financial_sheet(file_path, sheet_name, ticker):
     table_name = statement_tables[sheet_name]
 
-    df = df_raw.copy()
+    # Load workbook with formatting (assumes xlsx file)
+    wb = load_workbook(file_path, data_only=True)
+    ws = wb[sheet_name]
 
-    # Preserve original Excel row order:
-    df.reset_index(inplace=True)  # moves the current index to a column called 'index'
-    df.rename(columns={"index": "excel_row_index"}, inplace=True)
+    # Get headers from first row
+    header_cells = list(ws.iter_rows(min_row=1, max_row=1, values_only=False))[0]
+    headers = [cell.value for cell in header_cells]
 
-    # Identify which column is line_item vs. which are value columns
-    year_cols = []
+    # Identify the line_item column as the first header that does not include a 4-digit year.
     line_item_col = None
-
-    for col in df.columns:
-        if re.search(r'(19\d{2}|20\d{2})', str(col)):
-            year_cols.append(col)
+    year_cols_indices = []
+    for i, header in enumerate(headers):
+        if header is None:
+            continue
+        if re.search(r'(19\d{2}|20\d{2})', str(header)):
+            year_cols_indices.append(i)
         else:
-            if col not in ["excel_row_index"] and not line_item_col:
-                line_item_col = col
+            if line_item_col is None:
+                line_item_col = i
 
-    if not line_item_col:
-        line_item_col = df.columns[0]
+    if line_item_col is None:
+        line_item_col = 0
 
-    # Rename that column to "line_item"
-    df.rename(columns={line_item_col: "line_item"}, inplace=True)
+    data_rows = []
+    # Iterate over rows starting from row 2 (the data rows)
+    for row in ws.iter_rows(min_row=2, values_only=False):
+        # Get the line_item value from the designated column
+        line_item = row[line_item_col].value
+        if line_item is None:
+            continue
+        # For each year column, extract the cell value and formatting info
+        for i in year_cols_indices:
+            cell = row[i]
+            cell_value = cell.value
+            # Extract formatting: bold and number format
+            is_bold = 1 if cell.font and cell.font.bold else 0
+            number_format = cell.number_format
+            # Determine display_format based on number_format: if it contains "$" or "%" (custom logic)
+            if number_format and "$" in number_format:
+                display_format = "currency"
+            elif number_format and "%" in number_format:
+                display_format = "percent"
+            else:
+                display_format = None
 
-    # Convert "-" or other placeholders to NaN
-    df.replace("-", np.nan, inplace=True)
+            # Use the header of this column to extract fiscal year and quarter
+            raw_column = headers[i]
+            year, quarter = parse_year_quarter(str(raw_column))
+            if year is None:
+                continue
 
-    # Drop rows that have no line_item
-    df.dropna(subset=["line_item"], inplace=True)
+            record = {
+                "ticker": ticker,
+                "line_item": line_item,
+                "fiscal_year": year,
+                "fiscal_quarter": quarter,
+                "value": cell_value,
+                # Use the Excel row number minus 2 (to zero-index data rows; header is row 1)
+                "excel_row_index": cell.row - 2,
+                "is_bold": is_bold,
+                "display_format": display_format
+            }
+            data_rows.append(record)
 
-    # Convert each year col to numeric if possible
-    for yc in year_cols:
-        df[yc] = pd.to_numeric(df[yc], errors="coerce")
+    # Convert the list of records into a DataFrame
+    df_melted = pd.DataFrame(data_rows)
 
-    # Optionally remove rows that have too many missing values
-    df["missing_count"] = df[year_cols].isna().sum(axis=1)
-    df = df[df["missing_count"] <= 1] # Keep rows with 1 or fewer missing values
-    df.drop(columns=["missing_count"], inplace=True)
-
-    # Melt into long form, including excel_row_index in id_vars
-    df_melted = df.melt(
-        id_vars=["excel_row_index", "line_item"],
-        value_vars=year_cols,
-        var_name="raw_column",
-        value_name="value"
-    )
-
-    # Parse out (year, quarter)
-    df_melted["year_quarter"] = df_melted["raw_column"].apply(lambda x: parse_year_quarter(str(x)))
-    df_melted["fiscal_year"] = df_melted["year_quarter"].apply(lambda x: x[0])
-    df_melted["fiscal_quarter"] = df_melted["year_quarter"].apply(lambda x: x[1])
-    df_melted.drop(columns=["raw_column", "year_quarter"], inplace=True)
-
-    # Add ticker
-    df_melted["ticker"] = ticker
-
-    # Drop rows missing a year (no year => can't store them)
+    # Drop rows missing a fiscal_year (should already be handled by parse_year_quarter)
     df_melted.dropna(subset=["fiscal_year"], inplace=True)
     df_melted["fiscal_year"] = df_melted["fiscal_year"].astype(int)
-
-    # Reorder columns to include excel_row_index
-    df_melted = df_melted[[
-        "ticker",
-        "line_item",
-        "fiscal_year",
-        "fiscal_quarter",
-        "value",
-        "excel_row_index"
-    ]]
 
     # Insert into MySQL
     try:
@@ -202,7 +208,7 @@ def process_financial_sheet(df_raw, sheet_name, ticker):
         print(f"❌ Error inserting into {table_name}: {e}")
 
 # ------------------------------------------------------------------
-# 6) Read the Excel’s multiple sheets
+# 6) Read the Excel’s multiple sheets and process them using openpyxl
 # ------------------------------------------------------------------
 wanted_sheets = [
     "Income Statement",
@@ -212,18 +218,16 @@ wanted_sheets = [
 ]
 
 print(f"Reading Excel: {file_path} ...")
-try:
-    xlsx_dict = pd.read_excel(file_path, sheet_name=None)
-except Exception as e:
-    print(f"❌ Error reading Excel file: {e}")
-    sys.exit(1)
-
+# For formatting we use openpyxl instead of pd.read_excel.
 for sheet in wanted_sheets:
-    if sheet in xlsx_dict:
-        print(f"🔎 Processing sheet '{sheet}'...")
-        df_sheet = xlsx_dict[sheet]
-        process_financial_sheet(df_sheet, sheet, ticker)
-    else:
-        print(f"⚠️ Sheet '{sheet}' not found; skipping.")
+    try:
+        wb = load_workbook(file_path, data_only=True)
+        if sheet in wb.sheetnames:
+            print(f"🔎 Processing sheet '{sheet}'...")
+            process_financial_sheet(file_path, sheet, ticker)
+        else:
+            print(f"⚠️ Sheet '{sheet}' not found; skipping.")
+    except Exception as e:
+        print(f"❌ Error processing sheet '{sheet}': {e}")
 
 print("✅ Done processing all sheets for ticker:", ticker)

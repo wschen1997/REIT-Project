@@ -70,6 +70,7 @@ function FinancialsTable({ ticker, subTab }) {
         const data = await fetchAndParseJSON(
           `${API_BASE_URL}/api/reits/${ticker}/statements/quarterly?type=${subTab}`
         );
+        console.log("Fetched financial statements data:", data);
 
         if (data.error) {
           setError(data.error);
@@ -124,7 +125,11 @@ function FinancialsTable({ ticker, subTab }) {
     const colLabel = `${qPart}-${fiscal_year}`;
   
     // Store the value in the 'columns' sub-object
-    pivotMap[line_item].columns[colLabel] = value;
+    pivotMap[line_item].columns[colLabel] = {
+      value: value,
+      is_bold: r.is_bold,           // assuming 'is_bold' is returned by the endpoint
+      display_format: r.display_format // similarly, 'display_format' from the endpoint
+    };    
   
     // Collect this colLabel for later sorting
     allCols.add(colLabel);
@@ -188,7 +193,8 @@ function FinancialsTable({ ticker, subTab }) {
           {lineItems.map((li, idx) => {
             // Alternate row background
             const rowBackground = idx % 2 === 1 ? "#fafafa" : "#fff";
-            const colMap = pivotMap[li];
+            // IMPORTANT: Access the nested 'columns' property.
+            const colMap = pivotMap[li].columns;
             return (
               <tr key={li} style={{ backgroundColor: rowBackground }}>
                 <td
@@ -197,22 +203,45 @@ function FinancialsTable({ ticker, subTab }) {
                     padding: "8px",
                     position: "sticky",
                     left: 0,
-                    // Use the same solid color to avoid overlap
                     backgroundColor: rowBackground
                   }}
                 >
                   {li}
                 </td>
                 {sortedCols.map((colLabel) => {
-                  const val = colMap[colLabel];
-                  const displayVal = val != null ? val.toLocaleString() : "";
+                  // Get the complete cell object instead of just a value
+                  const cellData = colMap[colLabel];
+                  let displayVal = "";
+
+                  // Only format if cellData exists and a value is present
+                  if (cellData && cellData.value != null) {
+                    // Check for custom formatting
+                    if (cellData.display_format === "$") {
+                      // For currency, prepend the "$"
+                      displayVal = `$${cellData.value.toLocaleString()}`;
+                    } else if (cellData.display_format === "%") {
+                      // For percentage: if the value is at least 1, assume it needs to be multiplied by 100,
+                      // otherwise, display as is.
+                      if (cellData.value >= 1) {
+                        displayVal = `${(cellData.value * 100).toLocaleString()}%`;
+                      } else {
+                        displayVal = `${cellData.value}%`;
+                      }
+                    } else {
+                      // Default behavior: just call toLocaleString
+                      displayVal = cellData.value.toLocaleString();
+                    }
+                  } else {
+                    displayVal = "";
+                  }
                   return (
                     <td
                       key={colLabel}
                       style={{
                         border: "1px solid #ccc",
                         padding: "8px",
-                        minWidth: "100px"
+                        minWidth: "100px",
+                        fontWeight: cellData && cellData.is_bold ? "bold" : "normal"
                       }}
                     >
                       {displayVal}
