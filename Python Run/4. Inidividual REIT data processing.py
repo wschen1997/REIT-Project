@@ -27,7 +27,7 @@ engine = create_engine(
 # ------------------------------------------------------------------
 # 2) Prepare the user inputs: Ticker & file path
 # ------------------------------------------------------------------
-ticker = "AVB" # Update this to the REIT you want to process
+ticker = "AVB"  # Update this to the REIT you want to process
 print(f"Processing data for Ticker={ticker}...")
 
 root_folder = os.getenv("REIT_RAW_FINANCIALS_PATH")
@@ -35,7 +35,7 @@ xlsx_file_name = f"{ticker} Financials.xlsx"
 xls_file_name = f"{ticker} Financials.xls"
 
 file_path_xlsx = os.path.join(root_folder, ticker, "Financials", xlsx_file_name)
-file_path_xls  = os.path.join(root_folder, ticker, "Financials", xls_file_name)
+file_path_xls = os.path.join(root_folder, ticker, "Financials", xls_file_name)
 
 if os.path.exists(file_path_xlsx):
     file_path = file_path_xlsx
@@ -53,6 +53,7 @@ print(f"Using file: {file_path}")
 #    We'll store data in row-based format with an additional
 #    'fiscal_quarter' column. The unique constraint is now
 #    (ticker, line_item, fiscal_year, fiscal_quarter).
+#    ADDED: excel_row_index INT for preserving row order.
 # ------------------------------------------------------------------
 def create_reit_table_if_not_exists(table_name):
     create_query = f"""
@@ -63,6 +64,7 @@ def create_reit_table_if_not_exists(table_name):
         fiscal_year INT NOT NULL,
         fiscal_quarter INT NULL,
         value FLOAT,
+        excel_row_index INT,
         UNIQUE KEY unique_row (ticker, line_item, fiscal_year, fiscal_quarter)
     );
     """
@@ -118,15 +120,18 @@ def parse_year_quarter(col_name: str):
 
 # ------------------------------------------------------------------
 # 5) Function to process a single sheet (DataFrame) & insert
+#    ADDED: preserve original Excel row order via excel_row_index.
 # ------------------------------------------------------------------
 def process_financial_sheet(df_raw, sheet_name, ticker):
     table_name = statement_tables[sheet_name]
 
     df = df_raw.copy()
 
+    # Preserve original Excel row order:
+    df.reset_index(inplace=True)  # moves the current index to a column called 'index'
+    df.rename(columns={"index": "excel_row_index"}, inplace=True)
+
     # Identify which column is line_item vs. which are value columns
-    # We'll consider columns that have a 4-digit year as "value columns".
-    # The first column that doesn't parse to a year is "line_item".
     year_cols = []
     line_item_col = None
 
@@ -134,7 +139,7 @@ def process_financial_sheet(df_raw, sheet_name, ticker):
         if re.search(r'(19\d{2}|20\d{2})', str(col)):
             year_cols.append(col)
         else:
-            if not line_item_col:
+            if col not in ["excel_row_index"] and not line_item_col:
                 line_item_col = col
 
     if not line_item_col:
@@ -153,14 +158,14 @@ def process_financial_sheet(df_raw, sheet_name, ticker):
     for yc in year_cols:
         df[yc] = pd.to_numeric(df[yc], errors="coerce")
 
-    # Optionally remove rows that have too many missing values (e.g. > 10)
+    # Optionally remove rows that have too many missing values
     df["missing_count"] = df[year_cols].isna().sum(axis=1)
-    df = df[df["missing_count"] <= 10]
+    df = df[df["missing_count"] <= 1] # Keep rows with 1 or fewer missing values
     df.drop(columns=["missing_count"], inplace=True)
 
-    # Melt into long form
+    # Melt into long form, including excel_row_index in id_vars
     df_melted = df.melt(
-        id_vars=["line_item"],
+        id_vars=["excel_row_index", "line_item"],
         value_vars=year_cols,
         var_name="raw_column",
         value_name="value"
@@ -179,8 +184,15 @@ def process_financial_sheet(df_raw, sheet_name, ticker):
     df_melted.dropna(subset=["fiscal_year"], inplace=True)
     df_melted["fiscal_year"] = df_melted["fiscal_year"].astype(int)
 
-    # Reorder columns
-    df_melted = df_melted[["ticker", "line_item", "fiscal_year", "fiscal_quarter", "value"]]
+    # Reorder columns to include excel_row_index
+    df_melted = df_melted[[
+        "ticker",
+        "line_item",
+        "fiscal_year",
+        "fiscal_quarter",
+        "value",
+        "excel_row_index"
+    ]]
 
     # Insert into MySQL
     try:

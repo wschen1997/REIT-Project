@@ -203,9 +203,9 @@ def get_quarterly_statements(ticker):
         => returns Income Statement rows for WPC
 
       Optional query params:
-        limit -> # of rows to limit (e.g. ?limit=100)
-        from_year -> min year to filter
-        to_year -> max year to filter
+        limit      -> # of rows to limit (e.g. ?limit=100)
+        from_year  -> min year to filter
+        to_year    -> max year to filter
     """
     statement_type = request.args.get("type", "is").lower()
     limit = request.args.get("limit", default=None, type=int)
@@ -224,26 +224,32 @@ def get_quarterly_statements(ticker):
     if not table_name:
         return jsonify({"error": "Invalid 'type' parameter. Must be one of is|bs|cf|industry."}), 400
 
-    # Build basic SQL
+    # Build the base SELECT and WHERE
     sql = f"""
-        SELECT line_item, fiscal_year, fiscal_quarter, value
+        SELECT
+            line_item,
+            fiscal_year,
+            fiscal_quarter,
+            value,
+            excel_row_index
         FROM {table_name}
         WHERE ticker = :ticker
     """
-
-    # Build dynamic filters
     params = {"ticker": ticker}
+
+    # Dynamically add any filters
     if from_year is not None:
         sql += " AND fiscal_year >= :from_year"
         params["from_year"] = from_year
+
     if to_year is not None:
         sql += " AND fiscal_year <= :to_year"
         params["to_year"] = to_year
 
-    # Sort newest first, or oldest first—your choice
-    # We'll do newest first (descending)
-    sql += " ORDER BY fiscal_year DESC, fiscal_quarter DESC"
+    # Add ORDER BY last (after WHERE conditions)
+    sql += " ORDER BY excel_row_index ASC, fiscal_year ASC, fiscal_quarter ASC"
 
+    # Optionally limit the number of rows
     if limit is not None:
         sql += " LIMIT :limit"
         params["limit"] = limit
@@ -258,8 +264,9 @@ def get_quarterly_statements(ticker):
     if df.empty:
         return jsonify({"message": f"No {statement_type.upper()} data found for ticker '{ticker}'"}), 200
 
-    # Convert DF to JSON-friendly output
+    # Convert the 'fiscal_quarter' column to None where blank
     df["fiscal_quarter"] = df["fiscal_quarter"].astype(object).where(pd.notna(df["fiscal_quarter"]), None)
+
     records = df.to_dict(orient="records")
 
     return jsonify({

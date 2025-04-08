@@ -98,15 +98,37 @@ function FinancialsTable({ ticker, subTab }) {
   const allCols = new Set();
 
   rows.forEach((r) => {
-    const { line_item, fiscal_year, fiscal_quarter, value } = r;
+    const {
+      line_item,
+      fiscal_year,
+      fiscal_quarter,
+      value,
+      excel_row_index
+    } = r;
+  
+    // If it's the first time we see this line_item:
+    if (!pivotMap[line_item]) {
+      pivotMap[line_item] = {
+        excelRowIndex: excel_row_index,
+        columns: {}
+      };
+    } else {
+      // If line_item repeats with a different excel_row_index, keep the earliest
+      pivotMap[line_item].excelRowIndex = Math.min(
+        pivotMap[line_item].excelRowIndex,
+        excel_row_index
+      );
+    }
+  
     const qPart = fiscal_quarter ? `Q${fiscal_quarter}` : "Annual";
     const colLabel = `${qPart}-${fiscal_year}`;
-    if (!pivotMap[line_item]) {
-      pivotMap[line_item] = {};
-    }
-    pivotMap[line_item][colLabel] = value;
+  
+    // Store the value in the 'columns' sub-object
+    pivotMap[line_item].columns[colLabel] = value;
+  
+    // Collect this colLabel for later sorting
     allCols.add(colLabel);
-  });
+  });  
 
   // Sort columns by year & quarter ascending
   const sortedCols = Array.from(allCols).sort((a, b) => {
@@ -120,7 +142,9 @@ function FinancialsTable({ ticker, subTab }) {
     return quarterA - quarterB;
   });
 
-  const lineItems = Object.keys(pivotMap);
+  const lineItems = Object.keys(pivotMap).sort((a, b) => {
+    return pivotMap[a].excelRowIndex - pivotMap[b].excelRowIndex;
+  });  
 
   // Let the table horizontally scroll
   return (
