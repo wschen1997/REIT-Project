@@ -165,7 +165,8 @@ function FinancialsTable({ ticker, subTab }) {
                 position: "sticky",
                 left: 0,
                 // Use a solid color (not transparent) for the first column
-                backgroundColor: "#f2f2f2"
+                backgroundColor: "#f2f2f2",
+                textAlign: "left"
               }}
             >
               Line Item
@@ -400,18 +401,6 @@ function DetailPage({ userPlan }) {
     );
   }
 
-  if (error || !Array.isArray(financialData) || financialData.length === 0) {
-    return (
-      <div className="detail-page" style={{ padding: "20px" }}>
-        <h2>{ticker} - Analytics Dashboard</h2>
-        <p>{error || "Financial data is unavailable for this REIT."}</p>
-        <button className="back-button" onClick={() => navigate(-1)}>
-          Back to Results
-        </button>
-      </div>
-    );
-  }
-
   // ------------------------------------
   // Chart logic (Overview)
   // ------------------------------------
@@ -625,7 +614,7 @@ function DetailPage({ userPlan }) {
     if (Number.isNaN(numVal)) {
       return "No Data";
     }
-    return `$${numVal.toLocaleString()} million`;
+    return `$${numVal.toLocaleString()} Million`;
   };
 
   // (1) MAKE TABS LOOK LIKE REAL TABS
@@ -755,7 +744,97 @@ function DetailPage({ userPlan }) {
             <p style={{ marginTop: "10px" }}>{businessDescription}</p>
           </div>
 
-          <h2 style={{ marginBottom: "20px" }}>{ticker} - Analytics Dashboard</h2>
+          {/* Business Statistics Table (Now inside Grey Background) */}
+          <div style={sectionContainer}>
+            <h3 style={{ marginTop: 0, marginBottom: "10px" }}>Business Statistics</h3>
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                marginTop: "10px",
+              }}
+            >
+              <tbody>
+                <tr>
+                  <td style={{ padding: "8px", border: "1px solid #ccc" }}>
+                    Investment Property Type
+                  </td>
+                  <td style={{ padding: "8px", border: "1px solid #ccc" }}>
+                    {safeDisplay(propertyType)}
+                  </td>
+                </tr>
+                <tr>
+                  <td style={{ padding: "8px", border: "1px solid #ccc" }}>
+                    Year Founded
+                  </td>
+                  <td style={{ padding: "8px", border: "1px solid #ccc" }}>
+                    {safeDisplay(yearFounded)}
+                  </td>
+                </tr>
+                <tr>
+                  <td style={{ padding: "8px", border: "1px solid #ccc" }}>
+                    Number of Employees
+                  </td>
+                  <td style={{ padding: "8px", border: "1px solid #ccc" }}>
+                    {safeDisplay(numbersEmployee)}
+                  </td>
+                </tr>
+                <tr>
+                  <td style={{ padding: "8px", border: "1px solid #ccc" }}>
+                    Website
+                  </td>
+                  <td style={{ padding: "8px", border: "1px solid #ccc" }}>
+                    {website ? (
+                      <a
+                        href={website.startsWith("http") ? website : `https://${website}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: "#007bff" }}
+                      >
+                        {website}
+                      </a>
+                    ) : (
+                      "No Data"
+                    )}
+                  </td>
+                </tr>
+                <tr>
+                  <td style={{ padding: "8px", border: "1px solid #ccc" }}>
+                    Total Real Estate Assets
+                  </td>
+                  <td style={{ padding: "8px", border: "1px solid #ccc" }}>
+                    {formatAssets(totalAssetsM)}
+                  </td>
+                </tr>
+                <tr>
+                  <td style={{ padding: "8px", border: "1px solid #ccc" }}>
+                    Annualized Historical FFO Growth
+                    <span
+                      className="tooltip-icon"
+                      style={{
+                        marginLeft: "6px",
+                        cursor: "pointer",
+                        fontSize: "0.8rem",
+                        width: "14px",
+                        height: "14px",
+                        display: "inline-block",
+                        textAlign: "center",
+                        lineHeight: "16px",
+                      }}
+                    >
+                      i
+                      <span className="tooltip-text">
+                        This represents the CAGR of a REIT's FFO over the last five years. If a CAGR is unavailable—due to a sign change or both the starting and ending values being negative—the average annual growth over five years is displayed.
+                      </span>
+                    </span>
+                  </td>
+                  <td style={{ padding: "8px", border: "1px solid #ccc" }}>
+                    {formatFFOGrowth(fiveYrFFOGrowth)}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
 
           <div style={sectionContainer}>
             <h3 style={{ marginTop: 0, marginBottom: "10px" }}>Daily Price & Volume</h3>

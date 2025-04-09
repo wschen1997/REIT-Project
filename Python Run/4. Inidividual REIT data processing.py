@@ -27,7 +27,7 @@ engine = create_engine(
 # ------------------------------------------------------------------
 # 2) Prepare the user inputs: Ticker & file path
 # ------------------------------------------------------------------
-ticker = "WPC"  # Update this to the REIT you want to process
+ticker = "REXR"  # Update this to the REIT you want to process
 print(f"Processing data for Ticker={ticker}...")
 
 root_folder = os.getenv("REIT_RAW_FINANCIALS_PATH")
