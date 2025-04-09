@@ -11,6 +11,7 @@ __pycache__/
 # Ignore Excel and CSV files
 *.xlsx
 *.csv
+*.xls
 
 # Ignore environment files
 .env
