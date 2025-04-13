@@ -1,12 +1,34 @@
 Viserra
 
+CIQ statement cleanup:
+1. Currency
+2. All notes
+3. As reported total rev - income
+4. All filing date
+5. All restate/calc type
+6. Industry Tab:
+Clean up FFO, AFFO, FAD
+Total changed to Total Real Estate Asset (Industry tab
+Meaningless head items (Industry tab
+Check Lease revenue
+Remove all expense items
+
 Action:
+Read in logic - make it so that a new row that's now in the database can be appended, even tho its not in a new quarter.
 1. improve UX (hide functions not developed yet, payment, crowdfunding, etc.)
 2. Need to display more granular data, start from company level statements and holdings (see if Cap IQ batch download possible)
 3. See if lease level data is possible to source and aggregate
 4. improve UI
 5. Add back biz stat table
 6. clean up cap IQ notes, add currency, bold font, %, $, etc.
+7. Hide crowdfunding info/pricing for now, change header to side bar
+8. Make sure overdisplay aligns with financial data
+
+161: # Optionally remove rows that have too many missing values
+    df["missing_count"] = df[year_cols].isna().sum(axis=1)
+    df = df[df["missing_count"] <= 30] # Keep rows with <= 30 missing values
+    df.drop(columns=["missing_count"], inplace=True)
+
 
 User feedback:
 Average lease duration, as well as how much they appreciate annually. A breakdown of the type of leases they have, NNN for example is a type of lease. Would be super nice to just quickly see something like 142 leases, 100% NNN, annual appreciation of 1.5%, average duration of 10 years. Those are just random numbers obviously but if you could quickly list all of that for any REIT that would be amazing. I also like to see the percentage of buildings currently occupied, and how many tenants have missed rent last month.

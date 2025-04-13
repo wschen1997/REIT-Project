@@ -27,7 +27,7 @@ engine = create_engine(
 # ------------------------------------------------------------------
 # 2) Prepare the user inputs: Ticker & file path
 # ------------------------------------------------------------------
-ticker = "REXR"  # Update this to the REIT you want to process
+ticker = "PLD"  # Update this to the REIT you want to process
 print(f"Processing data for Ticker={ticker}...")
 
 root_folder = os.getenv("REIT_RAW_FINANCIALS_PATH")
@@ -150,6 +150,7 @@ def process_financial_sheet(df_raw, sheet_name, ticker):
 
     # Convert "-" or other placeholders to NaN
     df.replace("-", np.nan, inplace=True)
+    df.infer_objects(copy=False)
 
     # Drop rows that have no line_item
     df.dropna(subset=["line_item"], inplace=True)
@@ -157,11 +158,6 @@ def process_financial_sheet(df_raw, sheet_name, ticker):
     # Convert each year col to numeric if possible
     for yc in year_cols:
         df[yc] = pd.to_numeric(df[yc], errors="coerce")
-
-    # Optionally remove rows that have too many missing values
-    df["missing_count"] = df[year_cols].isna().sum(axis=1)
-    df = df[df["missing_count"] <= 1] # Keep rows with 1 or fewer missing values
-    df.drop(columns=["missing_count"], inplace=True)
 
     # Melt into long form, including excel_row_index in id_vars
     df_melted = df.melt(

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef} from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Bar, Doughnut } from "react-chartjs-2";
 import BottomBanner from "../components/BottomBanner.js";
@@ -49,6 +49,17 @@ function FinancialsTable({ ticker, subTab }) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  // Regular bold rows with indentation
+  const boldKeywords = ["Rent/Sq. Meter Leased, Avg. - Total","Rent/Sq. Meter Leased, Avg. - Total	","Rent/Sq. Ft. Leased, Avg. - Total","Sq. Meters Leased, Gross - Total","Sq. Ft. Leased, Gross - Total","Gross Operating Revenue","Total Hotels and Gaming Revenue","Total Tables, Incl. JVs","Total Slot Machines, Incl. JVs","Total Casinos, Incl. JVs","Total Rooms","Total Units","Total Real Estate Asset","Total Dividends Paid","Total Debt Repaid","Total Debt Issued","Total Asset","Total Equity","Property Statistics","Total Properties","Properties Data","Total Operating Expenses","Total Operating Revenue","Total Rental Revenue","Net Change in Cash","Cash from Financing","Depreciation & Amort., Total","Total Operating Exp.","Total Revenue","Total Common Equity","Total Pref. Equity","Total Liabilities","Total Real Estate Assets","Net Property, Plant & Equipment","Operating Income","Net Interest Exp.","EBT Incl. Unusual Items"," Earnings from Cont. Ops.","Net Income to Company","Net Income","NI to Common Incl Extra Items","NI to Common Excl. Extra Items","Cash from Ops.","Net Sale/Acq. of Real Estate Assets","Cash from Investing","EBT Excl. Unusual Items"];
+  // Do not bold these rows
+  const exceptKeywords = ["FFO / Total Revenue %","Interest and Invest. Income, Total (Rev)","Interest Expense, Total","Normalized Net Income","As Reported Total Revenue","Total Shares Out. on Filing Date","Total Shares Out. on Balance Sheet Date","Total Minority Interest","Total Asset Writedown"];
+  // Bolded but no indentation
+  const onlyBoldKeywords = ["Occupancy Rate - Total","Sq. Meters Leased, Net - Total","Sq. Ft. Leased, Net - Total","NLA (Sq. Meters) - Total","NLA (Sq. Ft.) - Total","Total Beds","GLA (Sq. Meters) - Total","GLA (Sq. Ft.) - Total","Total Sq. Ft.","Same Property Aggregate GLA (Sq. Ft.)","Total Other Property Operating Revenue","Reconciliation to FFO/AFFO/FAD ","ASSET","LIABILITIES","Supplemental Items","Per Share Items","Supplemental Operating Expense Items"];
+  // Add new rows but no bold and no indentation
+  const specialRowKeyword = ["Normalized Net Income","Expense Reimbursements / Rental Revenue %","Funds Available for Distribution","Interest on Long Term Debt","FFO Payout Ratio %","Normalized Diluted EPS","Weighted Avg. Basic Shares Out.","Weighted Avg. Diluted Shares Out.","Repurchase of Preferred Stock"];
+  // Add upper extra space
+  const extraSpaceRowKeyword = ["Casino Revenue","Investment Properties","Rents / Average Properties %"];
+  const containerRef = useRef(null); // For scrolling
 
   // Safely parse JSON, replacing "NaN" with null
   async function fetchAndParseJSON(url) {
@@ -148,10 +159,20 @@ function FinancialsTable({ ticker, subTab }) {
 
   // Let the table horizontally scroll
   return (
-    <div style={{ overflowX: 'auto', maxWidth: '100%' }}>
+    <div
+      ref={(el) => {
+        containerRef.current = el;
+        if (el) {
+          // Set scrollLeft or scrollRight based on the scroll direction
+          el.scrollright = el.scrollWidth - el.clientWidth;
+        }
+      }}
+      style={{ overflowX: 'auto', maxWidth: '100%' }}
+    >
       <table
         style={{
           borderCollapse: "collapse",
+          border: "1px solid #ccc",
           whiteSpace: "nowrap",
           minWidth: "700px" // ensures table doesn't collapse too narrowly
         }}
@@ -160,7 +181,6 @@ function FinancialsTable({ ticker, subTab }) {
           <tr style={{ backgroundColor: "#f2f2f2" }}>
             <th
               style={{
-                border: "1px solid #ccc",
                 padding: "8px",
                 position: "sticky",
                 left: 0,
@@ -169,59 +189,155 @@ function FinancialsTable({ ticker, subTab }) {
                 textAlign: "left"
               }}
             >
-              Line Item
+              For the Fiscal Period
             </th>
             {sortedCols.map((colLabel) => (
               <th
                 key={colLabel}
                 style={{
-                  border: "1px solid #ccc",
                   padding: "8px",
-                  minWidth: "100px"
+                  minWidth: "100px",
+                  textAlign: "left",
                 }}
               >
                 {colLabel}
               </th>
             ))}
           </tr>
+          {/*ITALIC SUB-NOTE ROW */}
+            <tr style={{ backgroundColor: "#f2f2f2" }}>
+              {/* First cell: the italic text, aligned under 'For the Fiscal Period' */}
+              <td
+                style={{
+                  padding: "4px",
+                  position: "sticky",
+                  left: 0,
+                  backgroundColor: "#f2f2f2",
+                  textAlign: "left",
+                  fontStyle: "italic",
+                  fontSize: "0.8rem",
+                  color: "#555",
+                }}
+              >
+                In Millions of the reported currency, except per share items.
+              </td>
+              {/* Render empty cells for the rest of the columns, so everything stays aligned */}
+              {sortedCols.map(() => (
+                <td style={{ backgroundColor: "#f2f2f2" }} />
+              ))}
+            </tr>
         </thead>
         <tbody>
           {lineItems.map((li, idx) => {
             // Alternate row background
             const rowBackground = idx % 2 === 1 ? "#fafafa" : "#fff";
-            // IMPORTANT: Access the nested 'columns' property.
+
+            // Determine regular bold conditions (case sensitive)
+            const regularBold = boldKeywords.some(keyword => li.includes(keyword))
+                                && !exceptKeywords.some(keyword => li.includes(keyword));
+            const onlyBoldCondition = onlyBoldKeywords.some(keyword => li.includes(keyword));
+            // Check if the current line item matches any extra spacing keyword.
+            const extraSpaceRow = extraSpaceRowKeyword.some(keyword => li.includes(keyword));
+            // Also check for your existing "special row" condition
+            const specialRow = specialRowKeyword.some(keyword => li.includes(keyword));
+
+            // If this row is an extra-space row, force it to be not bold.
+            const isBold = extraSpaceRow ? false : (onlyBoldCondition || regularBold);
+            
             const colMap = pivotMap[li].columns;
+
             return (
-              <tr key={li} style={{ backgroundColor: rowBackground }}>
-                <td
-                  style={{
-                    border: "1px solid #ccc",
-                    padding: "8px",
-                    position: "sticky",
-                    left: 0,
-                    backgroundColor: rowBackground
-                  }}
-                >
-                  {li}
-                </td>
-                {sortedCols.map((colLabel) => {
-                  // Get the complete cell object instead of just a value
-                  const val = colMap[colLabel];
-                  const displayVal = val != null ? val.toLocaleString() : "";
-                  return (
+              <React.Fragment key={li}>
+                {/* If this row is flagged as an extra-space row, insert an extra spacing row above */}
+                {extraSpaceRow && (
+                  <tr style={{ backgroundColor: rowBackground }}>
                     <td
-                      key={colLabel}
-                      style={{
-                        border: "1px solid #ccc",
-                        padding: "8px",
-                        minWidth: "100px"
-                      }}
+                      colSpan={sortedCols.length + 1}
+                      style={{ padding: "2px", height: "10px" }}
                     >
-                      {displayVal}
+                      {/* Extra spacing row */}
                     </td>
-                  );
-                })}
-              </tr>
+                  </tr>
+                )}
+                <tr style={{ backgroundColor: rowBackground, fontWeight: isBold ? 'bold' : 'normal' }}>
+                  <td
+                    style={{
+                      padding: "8px",
+                      position: "sticky",
+                      left: 0,
+                      backgroundColor: rowBackground,
+                      // Add extra left padding only for regular bold rows (and not if extraSpaceRow is true)
+                      ...((regularBold && !specialRow && subTab !== "industry" && !extraSpaceRow) ? { paddingLeft: "16px" } : {})
+                    }}
+                  >
+                    {li}
+                  </td>
+                  {sortedCols.map((colLabel) => {
+                    // Determine if the row should be displayed as a percent.
+                    const isPercentRow = li.includes("%") || li.includes("Payout") || li.includes("Growth")|| li.includes("Occupancy Rate") || li.includes("Margin");
+                    const val = colMap[colLabel];
+                    let displayVal = "";
+                    if (val != null) {
+                      if (isPercentRow) {
+                        const numVal = Number(val) * 100;
+                        if (numVal < 0) {
+                          displayVal = "(" + Math.abs(numVal).toLocaleString("en-US", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2
+                          }) + "%)";
+                        } else {
+                          displayVal = numVal.toLocaleString("en-US", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2
+                          }) + "%";
+                        }
+                      } else {
+                        const isCurrencyRow = li.includes("EPS") || li.includes("/Share") ||
+                                              li.includes("per Share (Basic)") || li.includes("per Share (Diluted)") ||
+                                              li.includes("Dividends per Share");
+                        const numVal = Number(val);
+                        let formatted = "";
+                        if (numVal < 0) {
+                          formatted = "(" + Math.abs(numVal).toLocaleString("en-US", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2
+                          }) + ")";
+                        } else {
+                          formatted = numVal.toLocaleString("en-US", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2
+                          });
+                        }
+                        displayVal = isCurrencyRow ? "$ " + formatted : formatted;
+                      }
+                    }
+                    return (
+                      <td
+                        key={colLabel}
+                        style={{
+                          padding: "8px",
+                          minWidth: "100px",
+                          textAlign: "left",
+                        }}
+                      >
+                        {displayVal}
+                      </td>
+                    );
+                  })}
+                </tr>
+                {/* Render separator row (after the row) for regular bold, only bold or special rows,
+                    but skip it for extraSpace rows (since we already added a spacing row above) */}
+                {(!extraSpaceRow && (regularBold || onlyBoldCondition || specialRow)) && (
+                  <tr style={{ backgroundColor: rowBackground }}>
+                    <td
+                      colSpan={sortedCols.length + 1}
+                      style={{ padding: "2px", height: "10px" }}
+                    >
+                      {/* Separator row (empty) */}
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
             );
           })}
         </tbody>

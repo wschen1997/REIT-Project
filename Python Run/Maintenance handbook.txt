@@ -1,0 +1,67 @@
+
+Individual REIT Data Update
+    Download Financials fomr Cap IQ (quarterly, 2015 - 2025)
+    Clean up the 3 statements + industry specific. Delete everything above the dates row, delete currency
+    Update the ticker field in Python script 4
+    Run script
+    Workbench command to drop the record for specific REIT:
+        USE railway;
+        START TRANSACTION;
+        SET @t = 'SQFT';
+        DELETE FROM reit_income_statement WHERE ticker = @t;
+        DELETE FROM reit_balance_sheet WHERE ticker = @t;
+        DELETE FROM reit_cash_flow WHERE ticker = @t;
+        DELETE FROM reit_industry_metrics WHERE ticker = @t;
+        COMMIT;
+    Workbench command to drop all statements:
+        USE railway; 
+        DROP TABLE IF EXISTS reit_income_statement, reit_balance_sheet, reit_cash_flow, reit_industry_metrics;
+
+
+Update REIT Database Excel - orange cells/tabs (quarterly update)
+    Save updated REIT Universe csv
+    Save updated REIT FFO Payout csv
+    Save financial display csv
+
+Update REC Database Excel - orange cells/tabs (pause for now)
+    Save updated REC Universe csv
+    Save updated REC Total Return csv
+    Save updated REC Distribution Yield csv
+    Save updated REC NAV Growth csv
+
+(optional )Activate virtual environment: .\venv\Scripts\activate
+
+Update database: run 
+    1. Stock universe - initial set up.py
+    2. Stock data analysis - risk.py
+    3. Stock data analysis - operations.py
+    4. REC universe - initial set up.py
+
+Github update process
+git add -A; git commit -m "Development Update"; git push origin main
+
+Start website on local machine: 
+    1. run app.py (check JSON response only, cause front end will fetch API from render's endpoint, 
+       so need to push to Git or else updates won't show on website)
+    2. Start react
+        cd "Frontend\frontend-setup"
+        npm start 
+
+
+If there are changes to backend, re-deploy Render
+If there are changes to frontend's asset or added pages, re-deploy Vercel
+
+
+
+Original SQL Credentials:
+SQL Credentials:
+# Database credentials
+DB_USERNAME = "wsche"
+DB_PASSWORD = "Tyreke1211"
+DB_HOST = "127.0.0.1"
+DB_NAME = "investment_data"
+
+# API Key for Financial Modeling Prep (FMP)
+FMP_API_KEY = "t0o1Uhjcsk4w7pIIj32z0rusEwe61SN3"
+
+    
