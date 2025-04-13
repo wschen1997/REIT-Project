@@ -27,7 +27,7 @@ engine = create_engine(
 # ------------------------------------------------------------------
 # 2) Prepare the user inputs: Ticker & file path
 # ------------------------------------------------------------------
-ticker = "PLD"  # Update REIT you want to process
+ticker = "ESS"  # Update REIT you want to process
 print(f"Processing data for Ticker={ticker}...")
 
 root_folder = os.getenv("REIT_RAW_FINANCIALS_PATH")

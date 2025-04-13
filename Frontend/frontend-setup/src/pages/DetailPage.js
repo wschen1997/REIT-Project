@@ -57,7 +57,7 @@ function FinancialsTable({ ticker, subTab }) {
   const onlyBoldKeywords = ["Occupancy Rate - Total","Sq. Meters Leased, Net - Total","Sq. Ft. Leased, Net - Total","NLA (Sq. Meters) - Total","NLA (Sq. Ft.) - Total","Total Beds","GLA (Sq. Meters) - Total","GLA (Sq. Ft.) - Total","Total Sq. Ft.","Same Property Aggregate GLA (Sq. Ft.)","Total Other Property Operating Revenue","Reconciliation to FFO/AFFO/FAD ","ASSET","LIABILITIES","Supplemental Items","Per Share Items","Supplemental Operating Expense Items"];
   // Add new rows but no bold and no indentation
   const specialRowKeyword = ["Normalized Net Income","Expense Reimbursements / Rental Revenue %","Funds Available for Distribution","Interest on Long Term Debt","FFO Payout Ratio %","Normalized Diluted EPS","Weighted Avg. Basic Shares Out.","Weighted Avg. Diluted Shares Out.","Repurchase of Preferred Stock"];
-  // Add upper extra space
+  // Add upper extra space row
   const extraSpaceRowKeyword = ["Casino Revenue","Investment Properties","Rents / Average Properties %"];
   const containerRef = useRef(null); // For scrolling
 
