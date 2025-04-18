@@ -274,7 +274,7 @@ function FinancialsTable({ ticker, subTab }) {
                   </td>
                   {sortedCols.map((colLabel) => {
                     // Determine if the row should be displayed as a percent.
-                    const isPercentRow = li.includes("%") || li.includes("Payout") || li.includes("Growth")|| li.includes("Occupancy Rate") || li.includes("Margin");
+                    const isPercentRow = li.includes("%") || li.includes("Payout") || li.includes("Growth")|| li.includes("Occupancy") || li.includes("Margin");
                     const val = colMap[colLabel];
                     let displayVal = "";
                     if (val != null) {
