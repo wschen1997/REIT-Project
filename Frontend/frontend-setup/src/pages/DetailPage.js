@@ -59,6 +59,8 @@ function FinancialsTable({ ticker, subTab }) {
   const specialRowKeyword = ["Total Properties RevPAR","Normalized Net Income","Expense Reimbursements / Rental Revenue %","Funds Available for Distribution","Interest on Long Term Debt","FFO Payout Ratio %","Normalized Diluted EPS","Weighted Avg. Basic Shares Out.","Weighted Avg. Diluted Shares Out.","Repurchase of Preferred Stock"];
   // Add upper extra space row
   const extraSpaceRowKeyword = ["Total Rooms Occupancy","Casino Revenue","Investment Properties","Rents / Average Properties %"];
+  // Don't show null value as "-"
+  const dashBlankKeywords = ["Supplemental Operating Expense Items","Supplemental Items","Per Share Items","ASSET", "LIABILITIES"];
   const containerRef = useRef(null); // For scrolling
 
   // Safely parse JSON, replacing "NaN" with null
@@ -184,6 +186,7 @@ function FinancialsTable({ ticker, subTab }) {
                 padding: "8px",
                 position: "sticky",
                 left: 0,
+                zIndex: 2,
                 // Use a solid color (not transparent) for the first column
                 backgroundColor: "#f2f2f2",
                 textAlign: "left"
@@ -212,6 +215,7 @@ function FinancialsTable({ ticker, subTab }) {
                   padding: "4px",
                   position: "sticky",
                   left: 0,
+                  zIndex: 2,
                   backgroundColor: "#f2f2f2",
                   textAlign: "left",
                   fontStyle: "italic",
@@ -230,7 +234,8 @@ function FinancialsTable({ ticker, subTab }) {
         <tbody>
           {lineItems.map((li, idx) => {
             // Alternate row background
-            const rowBackground = idx % 2 === 1 ? "#fafafa" : "#fff";
+            const firstColBackground = "#fafafa";   // light‑grey for the item‑name column
+            const rowBackground      = "#fff";      // keep all data cells pure white
 
             // Determine regular bold conditions (case sensitive)
             const regularBold = boldKeywords.some(keyword => li.includes(keyword))
@@ -243,29 +248,42 @@ function FinancialsTable({ ticker, subTab }) {
 
             // If this row is an extra-space row, force it to be not bold.
             const isBold = extraSpaceRow ? false : (onlyBoldCondition || regularBold);
-            
             const colMap = pivotMap[li].columns;
+            const hasItemName      = li && li.trim() !== "";        // first cell non‑blank?
+            const allNullDataCells = sortedCols.every(col => colMap[col] == null);
+            const rowIsCompletelyEmpty = !hasItemName && allNullDataCells;
 
             return (
               <React.Fragment key={li}>
                 {/* If this row is flagged as an extra-space row, insert an extra spacing row above */}
                 {extraSpaceRow && (
-                  <tr style={{ backgroundColor: rowBackground }}>
+                  <tr>
+                    {/* grey bar under the first column */}
                     <td
-                      colSpan={sortedCols.length + 1}
-                      style={{ padding: "2px", height: "10px" }}
-                    >
-                      {/* Extra spacing row */}
-                    </td>
+                      style={{
+                        backgroundColor: firstColBackground,
+                        padding: "2px",
+                        height: "10px",
+                        position: "sticky",
+                        left: 0,
+                        zIndex: 2,
+                      }}
+                    />
+                    {/* white bar under the data columns */}
+                    <td
+                      colSpan={sortedCols.length}
+                      style={{ backgroundColor: "#fff", padding: "2px", height: "10px" }}
+                    />
                   </tr>
                 )}
-                <tr style={{ backgroundColor: rowBackground, fontWeight: isBold ? 'bold' : 'normal' }}>
+                <tr style={{ backgroundColor: "#fff", fontWeight: isBold ? 'bold' : 'normal' }}>
                   <td
                     style={{
                       padding: "8px",
                       position: "sticky",
+                      zIndex: 2,
                       left: 0,
-                      backgroundColor: rowBackground,
+                      backgroundColor: firstColBackground,
                       // Add extra left padding only for regular bold rows (and not if extraSpaceRow is true)
                       ...((regularBold && !specialRow && subTab !== "industry" && !extraSpaceRow) ? { paddingLeft: "16px" } : {})
                     }}
@@ -273,44 +291,59 @@ function FinancialsTable({ ticker, subTab }) {
                     {li}
                   </td>
                   {sortedCols.map((colLabel) => {
-                    // Determine if the row should be displayed as a percent.
-                    const isPercentRow = li.includes("%") || li.includes("Payout") || li.includes("Growth")|| li.includes("Occupancy") || li.includes("Margin");
+                    // decide if this row is a percentage row
+                    const isPercentRow =
+                      li.includes("%") || li.includes("Payout") || li.includes("Growth") ||
+                      li.includes("Occupancy") || li.includes("Margin");
+
                     const val = colMap[colLabel];
+
+                    // header rows that should stay blank when value is null
+                    const skipDash = rowIsCompletelyEmpty ||
+                                     dashBlankKeywords.some(keyword => li.startsWith(keyword));
+
                     let displayVal = "";
-                    if (val != null) {
+
+                    if (val == null) {
+                      // show "-" for null unless this is a header row
+                      displayVal = skipDash ? "" : "-";
+                    } else {
+                      // ---------- normal formatting ----------
                       if (isPercentRow) {
                         const numVal = Number(val) * 100;
-                        if (numVal < 0) {
-                          displayVal = "(" + Math.abs(numVal).toLocaleString("en-US", {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2
-                          }) + "%)";
-                        } else {
-                          displayVal = numVal.toLocaleString("en-US", {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2
-                          }) + "%";
-                        }
+                        displayVal =
+                          numVal < 0
+                            ? `(${Math.abs(numVal).toLocaleString("en-US", {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}%)`
+                            : `${numVal.toLocaleString("en-US", {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}%`;
                       } else {
-                        const isCurrencyRow = li.includes("EPS") || li.includes("/Share") ||
-                                              li.includes("per Share (Basic)") || li.includes("per Share (Diluted)") ||
-                                              li.includes("Dividends per Share");
+                        const isCurrencyRow =
+                          li.includes("EPS") || li.includes("/Share") ||
+                          li.includes("per Share (Basic)") || li.includes("per Share (Diluted)") ||
+                          li.includes("Dividends per Share");
+
                         const numVal = Number(val);
-                        let formatted = "";
-                        if (numVal < 0) {
-                          formatted = "(" + Math.abs(numVal).toLocaleString("en-US", {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2
-                          }) + ")";
-                        } else {
-                          formatted = numVal.toLocaleString("en-US", {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2
-                          });
-                        }
-                        displayVal = isCurrencyRow ? "$ " + formatted : formatted;
+                        const formatted =
+                          numVal < 0
+                            ? `(${Math.abs(numVal).toLocaleString("en-US", {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })})`
+                            : numVal.toLocaleString("en-US", {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              });
+
+                        displayVal = isCurrencyRow ? `$ ${formatted}` : formatted;
                       }
+                      // ---------------------------------------
                     }
+
                     return (
                       <td
                         key={colLabel}
@@ -324,17 +357,26 @@ function FinancialsTable({ ticker, subTab }) {
                       </td>
                     );
                   })}
+
                 </tr>
                 {/* Render separator row (after the row) for regular bold, only bold or special rows,
                     but skip it for extraSpace rows (since we already added a spacing row above) */}
                 {(!extraSpaceRow && (regularBold || onlyBoldCondition || specialRow)) && (
-                  <tr style={{ backgroundColor: rowBackground }}>
+                  <tr>
                     <td
-                      colSpan={sortedCols.length + 1}
-                      style={{ padding: "2px", height: "10px" }}
-                    >
-                      {/* Separator row (empty) */}
-                    </td>
+                            style={{
+                              backgroundColor: firstColBackground,
+                              padding: "2px",
+                              height: "10px",
+                              position: "sticky",
+                              left: 0,
+                              zIndex: 2,
+                            }}                      
+                    />
+                    <td
+                      colSpan={sortedCols.length}
+                      style={{ backgroundColor: "#fff", padding: "2px", height: "10px" }}
+                    />
                   </tr>
                 )}
               </React.Fragment>
