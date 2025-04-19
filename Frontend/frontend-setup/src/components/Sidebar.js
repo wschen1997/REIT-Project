@@ -1,3 +1,4 @@
+// Sidebar.js – logo left‑aligned, hover‑close removed, “X” button added
 import React from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -23,19 +24,65 @@ const Sidebar = ({ isOpen, onClose }) => {
         background : "#fff",
         color      : "#5A153D",
         borderRight: "1px solid #eee",
-        paddingTop : 80,             // space for header
+        paddingTop : 7,
         transition : "left .25s ease",
-        zIndex     : 1200,
+        zIndex     : 1301,    // above the blur overlay
+        overflowY  : "auto",
       }}
-      onMouseLeave={onClose}
     >
+      {/* ───────── Close (X) button ───────── */}
+      <div
+        onClick={onClose}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = "#faf0fb";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = "transparent";
+        }}
+        style={{
+          position     : "absolute",
+          top          : 10,
+          right        : 10,
+          width        : 28,
+          height       : 28,
+          lineHeight   : "28px",
+          textAlign    : "center",
+          fontSize     : 20,
+          fontWeight   : "bold",
+          cursor       : "pointer",
+          borderRadius : "50%",
+          color        : "#5A153D",
+          transition   : "background .2s",
+          userSelect   : "none",
+        }}
+      >
+        ×
+      </div>
+
+      {/* ───────── Logo (left‑aligned) ───────── */}
+      <div
+        onClick={() => { navigate("/"); onClose(); }}
+        style={{
+          padding   : "10px 24px 20px",
+          cursor    : "pointer",
+          userSelect: "none",
+        }}
+      >
+        <img
+          src="/logo-crop.PNG"
+          alt="Viserra Logo"
+          style={{ maxWidth: "100%", maxHeight: 60 }}
+        />
+      </div>
+
+      {/* ───────── Menu links ───────── */}
       {menu.map(({ label, path }) => (
         <div
           key={label}
           className="nav-link"
           style={{
-            padding: "14px 24px",
-            cursor : "pointer",
+            padding : "14px 24px",
+            cursor  : "pointer",
             fontSize: "1.05rem",
           }}
           onClick={() => { navigate(path); onClose(); }}

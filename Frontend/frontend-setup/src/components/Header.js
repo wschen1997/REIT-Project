@@ -92,6 +92,22 @@ const Header = ({ userPlan, setUserPlan }) => {
   return (
     <>
       {/* Sidebar */}
+      {isSidebarOpen && (
+        <div
+          onClick={() => setIsSidebarOpen(false)}    // click anywhere to close
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+            backgroundColor: "rgba(0,0,0,0.25)",    // slight dark tint
+            zIndex: 1200,                           // below the sidebar (1300) but above everything else
+          }}
+        />
+      )}
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
       {/* Header bar */}
