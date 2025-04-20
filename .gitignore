@@ -7,12 +7,14 @@ node_modules/
 # Ignore Python compiled files
 __pycache__/
 *.pyc
+*.py
 
 # Ignore Excel and CSV files
 *.xlsx
 *.csv
 *.xls
 *.pdf
+*.docs
 
 # Ignore environment files
 .env

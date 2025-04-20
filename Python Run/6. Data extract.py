@@ -19,6 +19,12 @@ if not GEMINI_API_KEY:
     raise ValueError("❌ API Key not set! Please check the key in Credentials.env")
 
 # ------------------------------------------------------------------
+# Configure Tesseract executable location
+# ------------------------------------------------------------------
+# Point pytesseract at the installed tesseract.exe
+pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+
+# ------------------------------------------------------------------
 # Configure REIT ticker and base path
 # ------------------------------------------------------------------
 if len(sys.argv) > 1:
@@ -138,7 +144,7 @@ Strict Rules:
 - Omit any section entirely if no data found.
 - Return valid JSON only—no commentary or markdown fences.
 - After extracting, triple‑check all JSON keys and correct any typos or line‑break artifacts.
-- If a key is accurate but could be more descriptive (e.g. `"Unsecured": "99%"` → `"Percentage of unsecured debt": "99%"`), rename it.
+- If any data point is technically accurate but could be more descriptive (e.g. `"Unsecured": "99%"` → `"Percentage of unsecured debt": "99%"`), rename it.
 - Strip out any footnote markers or stray artifacts (e.g. `"Triple net lease exposure4,5"` → `"Triple net lease exposure"`).
 - For any chart‑based section, only extract data points that display an explicit numeric label.
 
