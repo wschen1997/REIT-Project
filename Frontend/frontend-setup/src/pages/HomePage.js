@@ -146,7 +146,7 @@ function HomePage() {
           <img
             src="/Powered By.png"
             alt="Powered by data providers"
-            style={{ width: "100%", maxWidth: "900px" }}
+            style={{ width: "100%", maxWidth: "1100px" }}
           />
         </div>
 

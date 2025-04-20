@@ -57,13 +57,32 @@ const Header = ({ userPlan, setUserPlan }) => {
   const [suggestions, setSuggestions] = useState([]);
   const [isFetching, setIsFetching] = useState(false);
 
+  // recent searches (array of {Ticker, Company_Name})
+  const [recentSearches, setRecentSearches] = useState([]);
+  const [isFocused, setIsFocused] = useState(false);
+
+  // load recents from localStorage
+  useEffect(() => {
+    const stored = JSON.parse(localStorage.getItem("recentSearches") || "[]");
+    setRecentSearches(stored);
+  }, []);
+
+  // save a new recent (object) at top, dedupe, keep max 5
+  const saveRecent = (item) => {
+    const filtered = recentSearches.filter((r) => r.Ticker !== item.Ticker);
+    const updated = [item, ...filtered].slice(0, 5);
+    setRecentSearches(updated);
+    localStorage.setItem("recentSearches", JSON.stringify(updated));
+  };
+
+  // fetch from API when user types
   useEffect(() => {
     if (!searchQuery) {
       setSuggestions([]);
       return;
     }
     let active = true;
-    const fetchSuggestions = async () => {
+    (async () => {
       setIsFetching(true);
       try {
         const res = await axios.get(`${API_BASE_URL}/api/reits`, {
@@ -75,26 +94,27 @@ const Header = ({ userPlan, setUserPlan }) => {
       } finally {
         active && setIsFetching(false);
       }
-    };
-    fetchSuggestions();
+    })();
     return () => {
       active = false;
     };
   }, [searchQuery]);
 
-  const handleSelectTicker = (tkr) => {
+  // when user selects, record and navigate
+  const handleSelectTicker = (item) => {
+    saveRecent(item);
     setSearchQuery("");
     setSuggestions([]);
-    navigate(`/reits/${tkr}`);
+    navigate(`/reits/${item.Ticker}`);
   };
 
   /* ─────────────────────────  render  ───────────────────────── */
   return (
     <>
-      {/* Sidebar */}
+      {/* Sidebar overlay */}
       {isSidebarOpen && (
         <div
-          onClick={() => setIsSidebarOpen(false)}    // click anywhere to close
+          onClick={() => setIsSidebarOpen(false)}
           style={{
             position: "fixed",
             top: 0,
@@ -103,8 +123,8 @@ const Header = ({ userPlan, setUserPlan }) => {
             height: "100vh",
             backdropFilter: "blur(6px)",
             WebkitBackdropFilter: "blur(6px)",
-            backgroundColor: "rgba(0,0,0,0.25)",    // slight dark tint
-            zIndex: 1200,                           // below the sidebar (1300) but above everything else
+            backgroundColor: "rgba(0,0,0,0.25)",
+            zIndex: 1200,
           }}
         />
       )}
@@ -139,7 +159,7 @@ const Header = ({ userPlan, setUserPlan }) => {
               lineHeight: 0,
               cursor: "pointer",
               userSelect: "none",
-              color: "#5A153D", // change if you need another color
+              color: "#5A153D",
             }}
           >
             &#9776;
@@ -153,11 +173,13 @@ const Header = ({ userPlan, setUserPlan }) => {
             onClick={() => navigate("/")}
           />
 
-          {/* search box – moved here */}
+          {/* search box */}
           <div style={{ width: 320, position: "relative" }}>
             <input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setTimeout(() => setIsFocused(false), 200)}
               placeholder="Search REIT ticker…"
               style={{
                 width: "100%",
@@ -167,13 +189,18 @@ const Header = ({ userPlan, setUserPlan }) => {
                 border: "1px solid #ccc",
               }}
             />
-            {Boolean(searchQuery) && (
+            {(
+              // show API suggestions if typing
+              searchQuery ||
+              // otherwise, if focused and have recents, show them
+              (!searchQuery && isFocused && recentSearches.length > 0)
+            ) && (
               <div
                 style={{
                   position: "absolute",
                   top: 46,
                   left: 0,
-                  width: "108.5%", 
+                  width: "108.5%",
                   maxHeight: 260,
                   overflowY: "auto",
                   background: "#fff",
@@ -182,24 +209,38 @@ const Header = ({ userPlan, setUserPlan }) => {
                   zIndex: 1300,
                 }}
               >
-                {isFetching && (
+                {searchQuery && isFetching && (
                   <p style={{ margin: 8, fontSize: ".9rem", color: "#555" }}>
                     Loading…
                   </p>
                 )}
-                {!isFetching && suggestions.length === 0 && (
-                  <p style={{ margin: 8, fontSize: ".9rem" }}>
-                    No match for <strong>{searchQuery}</strong>
-                  </p>
+                {searchQuery &&
+                  !isFetching &&
+                  suggestions.length === 0 && (
+                    <p style={{ margin: 8, fontSize: ".9rem" }}>
+                      No match for <strong>{searchQuery}</strong>
+                    </p>
+                  )}
+
+                {/* unified list: either API results or recents (filtered) */}
+                {!searchQuery && isFocused && recentSearches.filter(r => r.Ticker && r.Company_Name).length > 0 && (
+                  <div style={{ padding: "8px 12px", color: "#000", fontWeight: 600 }}>
+                    Recent
+                  </div>
                 )}
-                {suggestions.map((r) => (
+                {(searchQuery
+                  ? suggestions
+                  : recentSearches.filter((r) => r.Ticker && r.Company_Name)
+                ).map((r) => (
                   <div
                     key={r.Ticker}
-                    onClick={() => handleSelectTicker(r.Ticker)}
+                    onClick={() => handleSelectTicker(r)}
                     style={{
                       padding: "8px 12px",
                       cursor: "pointer",
                       borderBottom: "1px solid #eee",
+                      display: "flex",
+                      alignItems: "center",
                     }}
                     onMouseEnter={(e) =>
                       (e.currentTarget.style.background = "#faf0fb")
@@ -208,8 +249,19 @@ const Header = ({ userPlan, setUserPlan }) => {
                       (e.currentTarget.style.background = "transparent")
                     }
                   >
-                    <strong>{r.Ticker}</strong>
-                    {r.Company_Name ? ` – ${r.Company_Name}` : ""}
+                    {/* Ticker in purple */}
+                    <span
+                      style={{
+                        color: "#5A153D",
+                        fontWeight: 600,
+                      }}
+                    >
+                      {r.Ticker}
+                    </span>
+                    {/* Company name in black, safe-split */}
+                    <span style={{ color: "#000", marginLeft: 8 }}>
+                      {(r.Company_Name || "").split(" (")[0]}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -228,11 +280,13 @@ const Header = ({ userPlan, setUserPlan }) => {
         >
           {currentUser ? (
             <>
-              {/* greeting dropdown trigger */}
+              {/* greeting dropdown */}
               <div
                 className="nav-link dropdown-trigger"
                 onMouseEnter={(e) =>
-                  e.currentTarget.querySelector(".acct-dd").classList.add("show")
+                  e.currentTarget
+                    .querySelector(".acct-dd")
+                    .classList.add("show")
                 }
                 onMouseLeave={(e) =>
                   e.currentTarget
@@ -251,7 +305,7 @@ const Header = ({ userPlan, setUserPlan }) => {
                   </div>
                 </div>
               </div>
-              {/* logout –  unchanged styles */}
+              {/* logout */}
               <button
                 onClick={() => {
                   setUsername("");
