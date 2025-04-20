@@ -12,6 +12,7 @@ __pycache__/
 *.xlsx
 *.csv
 *.xls
+*.pdf
 
 # Ignore environment files
 .env
