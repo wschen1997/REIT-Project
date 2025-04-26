@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef} from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Bar, Doughnut } from "react-chartjs-2";
+import { Bar, Doughnut, Pie } from "react-chartjs-2";
 import BottomBanner from "../components/BottomBanner.js";
 import ScatterPlotOverlay from "../components/ScatterPlotOverlay.js";
 import { ComposableMap, Geographies, Geography } from "react-simple-maps";
@@ -20,6 +20,7 @@ import {
   Legend,
   TimeScale,
 } from "chart.js";
+import ChartDataLabels from 'chartjs-plugin-datalabels'
 
 const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
 
@@ -33,10 +34,12 @@ ChartJS.register(
   PointElement, 
   Title,
   Tooltip,
-  Legend
+  Legend,
+  ChartDataLabels
 );
 
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:5000";
+
 
 /**************************************************
  * 1) SUBCOMPONENT: FinancialsTable
@@ -426,6 +429,11 @@ function DetailPage({ userPlan }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // Portfolio breakdowns
+  const [breakdowns, setBreakdowns] = useState(null);
+  const [loadingBreakdowns, setLoadingBreakdowns] = useState(true);
+  const [errorBreakdowns, setErrorBreakdowns] = useState("");
+
   // For the geographical map
   const [hoveredCountry, setHoveredCountry] = useState(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
@@ -545,6 +553,24 @@ function DetailPage({ userPlan }) {
         setError("Error fetching financial data.");
         setLoading(false);
       });
+
+    // 4) Fetch portfolio breakdowns
+    fetch(`${API_BASE_URL}/api/reits/${ticker}/breakdowns`)
+    .then((res) => res.json())
+    .then((data) => {
+      if (data.breakdowns) {
+        setBreakdowns(data.breakdowns);
+      } else if (data.error) {
+        setErrorBreakdowns(data.error);
+      }
+    })
+    .catch((err) => {
+      console.error("Error fetching breakdowns:", err);
+      setErrorBreakdowns("Network error loading breakdowns.");
+    })
+    .finally(() => {
+      setLoadingBreakdowns(false);
+    });
   }, [ticker]);
 
   if (loading) {
@@ -752,6 +778,35 @@ function DetailPage({ userPlan }) {
       },
     },
   };
+
+  // Custom tooltip callbacks for the 4 portfolio pies
+  const pieTooltipCallbacks = {
+    callbacks: {
+      title: (ctx) => ctx[0].label,
+      label: (ctx) => {
+        const raw = ctx.parsed;
+        const pct = (raw * 100).toFixed(2) + '%';
+        // raw is in SF since rba_gla is in SF units; convert to millions:
+        const millions = (raw / 1_000_000).toFixed(1);
+        return `${pct} — ${millions}M SF`;
+      }
+    }
+  };
+
+  const pieOptions = {
+    ...donutOptions,        // keeps your responsive / maintainAspectRatio / etc
+    cutout: "0%",
+    plugins: {
+      // keep everything in donutOptions.plugins _except_ tooltip
+      ...donutOptions.plugins,
+      tooltip: {            // override _only_ the tooltip with pie-specific callbacks
+        ...pieTooltipCallbacks
+      },
+      legend: {
+        display: false
+      }
+    }
+  };  
 
   const safeDisplay = (value) => {
     if (value == null || Number.isNaN(value)) {
@@ -1307,11 +1362,110 @@ function DetailPage({ userPlan }) {
         </div>
       )}
 
-      {/* 5) PORTFOLIO BREAKDOWN (Placeholder) */}
+      {/* 5) PORTFOLIO BREAKDOWN */}
       {activeTab === "portfolio" && (
-        <div>
-          <h2>Portfolio Breakdown</h2>
-          <p>TODO: Implement portfolio breakdown here.</p>
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: "20px",
+          margin: "20px 0"
+        }}>
+          {[
+            { key: "property_type",   label: "Property Types" },
+            { key: "secondary_type",  label: "Secondary Property Types" },
+            { key: "state",           label: "Domestic State Breakdown" },
+            { key: "country",         label: "International Breakdown" }
+          ].map(({ key, label }) => {
+            const arr       = breakdowns[key] || [];
+            const values    = arr.map(d => d.rba_gla);
+            const labelsArr = arr.map(d => d.category);
+            const total     = values.reduce((sum, v) => sum + v, 0);
+
+            // DEBUG: log donut init
+            console.log("[Portfolio Breakdowns] init donut for:", key, labelsArr, values);
+
+            // generate a palette of diverse colors
+            const colors = [
+              "#5A153D", "#B12D78", "#FFC857", "#119DA4", "#19647E",
+              "#FF7B24", "#9A031E", "#FB8B24", "#E36414", "#0F4C5C"
+            ];
+            const bgColors = labelsArr.map((_, i) => colors[i % colors.length]);
+
+            const chartData = {
+              labels: labelsArr,
+              datasets: [{
+                data: values,
+                backgroundColor: bgColors,
+                borderWidth: 0
+              }]
+            };
+
+            // donut options (reuse your main donutOptions style)
+            const breakdownDonutOptions = {
+              responsive: true,
+              maintainAspectRatio: false,
+              cutout: "70%",
+              plugins: {
+                title: { display: false },
+                legend: { display: false },
+                datalabels: {
+                  display: false
+                },
+            
+                // your existing tooltip stays exactly as is:
+                tooltip: {
+                  enabled: true,
+                  mode: 'nearest',
+                  intersect: false,
+                  callbacks: {
+                    title: items => items[0].label,
+                    label: ({ parsed: raw }) => {
+                      const pct = total
+                        ? ((raw / total) * 100).toFixed(2) + "%"
+                        : "0%";
+                      const mSF = (raw / 1e6).toFixed(1) + " M SF";
+                      return `${pct} — ${mSF}`;
+                    }
+                  }
+                }
+              }
+            };
+
+            return (
+              <div key={key} style={{
+                width: '700px',           // ← fixed width
+                height: '400px',
+                margin: "0 auto",
+                border: "1px solid #ccc",
+                borderRadius: "0px",
+                padding: '30px',          // still controls inner spacing
+                boxSizing: 'border-box',
+                background: "#fff",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center"
+              }}>
+                <h4
+                style={{
+                  alignSelf: 'flex-start',  // push the label to the left edge
+                  margin: '0 0 12px 0',
+                  fontSize: '20px'    // tweak your bottom spacing
+                }}
+              >
+                {label}
+              </h4>
+                <div style={{ width: "300px", height: "300px", position: 'relative' }}>
+                  <Doughnut
+                    data={chartData}
+                    options={breakdownDonutOptions}
+                    plugins={[]}            
+                    width={300}               // ← canvas width in px
+                    height={300}     
+                  />
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
