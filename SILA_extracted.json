@@ -1,0 +1,201 @@
+{
+  "geographic_breakdown": {
+    "source_page": 14,
+    "metric": "by % of ABR",
+    "items": {
+      "Texas": {
+        "percentage": "28.6%"
+      },
+      "Oklahoma": {
+        "percentage": "7.3%"
+      },
+      "Louisiana": {
+        "percentage": "5.8%"
+      },
+      "Arizona": {
+        "percentage": "5.7%"
+      },
+      "California": {
+        "percentage": "5.1%"
+      },
+      "Ohio": {
+        "percentage": "4.9%"
+      },
+      "Florida": {
+        "percentage": "4.7%"
+      },
+      "Arkansas": {
+        "percentage": "4.3%"
+      },
+      "Iowa": {
+        "percentage": "4.0%"
+      },
+      "New Jersey": {
+        "percentage": "3.6%"
+      }
+    }
+  },
+  "lease_type_breakdown": {
+    "source_page": 4,
+    "metric": "by % of Annualized contractual base rent",
+    "items": [
+      {
+        "lease_type": "Triple net lease exposure",
+        "percentage": "99.9%"
+      }
+    ]
+  },
+  "debt_metrics": {
+    "source_page": 5,
+    "items": {
+      "Net debt to EBITDAre ratio": "3.3 x",
+      "Net debt leverage ratio": "26.5 %",
+      "Interest coverage ratio": "6.4 x"
+    }
+  },
+  "lease_details": {
+    "source_page": 4,
+    "items": [
+      {
+        "weighted average lease term/WALT": "9.7 years"
+      }
+    ]
+  },
+  "top_tenants": {
+    "source_page": 15,
+    "metric": "by % of ABR",
+    "items": [
+      {
+        "name": "Post Acute Medical, LLC",
+        "percentage": "15.8%"
+      },
+      {
+        "name": "Baylor Scott and White Health",
+        "percentage": "8.0%"
+      },
+      {
+        "name": "Community Health Systems, Inc.",
+        "percentage": "6.9%"
+      },
+      {
+        "name": "Integris Health, Inc.",
+        "percentage": "5.8%"
+      },
+      {
+        "name": "Tenet Healthcare Corporation",
+        "percentage": "5.6%"
+      },
+      {
+        "name": "Trinity Health",
+        "percentage": "5.6%"
+      },
+      {
+        "name": "Select Medical Holdings Corporation",
+        "percentage": "5.0%"
+      },
+      {
+        "name": "Surgery Partners, Inc.",
+        "percentage": "4.6%"
+      },
+      {
+        "name": "Cleveland Clinic Foundation",
+        "percentage": "2.8%"
+      },
+      {
+        "name": "Community Health Network, Inc.",
+        "percentage": "2.6%"
+      }
+    ]
+  },
+  "lease_expiration": {
+    "source_page": 15,
+    "metric": "Annualized Base Rent",
+    "items": [
+      {
+        "year": "2025",
+        "percentage": "28.6%"
+      },
+      {
+        "year": "2026",
+        "percentage": "38.3%"
+      },
+      {
+        "year": "2027",
+        "percentage": "33.1%"
+      },
+      {
+        "year": "2028",
+        "percentage": "0.0%"
+      },
+      {
+        "year": "2029",
+        "percentage": "0.0%"
+      },
+      {
+        "year": "2030",
+        "percentage": "0.0%"
+      },
+      {
+        "year": "2031",
+        "percentage": "0.0%"
+      },
+      {
+        "year": "2032",
+        "percentage": "0.0%"
+      },
+      {
+        "year": "2033",
+        "percentage": "0.0%"
+      },
+      {
+        "year": "2034",
+        "percentage": "0.0%"
+      },
+      {
+        "year": "Thereafter",
+        "percentage": "0.0%"
+      }
+    ]
+  },
+  "debt_maturity_schedule": {
+    "source_page": 11,
+    "unit": "million",
+    "items": [
+      {
+        "year": "2025",
+        "amount": "$250"
+      },
+      {
+        "year": "2026",
+        "amount": "$275"
+      },
+      {
+        "year": "2027",
+        "amount": "$0"
+      },
+      {
+        "year": "2028",
+        "amount": "$0"
+      },
+      {
+        "year": "2029",
+        "amount": "$0"
+      }
+    ]
+  },
+  "asset_type_breakdown": {
+    "source_page": 13,
+    "metric": "by % of Annualized Base Rent",
+    "items": {
+      "Medical Outpatient Building": {
+        "percentage": "37.6%"
+      },
+      "Inpatient Rehabilitation Facility": {
+        "percentage": "30.1%"
+      },
+      "Surgical and Specialty Facilities": {
+        "percentage": "32.3%"
+      }
+    }
+  }
+}
