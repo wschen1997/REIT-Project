@@ -40,6 +40,100 @@ ChartJS.register(
 
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:5000";
 
+const calloutPlugin = {
+  id: 'calloutPlugin',
+  afterDatasetsDraw(chart) {
+    const { ctx }   = chart;
+    const meta      = chart.getDatasetMeta(0);
+    const data      = chart.data.datasets[0].data;
+    const total     = data.reduce((a, b) => a + b, 0);
+
+    // per‐slice radial spoke lengths (in px)
+    const spokeOptions       = [8, 16, 24, 32];
+    // per‐slice fallback arm lengths (in px) for collided labels
+    const fallbackArmOptions = [20, 60, 100, 140];
+    const armLength          = 80;   // default horizontal arm length
+    const fontSize           = 12;
+    const lineHeight         = fontSize + 2;
+
+    ctx.save();
+    ctx.font         = `${fontSize}px Arial`;
+    ctx.fillStyle    = '#333';
+    ctx.textBaseline = 'bottom';
+    ctx.strokeStyle  = '#999';
+    ctx.lineWidth    = 1;
+
+    const placed = [];  // track label boxes for collision detection
+
+    meta.data.forEach((arc, i) => {
+      if (i >= 4) return;  // only top-4 slices
+
+      const angle   = (arc.startAngle + arc.endAngle) / 2;
+      const cx      = arc.x, cy = arc.y;
+      const r       = arc.outerRadius;
+
+      // pick this slice’s spoke length
+      const spoke = spokeOptions[i] ?? spokeOptions[0];
+
+      // spoke end
+      const sx = cx + Math.cos(angle) * r;
+      const sy = cy + Math.sin(angle) * r;
+
+      // after-spoke point
+      const mx = cx + Math.cos(angle) * (r + spoke);
+      const my = cy + Math.sin(angle) * (r + spoke);
+
+      const baseRight = Math.cos(angle) > 0;
+      const pct       = ((data[i] / total) * 100).toFixed(1) + '%';
+      const lbl       = chart.data.labels[i];
+      const lines     = [pct, lbl];
+
+      // measure label
+      const w  = Math.max(...lines.map(t => ctx.measureText(t).width));
+      const h  = lineHeight * lines.length;
+      const defaultX = baseRight
+        ? mx + armLength
+        : mx - armLength - w;
+      const y0 = my - (lines.length - 1) * lineHeight;
+
+      // detect collision
+      const collides = placed.some(r =>
+        !(defaultX + w < r.x || r.x + r.w < defaultX || y0 + h < r.y || r.y + r.h < y0)
+      );
+
+      // decide direction: flip side only on collision
+      const effectiveRight = collides ? !baseRight : baseRight;
+      // pick arm length
+      const useArm = collides
+        ? (fallbackArmOptions[i] ?? fallbackArmOptions[0])
+        : armLength;
+      const hx = mx + (effectiveRight ? useArm : -useArm);
+
+      // draw connector
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(mx, my);
+      ctx.lineTo(hx, my);
+      ctx.stroke();
+
+      // draw text
+      ctx.textAlign = effectiveRight ? 'left' : 'right';
+      let ty = my - 4;
+      for (const txt of lines) {
+        ctx.fillText(txt, hx, ty);
+        ty -= lineHeight;
+      }
+
+      // record this label’s box
+      const boxX = effectiveRight ? hx : hx - w;
+      placed.push({ x: boxX, y: y0, w, h });
+    });
+
+    ctx.restore();
+  }
+};
+
+ChartJS.register(calloutPlugin);
 
 /**************************************************
  * 1) SUBCOMPONENT: FinancialsTable
@@ -1405,14 +1499,19 @@ function DetailPage({ userPlan }) {
               responsive: true,
               maintainAspectRatio: false,
               cutout: "70%",
+              layout: {
+                padding: {
+                  top:    65,
+                  right:  40,
+                  bottom: 40,
+                  left:   40
+                }
+              },
               plugins: {
                 title: { display: false },
+                calloutPlugin: {},
                 legend: { display: false },
-                datalabels: {
-                  display: false
-                },
-            
-                // your existing tooltip stays exactly as is:
+                datalabels: { display: false },
                 tooltip: {
                   enabled: true,
                   mode: 'nearest',
@@ -1432,42 +1531,59 @@ function DetailPage({ userPlan }) {
             };
 
             return (
-              <div key={key} style={{
-                width: '700px',           // ← fixed width
-                height: '400px',
-                margin: "0 auto",
-                border: "1px solid #ccc",
-                borderRadius: "0px",
-                padding: '30px',          // still controls inner spacing
-                boxSizing: 'border-box',
-                background: "#fff",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center"
-              }}>
-                <h4
+              <div
+                key={key}
                 style={{
-                  alignSelf: 'flex-start',  // push the label to the left edge
-                  margin: '0 0 12px 0',
-                  fontSize: '20px'    // tweak your bottom spacing
+                  position: 'relative',    // ← new wrapper
+                  overflow: 'visible',     // ← allow callouts to spill out
+                  width: '660px',          // ← keep your fixed width
+                  margin: "0 auto"
                 }}
               >
-                {label}
-              </h4>
-                <div style={{ width: "300px", height: "300px", position: 'relative' }}>
-                  <Doughnut
-                    data={chartData}
-                    options={breakdownDonutOptions}
-                    plugins={[]}            
-                    width={300}               // ← canvas width in px
-                    height={300}     
-                  />
+                {/* panel title pulled outside the box */}
+                <h4
+                  style={{
+                    position: 'absolute',
+                    top: '-1.2em',
+                    left: '0px',
+                    margin: 0,
+                    background: '#fff',
+                    padding: '12px 4px',           // ← add vertical padding
+                    textDecoration: 'underline',  // ← underline the label
+                    fontSize: '16px'
+                  }}
+                >
+                  {label}
+                </h4>
+
+                {/* inner bordered box */}
+                <div style={{
+                  border: "1px solid #ccc",
+                  borderRadius: "0px",
+                  padding: '20px',
+                  boxSizing: 'border-box',
+                  background: "#fff",
+                  width: '100%',
+                  height: '400px',
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  overflow: 'visible',     // ← also allow spill-out here
+                  marginTop: '1.5em'  
+                }}>
+                  <div style={{ width: "600px", height: "600px", position: 'relative', overflow: 'visible' }}>
+                    <Doughnut
+                      data={chartData}
+                      options={breakdownDonutOptions}
+                    />
+                  </div>
                 </div>
               </div>
             );
           })}
         </div>
       )}
+
     </div>
   );
 }

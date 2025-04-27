@@ -1,18 +1,5 @@
 Viserra
 
-CIQ statement cleanup:
-1. Currency
-2. All notes
-3. As reported total rev - income
-4. All filing date
-5. All restate/calc type
-6. Industry Tab:
-Clean up FFO, AFFO, FAD
-Total changed to Total Real Estate Asset (Industry tab
-Meaningless head items (Industry tab
-Check Lease revenue
-Remove all expense items
-
 Action:
 Read in logic - make it so that a new row that's now in the database can be appended, even tho its not in a new quarter.
 1. improve UX (hide functions not developed yet, payment, crowdfunding, etc.)

@@ -1,9 +1,19 @@
 
-Individual REIT Data Update
-    Download Financials fomr Cap IQ (quarterly, 2015 - 2025)
-    Clean up the 3 statements + industry specific. Delete everything above the dates row, delete currency
-    Update the ticker field in Python script 4
-    Run script
+Individual REIT Financial Statements Update
+    Download Financials fomr Cap IQ (quarterly, 2013 - 2025)
+    Clean up CIQ statements:
+        1. Delete Currency
+        2. Delete All Footnotes
+        3. Delete As reported total rev - income statement
+        4. Delete All filing date
+        5. Delete All restate/calc type
+        6. Industry Tab:
+            Top rows - leave only FFO, AFFO, FAD
+            Change "Total" to "Total Real Estate Asset" 
+            Meaningless header row with no data
+            Remove all expense items
+            Hotel REITs: leave only Total Occupancy, RevPar, and ADR
+    Run script 4 (Update the ticker field)
     Workbench command to drop the record for specific REIT:
         USE railway;
         START TRANSACTION;
@@ -17,6 +27,10 @@ Individual REIT Data Update
         USE railway; 
         DROP TABLE IF EXISTS reit_income_statement, reit_balance_sheet, reit_cash_flow, reit_industry_metrics;
 
+Individual REIT Properties Data Update
+    Download Property List from CoStar (Owner, Daniel's Table)
+    Replace "Not Disclosed" with ""
+    Run script 7 and 8 (Update ticker field)
 
 Update REIT Database Excel - orange cells/tabs (quarterly update)
     Save updated REIT Universe csv
