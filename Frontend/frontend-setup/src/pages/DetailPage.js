@@ -527,6 +527,10 @@ function DetailPage({ userPlan }) {
   const [breakdowns, setBreakdowns] = useState(null);
   const [loadingBreakdowns, setLoadingBreakdowns] = useState(true);
   const [errorBreakdowns, setErrorBreakdowns] = useState("");
+  const [mapView, setMapView] = useState('state');
+  const [hoveredGeo, setHoveredGeo] = useState(null);
+  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+
 
   // For the geographical map
   const [hoveredCountry, setHoveredCountry] = useState(null);
@@ -1458,86 +1462,145 @@ function DetailPage({ userPlan }) {
 
       {/* 5) PORTFOLIO BREAKDOWN */}
       {activeTab === "portfolio" && (
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "20px",
-          margin: "20px 0"
-        }}>
-          {[
-            { key: "property_type",   label: "Property Types" },
-            { key: "secondary_type",  label: "Secondary Property Types" },
-            { key: "state",           label: "Domestic State Breakdown" },
-            { key: "country",         label: "International Breakdown" }
-          ].map(({ key, label }) => {
-            const arr       = breakdowns[key] || [];
-            const values    = arr.map(d => d.rba_gla);
-            const labelsArr = arr.map(d => d.category);
-            const total     = values.reduce((sum, v) => sum + v, 0);
+        <>
+          {loadingBreakdowns ? (
+            <p>Loading portfolio data…</p>
+          ) : errorBreakdowns || !breakdowns ? (
+            <p>Property & portfolio data unavailable.</p>
+          ) : (
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "20px",
+              margin: "20px 0"
+            }}>
 
-            // DEBUG: log donut init
-            console.log("[Portfolio Breakdowns] init donut for:", key, labelsArr, values);
+              
+              {[
+                { key: "property_type",   label: "Property Types" },
+                { key: "secondary_type",  label: "Secondary Property Types" },
+              ].map(({ key, label }) => {
+                const arr       = breakdowns[key] || [];
+                const values    = arr.map(d => d.rba_gla);
+                const labelsArr = arr.map(d => d.category);
+                const total     = values.reduce((sum, v) => sum + v, 0);
 
-            // generate a palette of diverse colors
-            const colors = [
-              "#5A153D", "#B12D78", "#FFC857", "#119DA4", "#19647E",
-              "#FF7B24", "#9A031E", "#FB8B24", "#E36414", "#0F4C5C"
-            ];
-            const bgColors = labelsArr.map((_, i) => colors[i % colors.length]);
+                // DEBUG: log donut init
+                console.log("[Portfolio Breakdowns] init donut for:", key, labelsArr, values);
 
-            const chartData = {
-              labels: labelsArr,
-              datasets: [{
-                data: values,
-                backgroundColor: bgColors,
-                borderWidth: 0
-              }]
-            };
+                // generate a palette of diverse colors
+                const colors = [
+                  "#5A153D", "#B12D78", "#FFC857", "#119DA4", "#19647E",
+                  "#FF7B24", "#9A031E", "#FB8B24", "#E36414", "#0F4C5C"
+                ];
+                const bgColors = labelsArr.map((_, i) => colors[i % colors.length]);
 
-            // donut options (reuse your main donutOptions style)
-            const breakdownDonutOptions = {
-              responsive: true,
-              maintainAspectRatio: false,
-              cutout: "70%",
-              layout: {
-                padding: {
-                  top:    65,
-                  right:  40,
-                  bottom: 40,
-                  left:   40
-                }
-              },
-              plugins: {
-                title: { display: false },
-                calloutPlugin: {},
-                legend: { display: false },
-                datalabels: { display: false },
-                tooltip: {
-                  enabled: true,
-                  mode: 'nearest',
-                  intersect: false,
-                  callbacks: {
-                    title: items => items[0].label,
-                    label: ({ parsed: raw }) => {
-                      const pct = total
-                        ? ((raw / total) * 100).toFixed(2) + "%"
-                        : "0%";
-                      const mSF = (raw / 1e6).toFixed(1) + " M SF";
-                      return `${pct} — ${mSF}`;
+                const chartData = {
+                  labels: labelsArr,
+                  datasets: [{
+                    data: values,
+                    backgroundColor: bgColors,
+                    borderWidth: 0
+                  }]
+                };
+
+                // donut options (reuse your main donutOptions style)
+                const breakdownDonutOptions = {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  cutout: "70%",
+                  layout: {
+                    padding: {
+                      top:    65,
+                      right:  40,
+                      bottom: 40,
+                      left:   40
+                    }
+                  },
+                  plugins: {
+                    title: { display: false },
+                    calloutPlugin: {},
+                    legend: { display: false },
+                    datalabels: { display: false },
+                    tooltip: {
+                      enabled: true,
+                      mode: 'nearest',
+                      intersect: false,
+                      callbacks: {
+                        title: items => items[0].label,
+                        label: ({ parsed: raw }) => {
+                          const pct = total
+                            ? ((raw / total) * 100).toFixed(2) + "%"
+                            : "0%";
+                          const mSF = (raw / 1e6).toFixed(1) + " M SF";
+                          return `${pct} — ${mSF}`;
+                        }
+                      }
                     }
                   }
-                }
-              }
-            };
+                };
 
-            return (
+                return (
+                  <div
+                    key={key}
+                    style={{
+                      position: 'relative',    // ← new wrapper
+                      overflow: 'visible',     // ← allow callouts to spill out
+                      width: '660px',          // ← keep your fixed width
+                      margin: "0 auto"
+                    }}
+                  >
+                    {/* panel title pulled outside the box */}
+                    <h4
+                      style={{
+                        position: 'absolute',
+                        top: '-1.2em',
+                        left: '0px',
+                        margin: 0,
+                        background: '#fff',
+                        padding: '12px 4px',           // ← add vertical padding
+                        textDecoration: 'underline',  // ← underline the label
+                        fontSize: '16px'
+                      }}
+                    >
+                      {label}
+                    </h4>
+
+                    {/* inner bordered box */}
+                    <div style={{
+                      border: "1px solid #ccc",
+                      borderRadius: "0px",
+                      padding: '20px',
+                      boxSizing: 'border-box',
+                      background: "#fff",
+                      width: '100%',
+                      height: '400px',
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      overflow: 'visible',     // ← also allow spill-out here
+                      marginTop: '1.5em'  
+                    }}>
+                      <div style={{ width: "600px", height: "600px", position: 'relative', overflow: 'visible' }}>
+                        <Doughnut
+                          data={chartData}
+                          options={breakdownDonutOptions}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* ——— Geographical Breakdown panel ——— */}
               <div
-                key={key}
                 style={{
-                  position: 'relative',    // ← new wrapper
-                  overflow: 'visible',     // ← allow callouts to spill out
-                  width: '660px',          // ← keep your fixed width
-                  margin: "0 auto"
+                  position: 'relative',
+                  overflow: 'visible',
+                  // span exactly the two 660px panels + the 20px gap
+                  gridColumn: '1 / span 2',
+                  width: 'calc(670px * 2 + 20px)',
+                  margin: '0 auto'
                 }}
               >
                 {/* panel title pulled outside the box */}
@@ -1548,42 +1611,229 @@ function DetailPage({ userPlan }) {
                     left: '0px',
                     margin: 0,
                     background: '#fff',
-                    padding: '12px 4px',           // ← add vertical padding
-                    textDecoration: 'underline',  // ← underline the label
+                    padding: '12px 4px',
+                    textDecoration: 'underline',
                     fontSize: '16px'
                   }}
                 >
-                  {label}
+                  Geographical Breakdown
                 </h4>
 
                 {/* inner bordered box */}
-                <div style={{
-                  border: "1px solid #ccc",
-                  borderRadius: "0px",
-                  padding: '20px',
-                  boxSizing: 'border-box',
-                  background: "#fff",
-                  width: '100%',
-                  height: '400px',
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  overflow: 'visible',     // ← also allow spill-out here
-                  marginTop: '1.5em'  
-                }}>
-                  <div style={{ width: "600px", height: "600px", position: 'relative', overflow: 'visible' }}>
-                    <Doughnut
-                      data={chartData}
-                      options={breakdownDonutOptions}
-                    />
+                <div
+                  style={{
+                    border: '1px solid #ccc',
+                    borderRadius: '0px',
+                    padding: '10px',
+                    boxSizing: 'border-box',
+                    background: '#fff',
+                    width: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    overflow: 'visible',
+                    marginTop: '1.5em'
+                  }}
+                >
+                  {/* ——— Map toggle row ——— */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'flex-end',
+                      marginTop: '5px',
+                      marginBottom: '0px'
+                    }}
+                  >
+                    <button
+                    onClick={() => setMapView('state')}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor = "#faf0fb";
+                      e.currentTarget.style.color = "#5A153D";
+                    }}
+                    onMouseLeave={e => {
+                      const active = mapView === 'state';
+                      e.currentTarget.style.backgroundColor = active ? "#5A153D" : "#fff";
+                      e.currentTarget.style.color = active ? "#fff"   : "#333";
+                    }}
+                    style={{
+                      padding: '6px 12px',
+                      marginRight: '10px',
+                      background: mapView === 'state' ? '#5A153D' : '#fff',
+                      color:      mapView === 'state' ? '#fff'   : '#333',
+                      border: '1px solid #ccc',
+                      cursor: 'pointer'
+                    }}
+                    >
+                    US Allocation
+                    </button>
+
+                    <button
+                    onClick={() => setMapView('country')}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor = "#faf0fb";
+                      e.currentTarget.style.color = "#5A153D";
+                    }}
+                    onMouseLeave={e => {
+                      const active = mapView === 'country';
+                      e.currentTarget.style.backgroundColor = active ? "#5A153D" : "#fff";
+                      e.currentTarget.style.color = active ? "#fff"   : "#333";
+                    }}
+                    style={{
+                      padding: '6px 12px',
+                      background: mapView === 'country' ? '#5A153D' : '#fff',
+                      color:      mapView === 'country' ? '#fff'   : '#333',
+                      border: '1px solid #ccc',
+                      cursor: 'pointer'
+                    }}
+                    >
+                    International Allocation
+                    </button>
+                  </div>
+
+                  {/* ——— Choropleth map container ——— */}
+                  <div
+                    style={{
+                      position: 'relative',
+                      width: '100%',
+                      margin: '0 auto'
+                    }}
+                  >
+                    {mapView === 'state' ? (
+                      <ComposableMap
+                        projection="geoAlbersUsa"
+                        projectionConfig={{ scale: 1000, center: [-97, 38] }}
+                        style={{ width: '100%', height: '600px' }}
+                      >
+                        <Geographies geography="https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json">
+                          {({ geographies }) => {
+                            const data   = breakdowns.state || [];
+                            const maxPct = data.length
+                              ? Math.max(...data.map(d => Number(d.pct)))
+                              : 0;
+                            const nameToCode = {};
+                            Object.entries(US_STATE_MAP).forEach(([code, name]) => {
+                              nameToCode[name] = code;
+                            });
+
+                            return geographies.map(geo => {
+                              const fullName = geo.properties.name;
+                              const code     = nameToCode[fullName];
+                              const entry    = data.find(d => d.category === code);
+                              const pct      = entry ? Number(entry.pct) : 0;
+                              const rel      = maxPct > 0 ? pct / maxPct : 0;
+                              const opacity  = 0.2 + 0.8 * rel;
+                              const fill     = pct === 0
+                                ? '#e0e0e0'
+                                : `rgba(90,21,61,${opacity})`;
+
+                              return (
+                                <Geography
+                                  key={geo.rsmKey}
+                                  geography={geo}
+                                  fill={fill}
+                                  stroke="#fff"
+                                  onMouseEnter={evt => {
+                                    setTooltipPos({ x: evt.clientX, y: evt.clientY });
+                                    setHoveredGeo({
+                                      name: fullName,
+                                      pct:  `${(pct * 100).toFixed(2)}%`
+                                    });
+                                  }}
+                                  onMouseMove={evt =>
+                                    setTooltipPos({ x: evt.clientX, y: evt.clientY })
+                                  }
+                                  onMouseLeave={() => setHoveredGeo(null)}
+                                />
+                              );
+                            });
+                          }}
+                        </Geographies>
+                      </ComposableMap>
+                    ) : (
+                      <ComposableMap
+                        projectionConfig={{ scale: 150 }}
+                        style={{ width: '100%', height: '600px' }}
+                      >
+                        <Geographies geography={geoUrl}>
+                          {({ geographies }) => {
+                            const data   = breakdowns.country || [];
+                            const maxPct = data.length
+                              ? Math.max(...data.map(d => Number(d.pct)))
+                              : 0;
+
+                            return geographies.map(geo => {
+                              const name      = geo.properties.name;
+                              const lowerName = name.toLowerCase();
+                              const entry     = data.find(d => {
+                                const cat = d.category.toLowerCase();
+                                return (
+                                  lowerName === cat ||
+                                  lowerName.includes(cat) ||
+                                  cat.includes(lowerName)
+                                );
+                              });
+                              const pct     = entry ? Number(entry.pct) : 0;
+                              const rel     = maxPct > 0 ? pct / maxPct : 0;
+                              const opacity = 0.2 + 0.8 * rel;
+                              const fill    = pct === 0
+                                ? '#e0e0e0'
+                                : `rgba(90,21,61,${opacity})`;
+
+                              return (
+                                <Geography
+                                  key={geo.rsmKey}
+                                  geography={geo}
+                                  fill={fill}
+                                  stroke="#fff"
+                                  onMouseEnter={evt => {
+                                    setTooltipPos({ x: evt.clientX, y: evt.clientY });
+                                    setHoveredGeo({
+                                      name,
+                                      pct:  `${(pct * 100).toFixed(2)}%`
+                                    });
+                                  }}
+                                  onMouseMove={evt =>
+                                    setTooltipPos({ x: evt.clientX, y: evt.clientY })
+                                  }
+                                  onMouseLeave={() => setHoveredGeo(null)}
+                                />
+                              );
+                            });
+                          }}
+                        </Geographies>
+                      </ComposableMap>
+                    )}
+
+                    {/* ——— Hover tooltip ——— */}
+                    {hoveredGeo && (
+                      <div
+                        style={{
+                          position: 'fixed',
+                          top:    tooltipPos.y + 10,
+                          left:   tooltipPos.x + 10,
+                          background: '#fff',
+                          padding:    '6px 8px',
+                          borderRadius: '4px',
+                          boxShadow:  '0 2px 4px rgba(0,0,0,0.2)',
+                          pointerEvents: 'none',
+                          fontSize: '0.85rem',
+                          zIndex: 1000
+                        }}
+                      >
+                        <strong>{hoveredGeo.name}</strong><br/>
+                        {hoveredGeo.pct}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
-            );
-          })}
-        </div>
-      )}
 
+
+
+
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
