@@ -1802,7 +1802,6 @@ function DetailPage({ userPlan }) {
                         </Geographies>
                       </ComposableMap>
                     )}
-
                     {/* ——— Hover tooltip ——— */}
                     {hoveredGeo && (
                       <div
@@ -1826,10 +1825,17 @@ function DetailPage({ userPlan }) {
                   </div>
                 </div>
               </div>
-
-
-
-
+              {/* ——— FOOTNOTE ——— */}
+              <div style={{
+                gridColumn: "1 / span 2",
+                marginTop:  "12px",
+                fontSize:   "0.8rem",
+                color:      "#555",
+                fontStyle:  "italic",
+                textAlign:  "left"
+              }}>
+                As an analytics platform, Viserra strives to present every data point on a consistent basis. Property data and classification are sourced from CoStar and public records (eg. transaction deeds, county appraisal databases, etc.) to reflect the most up to date transaction information. All percentages here are calculated on a square-foot basis, so figures may differ from those on the company’s website or in investor presentations.
+              </div>
             </div>
           )}
         </>
