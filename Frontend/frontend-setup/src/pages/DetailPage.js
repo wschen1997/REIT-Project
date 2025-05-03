@@ -1834,7 +1834,7 @@ function DetailPage({ userPlan }) {
                 fontStyle:  "italic",
                 textAlign:  "left"
               }}>
-                As an analytics platform, Viserra strives to present every data point on a consistent basis. Property data and classification are sourced from CoStar and public records (eg. transaction deeds, county appraisal databases, etc.) to reflect the most up to date transaction information. All percentages here are calculated on a square-foot basis, so figures may differ from those on the company’s website or in investor presentations.
+                As an analytics platform, Viserra strives to present every data point on a consistent basis. Property data and classification are sourced from public records (eg. transaction deeds, county appraisal databases, etc.) to reflect the most up to date transaction information. All percentages here are calculated on a square-foot basis, so figures may differ from those on the company’s website or in investor presentations.
               </div>
             </div>
           )}

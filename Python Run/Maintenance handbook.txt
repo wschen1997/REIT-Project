@@ -31,6 +31,11 @@ Individual REIT Properties Data Update
     Download Property List from CoStar (Owner, Daniel's Table)
     Replace "Not Disclosed" with ""
     Run script 7 and 8 (Update ticker field)
+    Workbench command to drop record for specific REIT
+        USE railway;
+        DELETE FROM reit_properties
+        WHERE ticker = 'HR'
+        LIMIT 1000000;
 
 Update REIT Database Excel - orange cells/tabs (quarterly update)
     Save updated REIT Universe csv
