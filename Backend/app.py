@@ -278,21 +278,29 @@ def get_quarterly_statements(ticker):
 # -------------------------------------------------------------------------
 # PORTFOLIO ANALYSIS ENDPOINT 
 # -------------------------------------------------------------------------
-
 @app.route("/api/reits/<string:ticker>/breakdowns", methods=['GET'])
 def get_portfolio_breakdowns(ticker):
     """
     Returns portfolio breakdowns by property_type, secondary_type, US state, and country.
-    Each entry has: category, rba_gla, and pct (fraction of total).
+    Each entry has: category, rba_gla, pct (fraction of total), data source, and calc basis.
     """
     try:
         with db.engine.connect() as conn:
             df = pd.read_sql(text("""
-                SELECT breakdown_type, category, rba_gla, pct
+                SELECT breakdown_type
+                     , category
+                     , rba_gla
+                     , pct
+                     , source
+                     , basis
                   FROM reit_portfolio_analysis
                  WHERE ticker = :ticker
                  ORDER BY 
-                   FIELD(breakdown_type, 'property_type','secondary_type','state','country'),
+                   FIELD(breakdown_type,
+                         'property_type',
+                         'secondary_type',
+                         'state',
+                         'country'),
                    pct DESC
             """), conn, params={"ticker": ticker})
     except Exception as e:
@@ -302,14 +310,15 @@ def get_portfolio_breakdowns(ticker):
     if df.empty:
         return jsonify({"message": f"No breakdowns found for ticker '{ticker}'"}), 200
 
-    # pivot into four lists
+    # pivot into four lists, now including source & basis
     result = {}
     for btype in ["property_type", "secondary_type", "state", "country"]:
-        sub = df[df["breakdown_type"] == btype][["category","rba_gla","pct"]]
+        sub = df[df["breakdown_type"] == btype][
+            ["category", "rba_gla", "pct", "source", "basis"]
+        ]
         result[btype] = sub.to_dict(orient="records")
 
     return jsonify({"ticker": ticker, "breakdowns": result}), 200
-
 
 # -------------------------------------------------------------------------
 # OVERVIEW FINANCIAL DATA ENDPOINT (Last 6 quarters)
