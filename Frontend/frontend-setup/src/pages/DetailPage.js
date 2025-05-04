@@ -1478,7 +1478,7 @@ function DetailPage({ userPlan }) {
               
               {[
                 { key: "property_type",   label: "Property Types" },
-                { key: "secondary_type",  label: "Secondary Property Types" },
+                { key: "secondary_type",  label: "Secondary Property Types (If Reported)" },
               ].map(({ key, label }) => {
                 const arr       = breakdowns[key] || [];
                 const values    = arr.map(d => d.rba_gla);
