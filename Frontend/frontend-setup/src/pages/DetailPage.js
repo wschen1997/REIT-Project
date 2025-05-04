@@ -1533,7 +1533,7 @@ function DetailPage({ userPlan }) {
                             ? ((raw / total) * 100).toFixed(2) + "%"
                             : "0%";
                           const mSF = (raw / 1e6).toFixed(1) + " M SF";
-                          return `${pct} — ${mSF}`;
+                          return `${pct}`;
                         }
                       }
                     }
