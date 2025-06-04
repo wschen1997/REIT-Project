@@ -1,0 +1,274 @@
+{
+  "top_tenants": {
+    "source_page": 9,
+    "metric": "by % of Total",
+    "items": [
+      {
+        "name": "Net lease self-storage properties in the U.S. leased to publicly traded self-storage REIT",
+        "percentage": "2.7%"
+      },
+      {
+        "name": "Pharmaceutical R&D and manufacturing properties in the Greater Toronto Area leased to generic drug manufacturer",
+        "percentage": "2.4%"
+      },
+      {
+        "name": "Business-to-business retail stores in Italy leased to cash and carry wholesaler",
+        "percentage": "2.0%"
+      },
+      {
+        "name": "Automotive parts manufacturing properties in the U.S., Canada and Mexico leased to OEM supplier",
+        "percentage": "1.9%"
+      },
+      {
+        "name": "Retail properties in Germany leased to German DIY retailer",
+        "percentage": "1.8%"
+      },
+      {
+        "name": "Grocery stores and one warehouse in Croatia leased to European food retailer",
+        "percentage": "1.8%"
+      },
+      {
+        "name": "Retail properties in Poland leased to German DIY retailer",
+        "percentage": "1.8%"
+      },
+      {
+        "name": "K-12 private schools in Orlando, Miami and Houston leased to international day and boarding school operator",
+        "percentage": "1.7%"
+      },
+      {
+        "name": "Industrial and warehouse facilities in Germany, Italy and Spain leased to global manufacturer of premium packaging and labels",
+        "percentage": "1.7%"
+      },
+      {
+        "name": "Grocery stores and warehouses in Spain leased to Spanish food retailer",
+        "percentage": "1.5%"
+      }
+    ]
+  },
+  "asset_type_breakdown": {
+    "source_page": 11,
+    "metric": "by % of ABR",
+    "items": {
+      "Industrial / Warehouse": {
+        "percentage": "64%"
+      },
+      "Retail": {
+        "percentage": "22%"
+      },
+      "Other": {
+        "percentage": "14%"
+      }
+    }
+  },
+  "geographic_breakdown": {
+    "source_page": 12,
+    "metric": "by % of ABR",
+    "items": {
+      "United States": {
+        "percentage": "61%"
+      },
+      "Canada": {
+        "percentage": "4%"
+      },
+      "Mexico": {
+        "percentage": "2%"
+      },
+      "Europe": {
+        "percentage": "33%"
+      },
+      "Other": {
+        "percentage": "1%"
+      }
+    }
+  },
+  "lease_type_breakdown": {
+    "source_page": 13,
+    "metric": null,
+    "items": [
+      {
+        "lease_type": "Uncapped CPI",
+        "percentage": "31%"
+      },
+      {
+        "lease_type": "Fixed",
+        "percentage": "46%"
+      },
+      {
+        "lease_type": "Capped CPI",
+        "percentage": "19%"
+      },
+      {
+        "lease_type": "Other",
+        "percentage": "3%"
+      },
+      {
+        "lease_type": "None",
+        "percentage": "<1%"
+      }
+    ]
+  },
+  "debt_metrics": {
+    "source_page": 20,
+    "items": {
+      "Pro Rata Net Debt / Adjusted EBITDA": "5.5x",
+      "Pro Rata Net Debt / Enterprise Value": "38.7%",
+      "Total Consolidated Debt / Gross Assets": "41.6%",
+      "Weighted Average Interest Rate (three months ended Dec 31, 2024) (pro rata)": "3.3%",
+      "Weighted Average Debt Maturity (pro rata)": "4.7 years"
+    }
+  },
+  "lease_expiration": {
+    "source_page": 15,
+    "metric": "Lease Expirations (% ABR)",
+    "items": [
+      {
+        "year": "2025",
+        "percentage": "1.8%"
+      },
+      {
+        "year": "2026",
+        "percentage": "4.0%"
+      },
+      {
+        "year": "2027",
+        "percentage": "4.8%"
+      },
+      {
+        "year": "2028",
+        "percentage": "4.0%"
+      },
+      {
+        "year": "2029",
+        "percentage": "5.7%"
+      },
+      {
+        "year": "2030",
+        "percentage": "2.9%"
+      },
+      {
+        "year": "2031",
+        "percentage": "5.5%"
+      },
+      {
+        "year": "2032",
+        "percentage": "2.7%"
+      },
+      {
+        "year": "2033",
+        "percentage": "5.8%"
+      },
+      {
+        "year": "2034",
+        "percentage": "6.2%"
+      },
+      {
+        "year": "2035",
+        "percentage": "2.9%"
+      },
+      {
+        "year": "Thereafter",
+        "percentage": "53.7%"
+      }
+    ]
+  },
+  "debt_maturity_schedule": {
+    "source_page": 21,
+    "unit": "million",
+    "items": [
+      {
+        "year": "2025",
+        "amount": "519"
+      },
+      {
+        "year": "2026",
+        "amount": "883"
+      },
+      {
+        "year": "2027",
+        "amount": "623"
+      },
+      {
+        "year": "2028",
+        "amount": "450"
+      },
+      {
+        "year": "2029",
+        "amount": "350"
+      },
+      {
+        "year": "2030",
+        "amount": "325"
+      },
+      {
+        "year": "2031",
+        "amount": "500"
+      },
+      {
+        "year": "2032",
+        "amount": "350"
+      },
+      {
+        "year": "2033",
+        "amount": "425"
+      },
+      {
+        "year": "2034",
+        "amount": "400"
+      }
+    ]
+  },
+  "top_tenant_sectors": {
+    "source_page": 11,
+    "metric": "by % of ABR",
+    "items": [
+      {
+        "name": "Retail Stores",
+        "percentage": "22%"
+      },
+      {
+        "name": "Consumer Services",
+        "percentage": "9%"
+      },
+      {
+        "name": "Beverage and Food",
+        "percentage": "8%"
+      },
+      {
+        "name": "Automotive",
+        "percentage": "7%"
+      },
+      {
+        "name": "Grocery",
+        "percentage": "6%"
+      },
+      {
+        "name": "Healthcare and Pharmaceuticals",
+        "percentage": "5%"
+      },
+      {
+        "name": "Durable Consumer Goods",
+        "percentage": "5%"
+      },
+      {
+        "name": "Containers, Packaging and Glass",
+        "percentage": "4%"
+      },
+      {
+        "name": "Capital Equipment",
+        "percentage": "4%"
+      },
+      {
+        "name": "Chemicals, Plastics and Rubber",
+        "percentage": "4%"
+      }
+    ]
+  },
+  "lease_details": {
+    "source_page": 8,
+    "items": [
+      {
+        "weighted average lease term/WALT": "12.3 years"
+      }
+    ]
+  }
+}

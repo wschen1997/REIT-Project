@@ -861,6 +861,7 @@ function DetailPage({ userPlan }) {
     cutout: "70%",
     plugins: {
       legend: { display: false },
+      calloutPlugin: false,
       tooltip: {
         callbacks: {
           title: () => "",
@@ -1022,7 +1023,6 @@ function DetailPage({ userPlan }) {
           { id: "overview", label: "Overview" },
           { id: "financials", label: "Financials" },
           { id: "metrics", label: "Real Estate Specific Metrics" },
-          { id: "leasing", label: "Leasing" },
           { id: "portfolio", label: "Portfolio Breakdown" },
         ].map((tab) => {
           const isActive = (tab.id === activeTab);
@@ -1055,97 +1055,7 @@ function DetailPage({ userPlan }) {
             <p style={{ marginTop: "10px" }}>{businessDescription}</p>
           </div>
 
-          {/* Business Statistics Table (Now inside Grey Background) */}
-          <div style={sectionContainer}>
-            <h3 style={{ marginTop: 0, marginBottom: "10px" }}>Business Statistics</h3>
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "collapse",
-                marginTop: "10px",
-              }}
-            >
-              <tbody>
-                <tr>
-                  <td style={{ padding: "8px", border: "1px solid #ccc" }}>
-                    Investment Property Type
-                  </td>
-                  <td style={{ padding: "8px", border: "1px solid #ccc" }}>
-                    {safeDisplay(propertyType)}
-                  </td>
-                </tr>
-                <tr>
-                  <td style={{ padding: "8px", border: "1px solid #ccc" }}>
-                    Year Founded
-                  </td>
-                  <td style={{ padding: "8px", border: "1px solid #ccc" }}>
-                    {safeDisplay(yearFounded)}
-                  </td>
-                </tr>
-                <tr>
-                  <td style={{ padding: "8px", border: "1px solid #ccc" }}>
-                    Number of Employees
-                  </td>
-                  <td style={{ padding: "8px", border: "1px solid #ccc" }}>
-                    {safeDisplay(numbersEmployee)}
-                  </td>
-                </tr>
-                <tr>
-                  <td style={{ padding: "8px", border: "1px solid #ccc" }}>
-                    Website
-                  </td>
-                  <td style={{ padding: "8px", border: "1px solid #ccc" }}>
-                    {website ? (
-                      <a
-                        href={website.startsWith("http") ? website : `https://${website}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ color: "#007bff" }}
-                      >
-                        {website}
-                      </a>
-                    ) : (
-                      "No Data"
-                    )}
-                  </td>
-                </tr>
-                <tr>
-                  <td style={{ padding: "8px", border: "1px solid #ccc" }}>
-                    Total Real Estate Assets
-                  </td>
-                  <td style={{ padding: "8px", border: "1px solid #ccc" }}>
-                    {formatAssets(totalAssetsM)}
-                  </td>
-                </tr>
-                <tr>
-                  <td style={{ padding: "8px", border: "1px solid #ccc" }}>
-                    Annualized Historical FFO Growth
-                    <span
-                      className="tooltip-icon"
-                      style={{
-                        marginLeft: "6px",
-                        cursor: "pointer",
-                        fontSize: "0.8rem",
-                        width: "14px",
-                        height: "14px",
-                        display: "inline-block",
-                        textAlign: "center",
-                        lineHeight: "16px",
-                      }}
-                    >
-                      i
-                      <span className="tooltip-text">
-                        This represents the CAGR of a REIT's FFO over the last five years. If a CAGR is unavailable—due to a sign change or both the starting and ending values being negative—the average annual growth over five years is displayed.
-                      </span>
-                    </span>
-                  </td>
-                  <td style={{ padding: "8px", border: "1px solid #ccc" }}>
-                    {formatFFOGrowth(fiveYrFFOGrowth)}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+          
 
           <div style={sectionContainer}>
             <h3 style={{ marginTop: 0, marginBottom: "10px" }}>Daily Price & Volume</h3>
@@ -1304,95 +1214,7 @@ function DetailPage({ userPlan }) {
             </div>
           </div>
 
-          {/* Geographical Diversification */}
-          <div style={{ ...sectionContainer, position: "relative" }}>
-            <h3 style={{ marginTop: 0, marginBottom: "10px" }}>
-              Geographical Diversification
-            </h3>
-            <div
-              style={{
-                backgroundColor: "#fff",
-                padding: "20px",
-                borderRadius: "8px",
-                boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
-              }}
-            >
-              <div style={{ textAlign: "center" }}>
-                <ComposableMap projectionConfig={{ scale: 100 }} width={800} height={400}>
-                  <Geographies geography={geoUrl}>
-                    {({ geographies }) =>
-                      geographies.map((geo) => {
-                        const countryName = geo.properties.name;
-                        const isInvested =
-                          overseasInvestment.includes(countryName) ||
-                          (countryName === "United States of America" &&
-                            usInvestmentRegions.length > 0);
-
-                        return (
-                          <Geography
-                            key={geo.rsmKey}
-                            geography={geo}
-                            fill={isInvested ? "#b12d78" : "#D6D6DA"}
-                            stroke="#FFFFFF"
-                            strokeWidth={0.5}
-                            onMouseEnter={(event) => {
-                              setTooltipPosition({
-                                x: event.clientX + 10,
-                                y: event.clientY - 30,
-                              });
-                              setHoveredCountry(
-                                countryName === "United States of America" &&
-                                  usInvestmentRegions.length > 0
-                                  ? `States invested: ${usInvestmentRegions.join(", ")}`
-                                  : overseasInvestment.includes(countryName)
-                                  ? `${countryName}`
-                                  : null
-                              );
-                            }}
-                            onMouseMove={(event) => {
-                              setTooltipPosition({
-                                x: event.clientX + 10,
-                                y: event.clientY - 30,
-                              });
-                            }}
-                            onMouseLeave={() => setHoveredCountry(null)}
-                            style={{
-                              default: { outline: "none" },
-                              hover: { fill: "#5A153D", outline: "none" },
-                              pressed: { fill: "#2A0920", outline: "none" },
-                            }}
-                          />
-                        );
-                      })
-                    }
-                  </Geographies>
-                </ComposableMap>
-              </div>
-            </div>
-
-            {hoveredCountry && (
-              <div
-                style={{
-                  position: "fixed",
-                  left: `${tooltipPosition.x}px`,
-                  top: `${tooltipPosition.y}px`,
-                  backgroundColor: "#fff",
-                  padding: "8px",
-                  borderRadius: "5px",
-                  boxShadow: "0 2px 5px rgba(0,0,0,0.2)",
-                  fontSize: "14px",
-                  pointerEvents: "none",
-                  maxWidth: "200px",
-                  wordWrap: "break-word",
-                  whiteSpace: "normal",
-                  textAlign: "left",
-                  zIndex: 1000,
-                }}
-              >
-                {hoveredCountry}
-              </div>
-            )}
-          </div>
+          
 
           <BottomBanner />
           {showOverlay && (

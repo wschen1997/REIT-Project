@@ -6,9 +6,8 @@ const Sidebar = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
 
   const menu = [
-    { label: "Real Estate Crowdfundings", path: "/Crowdfunding" },
     { label: "REITs Screener",            path: "/filter"       },
-    { label: "Pricing",                   path: "/pricing"      },
+    { label: "Real Estate Crowdfundings", path: "/Crowdfunding" },
     { label: "About Us",                  path: "/about"        },
     { label: "Contact Us",                path: "/contact"      },
   ];

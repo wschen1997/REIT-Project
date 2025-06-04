@@ -150,94 +150,7 @@ function HomePage() {
           />
         </div>
 
-        {/* FEATURES SECTION */}
-        <div
-          style={{
-            textAlign: "center",
-            margin: "150px auto",
-            maxWidth: "1200px",
-            padding: "0 20px",
-          }}
-        >
-          <h2 style={{ fontSize: "2rem", color: "#5A153D", marginBottom: "50px" }}>
-            Powerful Analytics for Real Estate Investors
-          </h2>
-
-          <div
-            style={{
-              display: "flex",
-              gap: "40px",
-              justifyContent: "center",
-              flexWrap: "wrap",
-            }}
-          >
-            {/* REIT BOX */}
-            <div
-              onClick={handleReitClick}
-              style={featureBoxStyle}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = "#faf0fb";
-                e.currentTarget.style.transform = "translateY(-3px)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = "#fff";
-                e.currentTarget.style.transform = "translateY(0)";
-              }}
-            >
-              <img
-                src="/REIT.png"
-                alt="REIT Feature"
-                style={{
-                  width: "100%",
-                  height: "auto",
-                  borderRadius: "8px",
-                  marginBottom: "16px",
-                }}
-              />
-              <h3 style={{ fontSize: "1.3rem", marginBottom: "10px", color: "#5A153D" }}>
-                REIT Analytics
-              </h3>
-              <p style={{ fontSize: "0.95rem", color: "#444", lineHeight: "1.5" }}>
-                Gain insights into publicly traded REITs with live pricing,
-                fundamental data, and advanced screening tools. 
-                Quickly search and compare your target tickers.
-              </p>
-            </div>
-
-            {/* CROWDFUNDING BOX */}
-            <div
-              onClick={handleCrowdfundingClick}
-              style={featureBoxStyle}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = "#faf0fb";
-                e.currentTarget.style.transform = "translateY(-3px)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = "#fff";
-                e.currentTarget.style.transform = "translateY(0)";
-              }}
-            >
-              <img
-                src="/Crowdfunding.png"
-                alt="Crowdfunding Feature"
-                style={{
-                  width: "100%",
-                  height: "auto",
-                  borderRadius: "8px",
-                  marginBottom: "16px",
-                }}
-              />
-              <h3 style={{ fontSize: "1.3rem", marginBottom: "10px", color: "#5A153D" }}>
-                Crowdfunding Insights
-              </h3>
-              <p style={{ fontSize: "0.95rem", color: "#444", lineHeight: "1.5" }}>
-                Explore top real estate crowdfunding deals, with standardized metrics
-                including total return, distribution yield, and NAV growth. 
-                Compare different platforms for your next investment.
-              </p>
-            </div>
-          </div>
-        </div>
+        
 
         {/* SIGNUP SECTION */}
         <div
@@ -256,7 +169,7 @@ function HomePage() {
               marginBottom: "20px",
             }}
           >
-            Join Our Early Access List
+            Join Our Early Access List!
           </h2>
           <p
             style={{
@@ -268,8 +181,6 @@ function HomePage() {
               marginBottom: "20px",
             }}
           >
-            Sign up below for exclusive updates and enjoy a{" "}
-            <strong>30% discount</strong> when we officially launch!
           </p>
 
           {/* SIGN-UP FORM */}

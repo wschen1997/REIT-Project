@@ -67,7 +67,7 @@ function AboutUs() {
               >
                 Viserra combines <strong>“Vision”</strong> and <strong>“Terra”</strong> 
                 (Latin for “land”) to embody our mission: bringing a fresh perspective 
-                to real estate investment. Our team draws on decades of experience 
+                to real estate investment. We draw on decades of experience 
                 in REIT equity research and private equity real estate, and cutting‐edge 
                 software development. By blending real‐estate domain knowledge with 
                 modern data science, we aim to create a platform that empowers 
@@ -111,7 +111,7 @@ function AboutUs() {
 
               <div style={{ lineHeight: "1.6", fontSize: "1rem" }}>
                 <strong style={{ color: "#B12D78" }}>Data Accuracy</strong> &nbsp;
-                Our team painstakingly checks official company filings, prospectuses, 
+                We painstakingly checks official company filings, prospectuses, 
                 and investor relations documents to ensure each data point is 
                 thoroughly verified.
               </div>
@@ -157,16 +157,7 @@ function AboutUs() {
                 </p>
               </div>
 
-              <div style={{ flex: "1", minWidth: "200px" }}>
-                <h4 style={{ color: "#B12D78", marginBottom: "0.5rem" }}>
-                  Pittsburgh Office
-                </h4>
-                <p style={{ margin: 0, lineHeight: "1.6", fontSize: "1rem" }}>
-                  5727 Elwood Street
-                  <br />
-                  Pittsburgh, Pennsylvania 15232
-                </p>
-              </div>
+              
             </div>
           </div>
         </div>
