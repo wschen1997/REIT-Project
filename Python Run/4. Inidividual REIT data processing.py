@@ -4,12 +4,20 @@ import re
 import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, text, Table, MetaData
+from sqlalchemy.dialects.mysql import insert
 
 # ------------------------------------------------------------------
 # 1) Load DB credentials from env
 # ------------------------------------------------------------------
-script_dir = os.path.dirname(__file__)
+# Assumes the script is in a directory and Credentials.env is in the same directory.
+# If your script is elsewhere, you might need to adjust the path logic.
+try:
+    script_dir = os.path.dirname(os.path.realpath(__file__))
+except NameError:
+    # This fallback is useful for interactive environments like Jupyter
+    script_dir = os.getcwd()
+
 dotenv_path = os.path.join(script_dir, "Credentials.env")
 load_dotenv(dotenv_path)
 
@@ -21,13 +29,13 @@ DB_NAME = os.getenv("DB_NAME")
 
 engine = create_engine(
     f"mysql+pymysql://{DB_USERNAME}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}",
-    connect_args={"ssl": {"fake_flag_to_enable": True}}
+    connect_args={"ssl": {"fake_flag_to_enable": True}} # Note: for production, use proper SSL config
 )
 
 # ------------------------------------------------------------------
 # 2) Prepare the user inputs: Ticker & file path
 # ------------------------------------------------------------------
-ticker = "CSR"  # Update REIT you want to process
+ticker = "INN"  # Update REIT you want to process
 print(f"Processing data for Ticker={ticker}...")
 
 root_folder = os.getenv("REIT_RAW_FINANCIALS_PATH")
@@ -50,12 +58,13 @@ print(f"Using file: {file_path}")
 
 # ------------------------------------------------------------------
 # 3) Helper: Create or verify each statement table
-#    We'll store data in row-based format with an additional
-#    'fiscal_quarter' column. The unique constraint is now
-#    (ticker, line_item, fiscal_year, fiscal_quarter).
-#    ADDED: excel_row_index INT for preserving row order.
 # ------------------------------------------------------------------
 def create_reit_table_if_not_exists(table_name):
+    """
+    Creates the specified table if it doesn't already exist.
+    The unique key on (ticker, line_item, fiscal_year, fiscal_quarter) is
+    crucial for the upsert logic to work correctly.
+    """
     create_query = f"""
     CREATE TABLE IF NOT EXISTS {table_name} (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -63,7 +72,7 @@ def create_reit_table_if_not_exists(table_name):
         line_item VARCHAR(255) NOT NULL,
         fiscal_year INT NOT NULL,
         fiscal_quarter INT NULL,
-        value FLOAT,
+        value DOUBLE,
         excel_row_index INT,
         UNIQUE KEY unique_row (ticker, line_item, fiscal_year, fiscal_quarter)
     );
@@ -71,6 +80,7 @@ def create_reit_table_if_not_exists(table_name):
     try:
         with engine.connect() as conn:
             conn.execute(text(create_query))
+            conn.commit()
         print(f"✅ Verified/created table: {table_name}")
     except Exception as e:
         print(f"❌ Error creating table {table_name}: {e}")
@@ -88,16 +98,10 @@ for sheet_name, table_name in statement_tables.items():
 
 # ------------------------------------------------------------------
 # 4) Quarter/Year parsing
-#    We'll look for a 4-digit year and "Q1","Q2","Q3","Q4" in
-#    the column name. If no quarter is found, defaults to None.
 # ------------------------------------------------------------------
 def parse_year_quarter(col_name: str):
     """
-    Example column strings might be:
-      "Reclassified\n3 months\nQ1\nMar-31-2015"
-      "3 months Q2 Jun-30-2016"
-      "12 months Dec-31-2015"
-    We'll extract the 4-digit year + quarter (if present).
+    Extracts a 4-digit year and a quarter (Q1-Q4) from a column header string.
     Returns (year, quarter) or (None, None) if not found.
     """
     # Find a 4-digit year
@@ -107,59 +111,51 @@ def parse_year_quarter(col_name: str):
     year = int(y_match.group(1))
 
     # Look for "Q1", "Q2", "Q3", or "Q4"
-    q_match = re.search(r'(Q[1-4])', col_name, flags=re.IGNORECASE)
+    q_match = re.search(r'Q([1-4])', col_name, flags=re.IGNORECASE)
     if q_match:
-        # e.g. "Q1" -> quarter=1
-        quarter_str = q_match.group(1).upper()
-        quarter = int(quarter_str[1])
+        quarter = int(q_match.group(1))
     else:
-        # if no quarter found, we can store None or default to 4, etc.
-        quarter = None
+        quarter = None  # No quarter found
 
     return (year, quarter)
 
 # ------------------------------------------------------------------
-# 5) Function to process a single sheet (DataFrame) & insert
-#    ADDED: preserve original Excel row order via excel_row_index.
+# 5) Function to process a single sheet & UPSERT data
+#    MODIFIED: Replaced to_sql() with a robust upsert function.
 # ------------------------------------------------------------------
 def process_financial_sheet(df_raw, sheet_name, ticker):
+    """
+    Processes a raw DataFrame from an Excel sheet and upserts the data
+    into the corresponding database table.
+    """
     table_name = statement_tables[sheet_name]
 
     df = df_raw.copy()
-
-    # Preserve original Excel row order:
-    df.reset_index(inplace=True)  # moves the current index to a column called 'index'
+    df.reset_index(inplace=True)
     df.rename(columns={"index": "excel_row_index"}, inplace=True)
 
-    # Identify which column is line_item vs. which are value columns
+    # Identify line item column vs. data (year) columns
     year_cols = []
     line_item_col = None
-
     for col in df.columns:
         if re.search(r'(19\d{2}|20\d{2})', str(col)):
             year_cols.append(col)
-        else:
-            if col not in ["excel_row_index"] and not line_item_col:
-                line_item_col = col
+        elif col not in ["excel_row_index"] and not line_item_col:
+            line_item_col = col
 
     if not line_item_col:
+        # Fallback to the first column if detection fails
         line_item_col = df.columns[0]
-
-    # Rename that column to "line_item"
+    
     df.rename(columns={line_item_col: "line_item"}, inplace=True)
 
-    # Convert "-" or other placeholders to NaN
-    df.replace("-", np.nan, inplace=True)
-    df.infer_objects(copy=False)
-
-    # Drop rows that have no line_item
+    # Data cleaning
+    df.replace(["-", "--", "---"], np.nan, inplace=True)
     df.dropna(subset=["line_item"], inplace=True)
-
-    # Convert each year col to numeric if possible
     for yc in year_cols:
         df[yc] = pd.to_numeric(df[yc], errors="coerce")
 
-    # Melt into long form, including excel_row_index in id_vars
+    # Melt dataframe from wide to long format
     df_melted = df.melt(
         id_vars=["excel_row_index", "line_item"],
         value_vars=year_cols,
@@ -167,20 +163,22 @@ def process_financial_sheet(df_raw, sheet_name, ticker):
         value_name="value"
     )
 
-    # Parse out (year, quarter)
-    df_melted["year_quarter"] = df_melted["raw_column"].apply(lambda x: parse_year_quarter(str(x)))
-    df_melted["fiscal_year"] = df_melted["year_quarter"].apply(lambda x: x[0])
-    df_melted["fiscal_quarter"] = df_melted["year_quarter"].apply(lambda x: x[1])
-    df_melted.drop(columns=["raw_column", "year_quarter"], inplace=True)
+    # Parse year and quarter from the raw column header
+    df_melted[["fiscal_year", "fiscal_quarter"]] = df_melted["raw_column"].apply(
+        lambda x: pd.Series(parse_year_quarter(str(x)))
+    )
 
-    # Add ticker
+    # Clean up final dataframe
+    df_melted.drop(columns=["raw_column"], inplace=True)
     df_melted["ticker"] = ticker
-
-    # Drop rows missing a year (no year => can't store them)
-    df_melted.dropna(subset=["fiscal_year"], inplace=True)
+    df_melted.dropna(subset=["fiscal_year", "value"], inplace=True) # Rows without a year or value are unusable
     df_melted["fiscal_year"] = df_melted["fiscal_year"].astype(int)
+    
+    # Ensure fiscal_quarter is integer or None (nullable integer)
+    df_melted['fiscal_quarter'] = df_melted['fiscal_quarter'].astype('Int64')
 
-    # Reorder columns to include excel_row_index
+
+    # Reorder columns to match DB table for clarity
     df_melted = df_melted[[
         "ticker",
         "line_item",
@@ -189,16 +187,45 @@ def process_financial_sheet(df_raw, sheet_name, ticker):
         "value",
         "excel_row_index"
     ]]
+    
+    if df_melted.empty:
+        print(f"ℹ️ No valid data found to process for sheet '{sheet_name}'.")
+        return
 
-    # Insert into MySQL
+    # --- UPSERT into MySQL ---
+    # This block handles both inserting new rows and updating existing ones
+    # if a duplicate is found, based on the `unique_row` key in the table.
+    
+    # Convert dataframe to a list of dictionaries for insertion
+    data_to_insert = df_melted.to_dict(orient='records')
+    
     try:
-        df_melted.to_sql(table_name, con=engine, if_exists='append', index=False)
-        print(f"✅ Inserted {len(df_melted)} rows into {table_name}")
+        # Use SQLAlchemy Core to build the upsert statement
+        meta = MetaData()
+        reit_table = Table(table_name, meta, autoload_with=engine)
+        
+        stmt = insert(reit_table).values(data_to_insert)
+        
+        # Define which columns to update if a duplicate key is found
+        upsert_stmt = stmt.on_duplicate_key_update(
+            value=stmt.inserted.value,
+            excel_row_index=stmt.inserted.excel_row_index
+        )
+        
+        # Execute the statement
+        with engine.connect() as conn:
+            result = conn.execute(upsert_stmt)
+            conn.commit()
+            # In MySQL, rowcount is 1 for an insert, 2 for an update.
+            # So we just print the number of rows we intended to process.
+            print(f"✅ Processed {len(data_to_insert)} rows for {table_name}.")
+
     except Exception as e:
-        print(f"❌ Error inserting into {table_name}: {e}")
+        print(f"❌ Error upserting data into {table_name}: {e}")
+
 
 # ------------------------------------------------------------------
-# 6) Read the Excel’s multiple sheets
+# 6) Read the Excel’s multiple sheets and process them
 # ------------------------------------------------------------------
 wanted_sheets = [
     "Income Statement",
@@ -207,9 +234,9 @@ wanted_sheets = [
     "Industry Specific"
 ]
 
-print(f"Reading Excel: {file_path} ...")
+print(f"\nReading Excel: {file_path} ...")
 try:
-    xlsx_dict = pd.read_excel(file_path, sheet_name=None)
+    xlsx_dict = pd.read_excel(file_path, sheet_name=None, header=0)
 except Exception as e:
     print(f"❌ Error reading Excel file: {e}")
     sys.exit(1)
@@ -222,4 +249,4 @@ for sheet in wanted_sheets:
     else:
         print(f"⚠️ Sheet '{sheet}' not found; skipping.")
 
-print("✅ Done processing all sheets for ticker:", ticker) 
+print("\n✅ Done processing all sheets for ticker:", ticker)

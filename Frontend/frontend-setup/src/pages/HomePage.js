@@ -1,22 +1,30 @@
-import React, { useState } from "react";
+import React, { useState } from "react"; // useState is kept for potential future use
 import { useNavigate } from "react-router-dom";
 import BottomBanner from "../components/BottomBanner.js";
-import Loading from "../components/Loading.js"; // <-- Added import for Loading
+// import Loading from "../components/Loading.js"; // <-- Commented out, as it's only used by the hidden form
 
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:5000";
 
 function HomePage() {
   const navigate = useNavigate();
 
-  // Form State
+  // --- SECTION TO HIDE: Early Access Form State ---
+  // The state below is for the early access form.
+  // We'll comment it out to disable the feature without deleting the code.
+  /*
   const [email, setEmail] = useState("");
   const [feedback, setFeedback] = useState("");
   const [interest, setInterest] = useState("");
   const [submitted, setSubmitted] = useState(false);
-  const [showPopup, setShowPopup] = useState(false); // Controls popup visibility
-  const [isLoading, setIsLoading] = useState(false); // <-- Added loading state
+  const [showPopup, setShowPopup] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  */
 
-  // Handle form submission
+
+  // --- SECTION TO HIDE: Early Access Form Submission Logic ---
+  // This function handles the form submission to the backend.
+  // Commenting it out prevents any accidental calls and removes it from the app's logic.
+  /*
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -25,7 +33,7 @@ function HomePage() {
       return;
     }
 
-    setIsLoading(true); // <-- Show Loading before fetch
+    setIsLoading(true);
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/signup`, {
@@ -39,16 +47,17 @@ function HomePage() {
 
       if (response.ok) {
         setSubmitted(true);
-        setShowPopup(true); // Show popup after successful submission
+        setShowPopup(true);
       } else {
         console.error("Failed to submit data:", result);
       }
     } catch (error) {
       console.error("Error submitting form:", error);
     } finally {
-      setIsLoading(false); // <-- Hide Loading after fetch completes
+      setIsLoading(false);
     }
   };
+  */
 
   // REIT card => open search overlay
   const handleReitClick = () => {
@@ -71,7 +80,6 @@ function HomePage() {
     transition: "background-color 0.2s, transform 0.2s",
   };
 
-  // A single style object for all form controls so they line up identically
   const commonFormControlStyle = {
     width: "600px",
     height: "45px",
@@ -135,9 +143,10 @@ function HomePage() {
         <div
           style={{
             textAlign: "center",
-            margin: "80px auto",
+            margin: "40px auto",
             maxWidth: "1200px",
             padding: "0 20px",
+            marginBottom: "100px"
           }}
         >
           <h3 style={{ fontSize: "2rem", color: "#5A153D", marginBottom: "40px" }}>
@@ -150,9 +159,11 @@ function HomePage() {
           />
         </div>
 
-        
+        {/* --- SECTION TO HIDE: Early Access Form Visuals (JSX) --- */}
+        {/* The entire signup form and popup modal JSX is commented out below. */}
+        {/* To bring it back, just remove the opening and closing tags. */}
+        {/*
 
-        {/* SIGNUP SECTION */}
         <div
           style={{
             textAlign: "center",
@@ -183,7 +194,6 @@ function HomePage() {
           >
           </p>
 
-          {/* SIGN-UP FORM */}
           {!submitted ? (
             <form
               onSubmit={handleSubmit}
@@ -195,7 +205,6 @@ function HomePage() {
                 gap: "15px",
               }}
             >
-              {/* Email Input */}
               <input
                 type="email"
                 placeholder="Enter your email"
@@ -207,7 +216,6 @@ function HomePage() {
                 }}
               />
 
-              {/* Interest Selection */}
               <select
                 value={interest}
                 onChange={(e) => setInterest(e.target.value)}
@@ -223,7 +231,6 @@ function HomePage() {
                 <option value="Both">Both</option>
               </select>
 
-              {/* Feedback */}
               <textarea
                 placeholder="Any feedback or features you'd love to see?"
                 value={feedback}
@@ -239,7 +246,6 @@ function HomePage() {
                 }}
               />
 
-              {/* Submit Button */}
               <button
                 type="submit"
                 onMouseEnter={(e) => {
@@ -276,7 +282,6 @@ function HomePage() {
         </div>
       </div>
 
-      {/* POPUP MODAL */}
       {showPopup && (
         <div
           style={{
@@ -332,11 +337,11 @@ function HomePage() {
           </div>
         </div>
       )}
-
-      {/* Show Loading overlay if isLoading is true */}
+      
       {isLoading && <Loading />}
-
-      {/* The new bottom banner that slides up at scroll-bottom */}
+      */}
+      </div>
+      
       <BottomBanner />
     </>
   );
