@@ -386,8 +386,8 @@ def get_financials(ticker):
                 values='value'
             ).reset_index()
 
-            # 4) Take the last 20 quarters (5 years) for the overview chart
-            pivoted_df = pivoted_df.tail(20)
+            # 4) Take the last 26 quarters for the overview chart
+            pivoted_df = pivoted_df.tail(26)
 
             # Sanitize column names for JSON compatibility (replace spaces and %)
             pivoted_df.rename(columns={
