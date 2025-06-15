@@ -350,72 +350,73 @@ def get_financials(ticker):
     """
     include_scores = request.args.get('include_scores', 'false').lower() == 'true'
 
-    # 1) Load the financial display table
+    # 1) Define the financial line items we want to fetch
+    line_items_to_fetch = [
+        'Dividends per Share',  # From Income Statement
+        'FFO',                  # From Industry Metrics
+        'FFO / Total Revenue %' # From Industry Metrics
+    ]
+
+    # 2) Build and execute the SQL query to fetch the data in long format
+    # We use UNION ALL to combine results from two different tables efficiently.
+    sql_query = text("""
+        SELECT fiscal_year, fiscal_quarter, line_item, value
+        FROM reit_income_statement
+        WHERE ticker = :ticker AND line_item = 'Dividends per Share' AND fiscal_quarter IS NOT NULL
+        UNION ALL
+        SELECT fiscal_year, fiscal_quarter, line_item, value
+        FROM reit_industry_metrics
+        WHERE ticker = :ticker AND line_item IN ('FFO', 'FFO / Total Revenue %') AND fiscal_quarter IS NOT NULL
+        ORDER BY fiscal_year, fiscal_quarter
+    """)
+
     try:
         with db.engine.connect() as conn:
-            fd_data = pd.read_sql("SELECT * FROM reit_financial_display", conn)
+            df = pd.read_sql(sql_query, conn, params={"ticker": ticker})
+
+        if df.empty:
+            # If no data, prepare an empty response but still fetch scores later
+            results = []
+        else:
+            # 3) Pivot the data from long to wide format
+            # This makes it easier to create the JSON object for each time period.
+            pivoted_df = df.pivot_table(
+                index=['fiscal_year', 'fiscal_quarter'],
+                columns='line_item',
+                values='value'
+            ).reset_index()
+
+            # 4) Take the last 20 quarters (5 years) for the overview chart
+            pivoted_df = pivoted_df.tail(20)
+
+            # Sanitize column names for JSON compatibility (replace spaces and %)
+            pivoted_df.rename(columns={
+                'Dividends per Share': 'dividends_per_share',
+                'FFO': 'ffo',
+                'FFO / Total Revenue %': 'ffo_per_revenue_pct'
+            }, inplace=True)
+
+            # 5) Format the data into the JSON structure the frontend expects
+            results = []
+            for _, row in pivoted_df.iterrows():
+                # Re-create the "Q1 '23" style quarter label
+                year_short = str(row['fiscal_year'])[-2:]
+                quarter_label = f"Q{int(row['fiscal_quarter'])} '{year_short}"
+
+                row_obj = {
+                    "quarter": quarter_label,
+                }
+                
+                # Add each metric if it exists in the row, otherwise add None
+                row_obj["dividends_per_share"] = float(row['dividends_per_share']) if pd.notna(row.get('dividends_per_share')) else None
+                row_obj["ffo"] = float(row['ffo']) if pd.notna(row.get('ffo')) else None
+                row_obj["ffo_per_revenue_pct"] = float(row['ffo_per_revenue_pct']) if pd.notna(row.get('ffo_per_revenue_pct')) else None
+                
+                results.append(row_obj)
+                
     except Exception as e:
-        app.logger.error(f"Error loading reit_financial_display: {e}")
-        return jsonify({"error": "Failed to load financial display data"}), 500
-
-    if fd_data.empty:
-        return jsonify({"error": "Financial display table is empty"}), 404
-
-    # 2) Build ticker prefix (e.g., "GIPR_US_Equity")
-    ticker_prefix = f"{ticker}_US_Equity"
-
-    # Build column names
-    ffo_col = build_col_name(ticker_prefix, "FFO_PS")
-    dvd_col = build_col_name(ticker_prefix, "DVD")
-    noi_col = build_col_name(ticker_prefix, "NOI_PS")
-
-    existing_cols = fd_data.columns.tolist()
-    has_ffo = ffo_col in existing_cols
-    has_dvd = dvd_col in existing_cols
-    has_noi = noi_col in existing_cols
-
-    if not any([has_ffo, has_dvd, has_noi]):
-        return jsonify({"message": f"No financial data found for ticker '{ticker}'"}), 200
-
-    # 3) Keep only needed columns: "Dates" + available metric columns
-    selected_cols = ["Dates"]
-    if has_ffo:
-        selected_cols.append(ffo_col)
-    if has_dvd:
-        selected_cols.append(dvd_col)
-    if has_noi:
-        selected_cols.append(noi_col)
-
-    filtered = fd_data[selected_cols].copy()
-    metric_cols = [c for c in selected_cols if c != "Dates"]
-    filtered.dropna(how='all', subset=metric_cols, inplace=True)
-
-    if filtered.empty:
-        return jsonify({"message": f"No non-null financial data found for ticker '{ticker}'"}), 200
-
-    filtered["Dates"] = pd.to_datetime(filtered["Dates"], errors="coerce")
-    filtered.sort_values(by="Dates", ascending=False, inplace=True)
-    filtered = filtered.head(20)
-    filtered.sort_values(by="Dates", ascending=True, inplace=True)
-    filtered["Quarter"] = filtered["Dates"].apply(convert_date_to_quarter)
-
-    results = []
-    for _, row in filtered.iterrows():
-        row_obj = {
-            "quarter": row["Quarter"],
-            "date": row["Dates"].strftime("%Y-%m-%d") if not pd.isna(row["Dates"]) else None,
-        }
-        if has_ffo:
-            row_obj["ffo_ps"] = float(row[ffo_col]) if not pd.isna(row[ffo_col]) else None
-        if has_dvd:
-            row_obj["dvd"] = float(row[dvd_col]) if not pd.isna(row[dvd_col]) else None
-        if has_noi:
-            row_obj["noi_ps"] = float(row[noi_col]) if not pd.isna(row[noi_col]) else None
-
-        results.append(row_obj)
-
-    if not results:
-        return jsonify({"message": f"No valid data for ticker '{ticker}'"}), 200
+        app.logger.error(f"Error fetching real-time financial data for {ticker}: {e}")
+        return jsonify({"error": "Failed to load financial overview data"}), 500
 
     if include_scores:
         # Look up scoring analysis
