@@ -400,7 +400,7 @@ def get_financials(ticker):
             results = []
             for _, row in pivoted_df.iterrows():
                 # Re-create the "Q1 '23" style quarter label
-                year_short = str(row['fiscal_year'])[-2:]
+                year_short = str(int(row['fiscal_year']))[-2:]
                 quarter_label = f"Q{int(row['fiscal_quarter'])} '{year_short}"
 
                 row_obj = {

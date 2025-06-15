@@ -687,21 +687,45 @@ function DetailPage({ userPlan }) {
   // Chart logic (Overview)
   // ------------------------------------
   const labels = financialData.map((item) => item.quarter);
-  const ffoData = financialData.map((item) => item.ffo_ps);
-  const dvdData = financialData.map((item) => item.dvd);
-  const noiData = financialData.map((item) => item.noi_ps);
+  const dividendsData = financialData.map((item) => item.dividends_per_share);
+  const ffoData = financialData.map((item) => item.ffo);
+  const ffoRevenuePctData = financialData.map((item) => item.ffo_per_revenue_pct);
 
-  function makeBarOptions(labelText) {
+  function makeBarOptions(labelText, dataType = 'number') {
     return {
       responsive: true,
       plugins: {
         legend: { position: "top" },
         title: { display: false },
         tooltip: {
+          // This callback formats the text inside the tooltip box
           callbacks: {
+            title: function(context) {
+              // Use the corrected quarter label for the tooltip title
+              return context[0].label;
+            },
             label: function (context) {
-              const val = context.parsed.y;
-              return `${labelText}: $${val.toFixed(1)}`;
+              let val = context.parsed.y;
+              if (val === null) return null;
+
+              let displayVal = '';
+              // Format FFO tooltip as "$XXXM"
+              if (dataType === 'number') {
+                displayVal = `$${val.toFixed(0)}M`;
+              } 
+              // Format Dividends per Share tooltip as "$X.XX"
+              else if (dataType === 'currency') {
+                displayVal = val.toLocaleString("en-US", { style: "currency", currency: "USD" });
+              } 
+              // Format Percentage tooltip as "XX.X%"
+              else if (dataType === 'percent') {
+                displayVal = (val * 100).toFixed(1) + '%';
+              }
+              // Fallback for any other data types
+              else {
+                displayVal = val.toLocaleString("en-US");
+              }
+              return `${labelText}: ${displayVal}`;
             },
           },
         },
@@ -710,9 +734,22 @@ function DetailPage({ userPlan }) {
         y: {
           beginAtZero: true,
           grid: { display: false },
+          // This callback formats the labels on the Y-axis itself
           ticks: {
             callback: function (value) {
-              return Number(value).toFixed(1);
+              // Format FFO Y-axis as "$XXXM"
+              if (dataType === 'number') {
+                return '$' + value.toFixed(0) + 'M';
+              }
+              // Format Dividends Y-axis as "$X.XX"
+              if (dataType === 'currency') {
+                  return value.toLocaleString("en-US", { style: "currency", currency: "USD" });
+              }
+              // Format Percentage Y-axis as "XX%"
+              if (dataType === 'percent') {
+                return (value * 100).toFixed(0) + '%';
+              }
+              return value.toLocaleString();
             },
           },
         },
@@ -721,34 +758,36 @@ function DetailPage({ userPlan }) {
     };
   }
 
+  const dividendsChartData = {
+    labels,
+    datasets: [
+      {
+        label: "Dividends per Share",
+        data: dividendsData,
+        backgroundColor: "rgba(177, 45, 120, 0.8)",
+        datalabels: { display: false },
+      },
+    ],
+  };
+
   const ffoChartData = {
     labels,
     datasets: [
       {
-        label: "FFO per Share",
+        label: "FFO (in Millions)",
         data: ffoData,
         backgroundColor: "rgba(177, 45, 120, 0.8)",
         datalabels: { display: false },
       },
     ],
   };
-  const dvdChartData = {
+
+  const ffoRevenuePctChartData = {
     labels,
     datasets: [
       {
-        label: "Dividend per Share",
-        data: dvdData,
-        backgroundColor: "rgba(177, 45, 120, 0.8)",
-        datalabels: { display: false },
-      },
-    ],
-  };
-  const noiChartData = {
-    labels,
-    datasets: [
-      {
-        label: "NOI per Share",
-        data: noiData,
+        label: "FFO / Total Revenue %",
+        data: ffoRevenuePctData,
         backgroundColor: "rgba(177, 45, 120, 0.8)",
         datalabels: { display: false },
       },
@@ -1186,29 +1225,29 @@ function DetailPage({ userPlan }) {
             <h3 style={{ marginTop: 0, marginBottom: "10px" }}>Financial Data</h3>
             <div style={financialGridStyle}>
               <div style={blockStyle}>
+                <h4>Dividends per Share</h4>
+                {isAllNull(dividendsData) ? (
+                  <p>No Dividends per Share data available.</p>
+                ) : (
+                  <Bar data={dividendsChartData} options={makeBarOptions("Dividends per Share", "currency")} height={70} />
+                )}
+              </div>
+
+              <div style={blockStyle}>
                 <h4>FFO History</h4>
                 {isAllNull(ffoData) ? (
                   <p>No FFO data available.</p>
                 ) : (
-                  <Bar data={ffoChartData} options={makeBarOptions("FFO PS")} height={70} />
+                  <Bar data={ffoChartData} options={makeBarOptions("FFO", "number")} height={70} />
                 )}
               </div>
 
               <div style={blockStyle}>
-                <h4>Dividend History</h4>
-                {isAllNull(dvdData) ? (
-                  <p>No Dividend data available.</p>
+                <h4>FFO / Revenue %</h4>
+                {isAllNull(ffoRevenuePctData) ? (
+                  <p>No FFO / Revenue % data available.</p>
                 ) : (
-                  <Bar data={dvdChartData} options={makeBarOptions("Dividend PS")} height={70} />
-                )}
-              </div>
-
-              <div style={blockStyle}>
-                <h4>NOI History</h4>
-                {isAllNull(noiData) ? (
-                  <p>No NOI data available.</p>
-                ) : (
-                  <Bar data={noiChartData} options={makeBarOptions("NOI PS")} height={70} />
+                  <Bar data={ffoRevenuePctChartData} options={makeBarOptions("FFO / Revenue %", "percent")} height={70} />
                 )}
               </div>
             </div>
