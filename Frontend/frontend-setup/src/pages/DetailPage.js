@@ -695,13 +695,49 @@ function DetailPage({ userPlan }) {
     return {
       responsive: true,
       plugins: {
-        legend: { position: "top" },
+        legend: {
+          // --- START: MODIFIED SECTION ---
+          position: 'bottom', // <<< CHANGE #1: Moves the legend to the bottom
+          onClick: null,      // <<< CHANGE #2: Disables the click-to-hide action
+          // --- END: MODIFIED SECTION ---
+          labels: {
+            // This function generates custom legend items
+            generateLabels: function(chart) {
+              const data = chart.data.datasets[0].data;
+              const hasNegativeValues = data.some(value => value < 0);
+
+              // 1. Always create the primary legend item
+              const primaryLabel = {
+                text: labelText,
+                fillStyle: '#5A153D',
+                strokeStyle: '#5A153D',
+                lineWidth: 1,
+                hidden: false,
+                index: 0
+              };
+
+              const legendItems = [primaryLabel];
+
+              // 2. If negative values exist, add a second item for them
+              if (hasNegativeValues) {
+                legendItems.push({
+                  text: 'Negative Value',
+                  fillStyle: '#808080', // Use the same grey color
+                  strokeStyle: '#808080',
+                  lineWidth: 1,
+                  hidden: false,
+                  index: 1
+                });
+              }
+
+              return legendItems;
+            }
+          }
+        },
         title: { display: false },
         tooltip: {
-          // This callback formats the text inside the tooltip box
           callbacks: {
             title: function(context) {
-              // Use the corrected quarter label for the tooltip title
               return context[0].label;
             },
             label: function (context) {
@@ -709,20 +745,13 @@ function DetailPage({ userPlan }) {
               if (val === null) return null;
 
               let displayVal = '';
-              // Format FFO tooltip as "$XXXM"
               if (dataType === 'number') {
                 displayVal = `$${val.toFixed(0)}M`;
-              } 
-              // Format Dividends per Share tooltip as "$X.XX"
-              else if (dataType === 'currency') {
+              } else if (dataType === 'currency') {
                 displayVal = val.toLocaleString("en-US", { style: "currency", currency: "USD" });
-              } 
-              // Format Percentage tooltip as "XX.X%"
-              else if (dataType === 'percent') {
+              } else if (dataType === 'percent') {
                 displayVal = (val * 100).toFixed(1) + '%';
-              }
-              // Fallback for any other data types
-              else {
+              } else {
                 displayVal = val.toLocaleString("en-US");
               }
               return `${labelText}: ${displayVal}`;
@@ -734,18 +763,14 @@ function DetailPage({ userPlan }) {
         y: {
           beginAtZero: true,
           grid: { display: false },
-          // This callback formats the labels on the Y-axis itself
           ticks: {
             callback: function (value) {
-              // Format FFO Y-axis as "$XXXM"
               if (dataType === 'number') {
                 return '$' + value.toFixed(0) + 'M';
               }
-              // Format Dividends Y-axis as "$X.XX"
               if (dataType === 'currency') {
                   return value.toLocaleString("en-US", { style: "currency", currency: "USD" });
               }
-              // Format Percentage Y-axis as "XX%"
               if (dataType === 'percent') {
                 return (value * 100).toFixed(0) + '%';
               }
@@ -764,7 +789,11 @@ function DetailPage({ userPlan }) {
       {
         label: "Dividends per Share",
         data: dividendsData,
-        backgroundColor: "#5A153D",
+        // Conditionally set bar color
+        backgroundColor: (context) => {
+          const value = context.raw;
+          return value < 0 ? '#808080' : '#5A153D'; // Grey for negative, purple for positive
+        },
         datalabels: { display: false },
       },
     ],
@@ -776,7 +805,11 @@ function DetailPage({ userPlan }) {
       {
         label: "FFO (in Millions)",
         data: ffoData,
-        backgroundColor: "#5A153D",
+        // Conditionally set bar color
+        backgroundColor: (context) => {
+          const value = context.raw;
+          return value < 0 ? '#808080' : '#5A153D'; // Grey for negative, purple for positive
+        },
         datalabels: { display: false },
       },
     ],
@@ -788,7 +821,11 @@ function DetailPage({ userPlan }) {
       {
         label: "FFO / Total Revenue %",
         data: ffoRevenuePctData,
-        backgroundColor: "#5A153D",
+        // Conditionally set bar color
+        backgroundColor: (context) => {
+          const value = context.raw;
+          return value < 0 ? '#808080' : '#5A153D'; // Grey for negative, purple for positive
+        },
         datalabels: { display: false },
       },
     ],
