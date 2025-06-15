@@ -13,6 +13,11 @@ Individual REIT Financial Statements Update
             Meaningless header row with no data
             Remove all expense items
             Hotel REITs: leave only Total Occupancy, RevPar, and ADR
+    Update CIQ quarterly
+        Download latest quarter financials from CIQ
+        Open base file 
+        Alt Fn F8, run macro tool 1 to clean file up (check row 5 in all tabs, can't be empty)
+        Alt Fn F8, select source file, run macro tool2 to fetch
     Run script 4 (Update the ticker field)
     Workbench command to drop the record for specific REIT:
         USE railway;
