@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef} from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Bar, Doughnut, Pie } from "react-chartjs-2";
 import BottomBanner from "../components/BottomBanner.js";
+import ScoringDonutOverlay from '../components/ScoringDonutOverlay.js';
+import ModelTab from '../components/ModelTab.js';
 import ScatterPlotOverlay from "../components/ScatterPlotOverlay.js";
 import { ComposableMap, Geographies, Geography } from "react-simple-maps";
 import { feature } from "topojson-client";
@@ -513,6 +515,9 @@ function DetailPage({ userPlan }) {
   const [usInvestmentRegions, setUSInvestmentRegions] = useState([]);
   const [overseasInvestment, setOverseasInvestment] = useState([]);
 
+  // Overlay for quant scoring
+  const [showScoringOverlay, setShowScoringOverlay] = useState(false);
+
   // Price data for the line chart
   const [priceData, setPriceData] = useState([]);
 
@@ -866,7 +871,7 @@ function DetailPage({ userPlan }) {
     responsive: true,
     plugins: {
       tooltip: { mode: "index", intersect: false },
-      legend: { display: true },
+      legend: { position: 'bottom' },
       title: { display: false },
     },
     scales: {
@@ -1098,8 +1103,9 @@ function DetailPage({ userPlan }) {
         {[
           { id: "overview", label: "Overview" },
           { id: "financials", label: "Financials" },
-          { id: "metrics", label: "Real Estate Specific Metrics" },
+          { id: "metrics", label: "REIT Specific Metrics" },
           { id: "portfolio", label: "Portfolio Breakdown" },
+          { id: "modeling", label: "Modeling" },
         ].map((tab) => {
           const isActive = (tab.id === activeTab);
 
@@ -1122,8 +1128,11 @@ function DetailPage({ userPlan }) {
           );
         })}
       </div>
-
-      {/* 1) OVERVIEW TAB */}
+      {/* MODELING TAB */}
+      {activeTab === "modeling" && (
+        <ModelTab ticker={ticker} />
+      )}
+      {/* OVERVIEW TAB */}
       {activeTab === "overview" && (
         <>
           {/* Only Business Description in the overview now */}
@@ -1134,7 +1143,41 @@ function DetailPage({ userPlan }) {
           
 
           <div style={sectionContainer}>
-            <h3 style={{ marginTop: 0, marginBottom: "10px" }}>Daily Price & Volume</h3>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "10px",
+              }}
+            >
+              <h3 style={{ margin: 0 }}>Daily Price & Volume</h3>
+              {/* New Button, styled like the Peer Comparison one */}
+              <button
+                onClick={() => setShowScoringOverlay(true)}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "#faf0fb";
+                  e.currentTarget.style.color = "#5A153D";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "#5A153D";
+                  e.currentTarget.style.color = "#fff";
+                }}
+                style={{
+                  padding: "10px 20px",
+                  fontSize: "16px",
+                  borderRadius: "5px",
+                  backgroundColor: "#5A153D",
+                  color: "#fff",
+                  border: "none",
+                  cursor: "pointer",
+                  transition: "background-color 0.3s ease, color 0.3s ease",
+                }}
+              >
+                View Scoring Details
+              </button>
+            </div>
+            
             {priceData.length > 0 ? (
               <Line
                 data={priceVolumeChartData}
@@ -1290,7 +1333,17 @@ function DetailPage({ userPlan }) {
             </div>
           </div>
 
-          
+          {/* --- 4. ADD THE CONDITIONAL RENDER FOR THE NEW OVERLAY --- */}
+          {showScoringOverlay && (
+              <ScoringDonutOverlay
+                score={stabilityScore}
+                title="Stability Percentile"
+                tooltipText="Stability Percentile measures price volatility risk. Our algorithm calculates it using average daily return, standard deviation, skewness, kurtosis, and trading volume over the last five years. A higher percentile indicates lower risk."
+                donutOptions={donutOptions} // Pass the existing options from DetailPage
+                onClose={() => setShowScoringOverlay(false)}
+              />
+          )}
+          {/* --- END NEW OVERLAY LOGIC --- */}
 
           <BottomBanner />
           {showOverlay && (
@@ -1308,7 +1361,7 @@ function DetailPage({ userPlan }) {
         </>
       )}
 
-      {/* 2) FINANCIALS TAB (WITH SUB-TABS) */}
+      {/* FINANCIALS TAB (WITH SUB-TABS) */}
       {activeTab === "financials" && (
         <div>
           {/* Remove the extra heading; sub-tabs are snug against the bar */}
@@ -1343,14 +1396,14 @@ function DetailPage({ userPlan }) {
         </div>
       )}
 
-      {/* 3) REAL ESTATE SPECIFIC METRICS */}
+      {/* REIT SPECIFIC METRICS */}
       {activeTab === "metrics" && (
         <div>
           <FinancialsTable ticker={ticker} subTab="industry" />
         </div>
       )}
 
-      {/* 4) LEASING TAB (Placeholder) */}
+      {/* LEASING TAB (Placeholder, Hault) */}
       {activeTab === "leasing" && (
         <div>
           <h2>Leasing</h2>
@@ -1358,7 +1411,7 @@ function DetailPage({ userPlan }) {
         </div>
       )}
 
-      {/* 5) PORTFOLIO BREAKDOWN */}
+      {/* PORTFOLIO BREAKDOWN */}
       {activeTab === "portfolio" && (
         <>
           {loadingBreakdowns ? (
