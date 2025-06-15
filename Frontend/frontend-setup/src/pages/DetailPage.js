@@ -764,7 +764,7 @@ function DetailPage({ userPlan }) {
       {
         label: "Dividends per Share",
         data: dividendsData,
-        backgroundColor: "5A153D (177, 45, 120, 0.8)",
+        backgroundColor: "#5A153D",
         datalabels: { display: false },
       },
     ],
@@ -776,7 +776,7 @@ function DetailPage({ userPlan }) {
       {
         label: "FFO (in Millions)",
         data: ffoData,
-        backgroundColor: "rgba(177, 45, 120, 0.8)",
+        backgroundColor: "#5A153D",
         datalabels: { display: false },
       },
     ],
@@ -788,7 +788,7 @@ function DetailPage({ userPlan }) {
       {
         label: "FFO / Total Revenue %",
         data: ffoRevenuePctData,
-        backgroundColor: "rgba(177, 45, 120, 0.8)",
+        backgroundColor: "#5A153D",
         datalabels: { display: false },
       },
     ],
@@ -1222,10 +1222,10 @@ function DetailPage({ userPlan }) {
 
           {/* Additional Bar Charts (FFO, DVD, NOI) */}
           <div style={sectionContainer}>
-            <h3 style={{ marginTop: 0, marginBottom: "10px" }}>Financial Data</h3>
+            <h3 style={{ marginTop: 0, marginBottom: "10px" }}>Key Financials</h3>
             <div style={financialGridStyle}>
               <div style={blockStyle}>
-                <h4>Dividends per Share</h4>
+                <h4>Dividends History</h4>
                 {isAllNull(dividendsData) ? (
                   <p>No Dividends per Share data available.</p>
                 ) : (
@@ -1243,7 +1243,7 @@ function DetailPage({ userPlan }) {
               </div>
 
               <div style={blockStyle}>
-                <h4>FFO / Revenue %</h4>
+                <h4>FFO / Total Revenue %</h4>
                 {isAllNull(ffoRevenuePctData) ? (
                   <p>No FFO / Revenue % data available.</p>
                 ) : (
