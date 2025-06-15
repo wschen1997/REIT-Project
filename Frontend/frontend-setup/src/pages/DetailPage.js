@@ -764,7 +764,7 @@ function DetailPage({ userPlan }) {
       {
         label: "Dividends per Share",
         data: dividendsData,
-        backgroundColor: "rgba(177, 45, 120, 0.8)",
+        backgroundColor: "5A153D (177, 45, 120, 0.8)",
         datalabels: { display: false },
       },
     ],
