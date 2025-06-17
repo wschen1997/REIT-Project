@@ -29,6 +29,7 @@ const ScoringDonutOverlay = ({ score, title, tooltipText, donutOptions, onClose 
         data: [scoreVal, 100 - scoreVal],
         backgroundColor: ["#5A153D", "#e0e0e0"],
         borderWidth: 0,
+        datalabels: { display: false },
       },
     ],
   };
