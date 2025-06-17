@@ -11,7 +11,7 @@ const ModelTab = ({ ticker }) => {
     { id: 'p_ffo', label: 'P/FFO Multiple' },
     { id: 'p_affo', label: 'P/AFFO Multiple' },
     { id: 'ddm', label: 'Dividend Discount Model' },
-    { id: 'ms_ddm', label: 'Multi-stage DDM' },
+    { id: 'p_nav', label: 'P/NAV Multiple' },
   ];
 
   // --- Styles copied directly from DetailPage.js for consistency ---
@@ -89,10 +89,10 @@ const ModelTab = ({ ticker }) => {
           </div>
         )}
         
-        {activeModelSubTab === 'ms_ddm' && (
+        {activeModelSubTab === 'p_nav' && (
             <div>
               <h3>Multi-stage DDM for {ticker}</h3>
-              <p>This is where the multi-stage DDM model will go.</p>
+              <p>This is where the P/NAV model will go.</p>
             </div>
         )}
       </div>
