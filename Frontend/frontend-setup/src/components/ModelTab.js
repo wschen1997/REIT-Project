@@ -91,7 +91,7 @@ const ModelTab = ({ ticker }) => {
         
         {activeModelSubTab === 'p_nav' && (
             <div>
-              <h3>Multi-stage DDM for {ticker}</h3>
+              <h3>P/NAV Multiple Valuation for {ticker}</h3>
               <p>This is where the P/NAV model will go.</p>
             </div>
         )}
