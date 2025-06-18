@@ -11,6 +11,7 @@ import bcrypt
 import jwt
 from datetime import timedelta
 import json
+import requests
 
 # Explicitly load environment variables from the Credentials.env file
 dotenv_path = os.path.abspath(
@@ -573,6 +574,87 @@ def get_price_data(ticker):
     except Exception as e:
         app.logger.error(f"Error fetching price data for {ticker}: {e}")
         return jsonify({"error": "Failed to load price data"}), 500
+
+
+# -------------------------------------------------------------------------
+# ====================== SCORING AND LLM ENDPOINTS ===============================
+# -------------------------------------------------------------------------
+
+@app.route("/api/reits/<string:ticker>/stability-analysis", methods=['GET'])
+def get_stability_analysis(ticker):
+    """
+    Fetches the Z-score components for a REIT's stability score,
+    constructs a prompt for an LLM, and returns a generated explanation.
+    """
+    try:
+        with db.engine.connect() as conn:
+            # Fetch the pre-calculated Z-scores for the given ticker
+            query = text("""
+                SELECT 
+                    `Z_Score_Std_Dev`, 
+                    `Z_Score_Return`, 
+                    `Z_Score_Skew`, 
+                    `Z_Score_Kurtosis`, 
+                    `Z_Score_Illiquidity`
+                FROM reit_scoring_analysis 
+                WHERE Ticker = :ticker
+            """)
+            result = conn.execute(query, {"ticker": ticker}).fetchone()
+
+        if not result:
+            return jsonify({"error": "No scoring data found for this ticker."}), 404
+
+        # Map the database result to a dictionary
+        scores = dict(result._mapping)
+
+        # --- Construct the Prompt for Gemini ---
+        # This prompt is engineered to be concise and produce a short, insightful paragraph.
+        prompt = f"""
+        Analyze the Stability Score components for the REIT with ticker {ticker}.
+        The components are Z-scores, where a higher score means more of that factor.
+        - Volatility (Standard Deviation Z-score): {scores['Z_Score_Std_Dev']:.2f} (Higher is riskier)
+        - Illiquidity Z-score: {scores['Z_Score_Illiquidity']:.2f} (Higher is riskier)
+        - Return Z-score: {scores['Z_Score_Return']:.2f} (Higher is better)
+        - Negative Skew Z-score: {scores['Z_Score_Skew']:.2f} (Higher is riskier)
+        - Tail Risk (Kurtosis Z-score): {scores['Z_Score_Kurtosis']:.2f} (Higher is riskier)
+
+        Based on these Z-scores, write a brief, one-paragraph analysis (around 50-70 words) for a financial analyst. 
+        Start by stating the primary driver of its risk profile (e.g., "The risk profile for {ticker} is primarily driven by its high volatility...").
+        Mention at least one positive and one negative contributing factor.
+        """
+
+        # --- Call the Gemini API ---
+        gemini_api_key = os.getenv("GEMINI_API_KEY")
+        if not gemini_api_key:
+             return jsonify({"error": "Server is missing API key configuration."}), 500
+
+        api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={gemini_api_key}"
+        
+        payload = {
+            "contents": [{
+                "parts": [{"text": prompt}]
+            }]
+        }
+        
+        headers = {"Content-Type": "application/json"}
+        
+        response = requests.post(api_url, headers=headers, json=payload)
+        response.raise_for_status() # Will raise an exception for bad status codes (4xx or 5xx)
+
+        # Extract the text from the response
+        api_response = response.json()
+        explanation_text = api_response["candidates"][0]["content"]["parts"][0]["text"]
+        
+        # Return the Z-scores and the generated explanation
+        return jsonify({
+            "ticker": ticker,
+            "z_scores": scores,
+            "explanation": explanation_text
+        })
+
+    except Exception as e:
+        app.logger.error(f"Error generating stability analysis for {ticker}: {e}")
+        return jsonify({"error": "Failed to generate stability analysis."}), 500
 
 
 # -------------------------------------------------------------------------

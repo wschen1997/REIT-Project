@@ -13,7 +13,7 @@ load_dotenv(dotenv_path)
 DB_USERNAME = os.getenv("DB_USERNAME")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
 DB_HOST = os.getenv("DB_HOST")
-DB_PORT = os.getenv("DB_PORT")     
+DB_PORT = os.getenv("DB_PORT")
 DB_NAME = os.getenv("DB_NAME")
 
 # Create database connection with SSL forced
@@ -59,7 +59,6 @@ def calculate_stability(group):
     kurtosis = group['Daily Return'].kurt()
     
     # Volume-based metric: average volume
-    # (Consider median, or average dollar-volume, etc., if you prefer)
     avg_volume = group['volume'].mean()
     
     data_length = len(group)
@@ -79,7 +78,6 @@ def calculate_stability(group):
 stability_data = data.groupby('ticker', group_keys=False).apply(calculate_stability)
 
 # 4) Compute Z-scores for main risk metrics
-#    We'll add 'Average Volume' below
 z_scores = stability_data[['Average Daily Return', 'Standard Deviation', 'Skewness']].apply(
     lambda x: (x - x.mean()) / x.std()
 )
@@ -95,9 +93,6 @@ z_scores['Adjusted Kurtosis'] = (
 z_scores['Skewness Adjustment'] = z_scores['Skewness'].apply(lambda x: x if x < 0 else -x)
 
 # 5) Add Volume Z-score to penalize illiquidity
-#    Higher volume => lower risk, so we invert the sign
-#    i.e., "Illiquidity Z" = -Z(average volume)
-#    so that if volume is high => volume Z is large => illiquidity Z is negative => reduces risk
 z_scores['Volume'] = (
     (stability_data['Average Volume'] - stability_data['Average Volume'].mean())
     / stability_data['Average Volume'].std()
@@ -110,19 +105,30 @@ stability_data['Data Length Factor'] = (
 )
 
 # 7) Compute Risk Score
-#    We add a new term for illiquidity. Example weight: 1.0
-#    You can adjust it up or down to emphasize or de-emphasize liquidity in the overall risk.
 stability_data['Risk Score'] = (
     (2.0 * z_scores['Standard Deviation']) +
     (0.7 * z_scores['Skewness Adjustment']) +
     (0.5 * z_scores['Adjusted Kurtosis']) -
     (z_scores['Average Daily Return']) +
-    (0.8 * z_scores['Illiquidity'])  # Weighted illiquidity factor
+    (0.8 * z_scores['Illiquidity'])
 ) * stability_data['Data Length Factor']
 
 # Compute Stability Percentile
 stability_data['Risk Percentile'] = stability_data['Risk Score'].rank(pct=True, ascending=True) * 100
 stability_data['Stability Percentile'] = 100 - stability_data['Risk Percentile']
+
+
+# --- START: MODIFIED SECTION ---
+# Add the key Z-score components to the final DataFrame for later analysis.
+# We give them database-friendly names.
+stability_data['Z_Score_Std_Dev'] = z_scores['Standard Deviation']
+stability_data['Z_Score_Return'] = z_scores['Average Daily Return']
+# Note: We use the adjusted skewness score, which is more intuitive for risk analysis
+stability_data['Z_Score_Skew'] = z_scores['Skewness Adjustment'] 
+stability_data['Z_Score_Kurtosis'] = z_scores['Adjusted Kurtosis']
+stability_data['Z_Score_Illiquidity'] = z_scores['Illiquidity']
+# --- END: MODIFIED SECTION ---
+
 
 # --- Check if `reit_scoring_analysis` table exists ---
 try:
@@ -134,6 +140,8 @@ except Exception as e:
     exit()
 
 # --- If table exists, clear existing data ---
+# Note: Since we use if_exists='replace' below, this manual deletion is redundant
+# but kept for logical clarity. The 'replace' will handle everything.
 if table_exists:
     try:
         with engine.begin() as conn:
@@ -148,10 +156,12 @@ else:
 # --- Save Stability Percentile Data to MySQL (Replaces `reit_scoring_analysis`) ---
 try:
     with engine.connect() as conn:
+        # Using 'replace' ensures the table schema is updated with the new Z-score columns
         stability_data.to_sql('reit_scoring_analysis', con=engine, if_exists='replace', index=False)
-        print("✅ Stability scores saved successfully to MySQL (reit_scoring_analysis).")
+        print("✅ Stability scores and components saved successfully to MySQL (reit_scoring_analysis).")
 except Exception as e:
     print(f"❌ Error saving stability scores to MySQL: {e}")
 
 # --- Display Sample Data ---
 print(stability_data.head())
+
