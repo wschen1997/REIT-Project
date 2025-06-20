@@ -607,6 +607,9 @@ def get_stability_analysis(ticker):
         # Map the database result to a dictionary
         scores = dict(result._mapping)
 
+        # Replace any None values with 0.0 to prevent formatting errors
+        scores = {k: (v if v is not None else 0.0) for k, v in scores.items()}
+
         # --- Construct the Prompt for Gemini ---
         # This prompt is engineered to be concise and produce a short, insightful paragraph.
         prompt = f"""
@@ -643,6 +646,15 @@ def get_stability_analysis(ticker):
 
         # Extract the text from the response
         api_response = response.json()
+
+        # NEW: Add a check to ensure the 'candidates' key exists before trying to access it
+        if not api_response.get("candidates"):
+            app.logger.error(f"Gemini response for {ticker} missing 'candidates'. Full response: {api_response}")
+            # Provide a specific error if the AI response is not as expected
+            return jsonify({
+                "error": "The AI analysis could not be completed. The response from the AI was empty, which may be due to safety filters or a temporary issue."
+            }), 500
+
         explanation_text = api_response["candidates"][0]["content"]["parts"][0]["text"]
         
         # Return the Z-scores and the generated explanation
