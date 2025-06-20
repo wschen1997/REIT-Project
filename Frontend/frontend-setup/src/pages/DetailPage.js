@@ -1336,6 +1336,7 @@ function DetailPage({ userPlan }) {
           {/* --- 4. ADD THE CONDITIONAL RENDER FOR THE NEW OVERLAY --- */}
           {showScoringOverlay && (
               <ScoringDonutOverlay
+                ticker={ticker} 
                 score={stabilityScore}
                 title="Stability Percentile"
                 tooltipText="Stability Percentile measures price volatility risk. Our algorithm calculates it using average daily return, standard deviation, skewness, kurtosis, and trading volume over the last five years. A higher percentile indicates lower risk."

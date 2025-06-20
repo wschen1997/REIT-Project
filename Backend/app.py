@@ -628,7 +628,7 @@ def get_stability_analysis(ticker):
         if not gemini_api_key:
              return jsonify({"error": "Server is missing API key configuration."}), 500
 
-        api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={gemini_api_key}"
+        api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={gemini_api_key}"
         
         payload = {
             "contents": [{
