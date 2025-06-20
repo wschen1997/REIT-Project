@@ -12,6 +12,7 @@ import jwt
 from datetime import timedelta
 import json
 import requests
+import traceback
 
 # Explicitly load environment variables from the Credentials.env file
 dotenv_path = os.path.abspath(
@@ -665,8 +666,18 @@ def get_stability_analysis(ticker):
         })
 
     except Exception as e:
-        app.logger.error(f"Error generating stability analysis for {ticker}: {e}")
-        return jsonify({"error": "Failed to generate stability analysis."}), 500
+        # This will capture the full error traceback
+        error_traceback = traceback.format_exc()
+
+        # This will print a detailed, multi-line error log on your backend server
+        app.logger.error(f"--- UNHANDLED EXCEPTION IN /stability-analysis FOR {ticker} ---")
+        app.logger.error(f"Exception Type: {type(e).__name__}")
+        app.logger.error(f"Exception Message: {str(e)}")
+        app.logger.error(f"Full Traceback:\n{error_traceback}")
+        app.logger.error("--- END OF EXCEPTION ---")
+
+        # This sends a generic error back to the front-end
+        return jsonify({"error": "An unexpected error occurred. See backend logs for details."}), 500
 
 
 # -------------------------------------------------------------------------
