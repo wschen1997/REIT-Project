@@ -666,18 +666,17 @@ def get_stability_analysis(ticker):
         })
 
     except Exception as e:
-        # This will capture the full error traceback
+        # Capture the full error traceback
         error_traceback = traceback.format_exc()
 
-        # This will print a detailed, multi-line error log on your backend server
-        app.logger.error(f"--- UNHANDLED EXCEPTION IN /stability-analysis FOR {ticker} ---")
-        app.logger.error(f"Exception Type: {type(e).__name__}")
-        app.logger.error(f"Exception Message: {str(e)}")
-        app.logger.error(f"Full Traceback:\n{error_traceback}")
-        app.logger.error("--- END OF EXCEPTION ---")
+        # This will still try to log it on the backend, just in case
+        app.logger.error(f"--- EXCEPTION FOR {ticker}: {error_traceback} ---")
 
-        # This sends a generic error back to the front-end
-        return jsonify({"error": "An unexpected error occurred. See backend logs for details."}), 500
+        # CRITICAL CHANGE: Send the detailed traceback to the frontend for debugging
+        return jsonify({
+            "error": "A server error occurred. See browser console for details.",
+            "traceback": error_traceback 
+        }), 500
 
 
 # -------------------------------------------------------------------------

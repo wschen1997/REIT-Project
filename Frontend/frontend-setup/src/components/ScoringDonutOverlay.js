@@ -65,25 +65,46 @@ const ScoringDonutOverlay = ({ ticker, score, title, tooltipText, donutOptions, 
     }
 
     const fetchAnalysis = async () => {
-      console.log(`[ScoringDonutOverlay] Fetching stability analysis for ${ticker}...`);
-      setIsLoading(true);
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/reits/${ticker}/stability-analysis`);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+        console.log(`[ScoringDonutOverlay] Fetching stability analysis for ${ticker}...`);
+        setIsLoading(true);
+        setError('');
+
+        try {
+            const response = await fetch(`<span class="math-inline">\{API\_BASE\_URL\}/api/reits/</span>{ticker}/stability-analysis`);
+            const data = await response.json();
+
+            if (!response.ok) {
+                // This creates an error object that includes the response data
+                const error = new Error(data.error || `HTTP error! status: ${response.status}`);
+                error.response = { json: () => Promise.resolve(data) }; // Attach data to the error
+                throw error;
+            }
+
+            console.log(`[ScoringDonutOverlay] Received data for ${ticker}:`, data);
+            setAnalysisData(data);
+
+        } catch (err) {
+            console.error(`[ScoringDonutOverlay] A fetch error occurred for ${ticker}:`);
+            // We will try to get more details from the response body
+            try {
+                // err.response might not exist on a network failure, so we check
+                const errorData = err.response ? await err.response.json() : { error: err.message };
+                console.error("[ScoringDonutOverlay] Detailed error from server:", errorData);
+
+                if (errorData.traceback) {
+                    console.error("--- DETAILED BACKEND TRACEBACK ---");
+                    console.error(errorData.traceback);
+                    console.error("--- END OF TRACEBACK ---");
+                    setError("Server error. The full error report has been printed to your browser's developer console (Press F12).");
+                } else {
+                    setError(errorData.error || "An unknown error occurred.");
+                }
+            } catch (parseError) {
+                setError("Could not load analysis. The server responded with an unreadable error.");
+            }
+        } finally {
+            setIsLoading(false);
         }
-        const data = await response.json();
-        console.log(`[ScoringDonutOverlay] Received data for ${ticker}:`, data);
-        if (data.error) {
-            throw new Error(data.error)
-        }
-        setAnalysisData(data);
-      } catch (err) {
-        console.error(`[ScoringDonutOverlay] Failed to fetch analysis for ${ticker}:`, err);
-        setError("Could not load AI-powered analysis. Please try again later.");
-      } finally {
-        setIsLoading(false);
-      }
     };
 
     fetchAnalysis();
