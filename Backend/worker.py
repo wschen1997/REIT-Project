@@ -52,8 +52,8 @@ def generate_stability_analysis_task(ticker):
         # 2. Construct Prompt
         # New, improved prompt for a human-friendly analysis
         prompt = f"""
-        You are a savvy financial advisor explaining a REIT's risk profile to a smart but non-technical client.
-        Your tone should be clear, direct, and insightful. Avoid jargon.
+        You are a financial advisor explaining a REIT's risk profile to a non-technical client.
+        Your tone should be clear and direct. Avoid jargon.
         Your goal is to explain what these Z-scores mean for a potential investor in plain English.
 
         Here are the Z-scores for REIT ticker {ticker}, comparing it to its peers. A score near 0 is average.
@@ -65,8 +65,10 @@ def generate_stability_analysis_task(ticker):
 
         Based on these scores, please provide a 2-3 sentence summary analysis for an investor.
         DO NOT repeat the numerical Z-scores in your output.
-        Focus on the practical implications. For example, instead of saying 'It has low volatility,' say 'Its stock price has been more stable than its peers.'
+        Focus on the practical implications. For example, instead of saying 'It has low volatility,' say 'Its stock price has been more stable than peers.'
         Start by summarizing the main trade-off (the primary strength vs. the primary weakness).
+        For volitility, only mention it if it's obviously worse than peers. Don't list it as a strength if it's average or better.
+        Focus a bit more on volatility, downside risk, and extreme event risk, as these are the most relevant for stability.
         """
 
         # 3. Call Gemini API
