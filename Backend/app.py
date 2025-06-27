@@ -13,6 +13,8 @@ from datetime import timedelta
 import json
 import requests
 import traceback
+from Backend.worker import generate_stability_analysis_task
+from celery.result import AsyncResult
 
 # Explicitly load environment variables from the Credentials.env file
 dotenv_path = os.path.abspath(
@@ -581,103 +583,41 @@ def get_price_data(ticker):
 # ====================== SCORING AND LLM ENDPOINTS ===============================
 # -------------------------------------------------------------------------
 
-@app.route("/api/reits/<string:ticker>/stability-analysis", methods=['GET'])
-def get_stability_analysis(ticker):
+# endpoint to START the analysis job
+@app.route("/api/reits/<string:ticker>/start-analysis", methods=['POST'])
+def start_stability_analysis(ticker):
     """
-    Fetches the Z-score components for a REIT's stability score,
-    constructs a prompt for an LLM, and returns a generated explanation.
+    Starts the stability analysis task in the background.
+    Immediately returns a task ID.
     """
-    try:
-        with db.engine.connect() as conn:
-            # Fetch the pre-calculated Z-scores for the given ticker
-            query = text("""
-                SELECT 
-                    `Z_Score_Std_Dev`, 
-                    `Z_Score_Return`, 
-                    `Z_Score_Skew`, 
-                    `Z_Score_Kurtosis`, 
-                    `Z_Score_Illiquidity`
-                FROM reit_scoring_analysis 
-                WHERE Ticker = :ticker
-            """)
-            result = conn.execute(query, {"ticker": ticker}).fetchone()
+    task = generate_stability_analysis_task.delay(ticker)
+    return jsonify({"task_id": task.id}), 202
 
-        if not result:
-            return jsonify({"error": "No scoring data found for this ticker."}), 404
+# endpoint to CHECK THE STATUS and GET THE RESULT of the analysis job
+@app.route("/api/reits/analysis-result/<string:task_id>", methods=['GET'])
+def get_analysis_result(task_id):
+    """
+    Checks the status of a background task.
+    Returns the result if the task is complete.
+    """
+    task_result = AsyncResult(task_id, app=generate_stability_analysis_task.app)
 
-        # Map the database result to a dictionary
-        scores = dict(result._mapping)
-
-        # Replace any None values with 0.0 to prevent formatting errors
-        scores = {k: (v if v is not None else 0.0) for k, v in scores.items()}
-
-        # --- Construct the Prompt for Gemini ---
-        # This prompt is engineered to be concise and produce a short, insightful paragraph.
-        prompt = f"""
-        Analyze the Stability Score components for the REIT with ticker {ticker}.
-        The components are Z-scores, where a higher score means more of that factor.
-        - Volatility (Standard Deviation Z-score): {scores['Z_Score_Std_Dev']:.2f} (Higher is riskier)
-        - Illiquidity Z-score: {scores['Z_Score_Illiquidity']:.2f} (Higher is riskier)
-        - Return Z-score: {scores['Z_Score_Return']:.2f} (Higher is better)
-        - Negative Skew Z-score: {scores['Z_Score_Skew']:.2f} (Higher is riskier)
-        - Tail Risk (Kurtosis Z-score): {scores['Z_Score_Kurtosis']:.2f} (Higher is riskier)
-
-        Based on these Z-scores, write a brief, one-paragraph analysis (around 50-70 words) for a financial analyst. 
-        Start by stating the primary driver of its risk profile (e.g., "The risk profile for {ticker} is primarily driven by its high volatility...").
-        Mention at least one positive and one negative contributing factor.
-        """
-
-        # --- Call the Gemini API ---
-        gemini_api_key = os.getenv("GEMINI_API_KEY")
-        if not gemini_api_key:
-             return jsonify({"error": "Server is missing API key configuration."}), 500
-
-        api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={gemini_api_key}"
-        
-        payload = {
-            "contents": [{
-                "parts": [{"text": prompt}]
-            }]
-        }
-        
-        headers = {"Content-Type": "application/json"}
-        
-        response = requests.post(api_url, headers=headers, json=payload)
-        response.raise_for_status() # Will raise an exception for bad status codes (4xx or 5xx)
-
-        # Extract the text from the response
-        api_response = response.json()
-
-        # NEW: Add a check to ensure the 'candidates' key exists before trying to access it
-        if not api_response.get("candidates"):
-            app.logger.error(f"Gemini response for {ticker} missing 'candidates'. Full response: {api_response}")
-            # Provide a specific error if the AI response is not as expected
-            return jsonify({
-                "error": "The AI analysis could not be completed. The response from the AI was empty, which may be due to safety filters or a temporary issue."
-            }), 500
-
-        explanation_text = api_response["candidates"][0]["content"]["parts"][0]["text"]
-        
-        # Return the Z-scores and the generated explanation
+    if task_result.successful():
+        result = task_result.get()
+        if result.get("error"): # Handle cases where the task failed internally
+             return jsonify({"status": "FAILURE", "error": result["error"]}), 200
         return jsonify({
-            "ticker": ticker,
-            "z_scores": scores,
-            "explanation": explanation_text
-        })
-
-    except Exception as e:
-        # Capture the full error traceback
-        error_traceback = traceback.format_exc()
-
-        # This will still try to log it on the backend, just in case
-        app.logger.error(f"--- EXCEPTION FOR {ticker}: {error_traceback} ---")
-
-        # CRITICAL CHANGE: Send the detailed traceback to the frontend for debugging
+            "status": "SUCCESS",
+            "result": result
+        }), 200
+    elif task_result.failed():
         return jsonify({
-            "error": "A server error occurred. See browser console for details.",
-            "traceback": error_traceback 
-        }), 500
-
+            "status": "FAILURE",
+            "error": str(task_result.info) # Get the exception info
+        }), 200
+    else:
+        # Task is still pending or in another state
+        return jsonify({"status": "PENDING"}), 202
 
 # -------------------------------------------------------------------------
 # ====================== Stripe ENDPOINTS ===============================
