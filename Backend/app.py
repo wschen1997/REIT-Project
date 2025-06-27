@@ -13,7 +13,7 @@ from datetime import timedelta
 import json
 import requests
 import traceback
-from Backend.worker import generate_stability_analysis_task
+from worker import generate_stability_analysis_task
 from celery.result import AsyncResult
 
 # Explicitly load environment variables from the Credentials.env file
