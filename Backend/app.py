@@ -23,7 +23,7 @@ dotenv_path = os.path.abspath(
 load_dotenv(dotenv_path)
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/api/*": {"origins": ["http://localhost:3000", "https://www.viserra-group.com"]}})
 
 # get the stripe secret key from the environment variables
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")

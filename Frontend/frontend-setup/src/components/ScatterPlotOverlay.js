@@ -1,258 +1,144 @@
-import React, { useState, useEffect } from "react";
-import { Scatter } from "react-chartjs-2";
+// src/components/ScoringDonutOverlay.js
+import React, { useState, useEffect, useRef } from 'react';
+import { Doughnut } from 'react-chartjs-2';
+import { Chart as ChartJS, ArcElement, Tooltip } from "chart.js";
 
-// 1) Import the plugins
-import {
-  Chart as ChartJS,
-  PointElement,
-  LinearScale,
-  Tooltip,
-  Legend
-} from "chart.js";
-import annotationPlugin from "chartjs-plugin-annotation";
-import ChartDataLabels from "chartjs-plugin-datalabels";
+ChartJS.register(ArcElement, Tooltip);
+const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:5000";
 
-// Register the base chart features plus the plugins
-ChartJS.register(
-  PointElement,
-  LinearScale,
-  Tooltip,
-  Legend,
-  annotationPlugin,
-  ChartDataLabels
-);
-
-const ScatterPlotOverlay = ({ propertyTypes = [], onClose, currentREIT, API_BASE_URL }) => {
-  // Use the first property type by default if multiple exist
-  const [selectedType, setSelectedType] = useState(propertyTypes[0] || "");
-  const [peerData, setPeerData] = useState([]);
-
-  // Fetch peer data when the selected type changes
-  useEffect(() => {
-    if (selectedType && API_BASE_URL) {
-      fetch(`${API_BASE_URL}/api/peer-scatter?property_type=${encodeURIComponent(selectedType)}`)
-        .then((res) => res.json())
-        .then((data) => {
-          // Remove the current REIT from the peer list if it's in there
-          // so we don't get duplicates in both sets
-          const filtered = currentREIT
-            ? data.filter((item) => item.ticker !== currentREIT.ticker)
-            : data;
-          setPeerData(filtered);
-        })
-        .catch((err) => {
-          console.error("Error fetching peer data:", err);
-          setPeerData([]);
-        });
-    }
-  }, [selectedType, API_BASE_URL, currentREIT]);
-
-  // Data label styling to simulate a "speech bubble" background
-  const dataLabelStyle = {
-    backgroundColor: "rgba(128, 128, 128, 0.1)", // Slightly transparent grey
-    borderColor: "black",
-    borderWidth: 1,
-    borderRadius: 4,
-    color: "#333",
-    padding: 4,
-    // Attempt to avoid collisions (not perfect, but helps)
-    overlap: false,
-    // Position label away from the dot
-    anchor: "end",
-    align: "end",
-    offset: 8,
-    // Keep label inside chart if possible
-    clamp: true,
-    formatter: (value, context) => {
-      const dataObj = context.dataset.data[context.dataIndex];
-      return dataObj.ticker || "";
-    },
-  };
-
-  // Build the chart data
-  const chartData = {
-    datasets: [
-      {
-        label: "Peers",
-        // Make peers a bit bigger on hover
-        pointRadius: 6,
-        pointHoverRadius: 8,
-        data: peerData,
-        backgroundColor: "rgba(177, 45, 120, 0.8)",
-        datalabels: dataLabelStyle,
-      },
-      {
-        label: currentREIT?.ticker || "Current REIT",
-        // Make the current REIT dot larger, and also bigger on hover
-        pointRadius: 10,
-        pointHoverRadius: 12,
-        data: currentREIT
-          ? [{ x: currentREIT.xValue, y: currentREIT.yValue, ticker: currentREIT.ticker }]
-          : [],
-        backgroundColor: "rgba(90, 21, 61, 0.8)",
-        datalabels: dataLabelStyle,
-      },
-    ],
-  };
-
-  // Chart options
-  const chartOptions = {
-    responsive: true,
-    plugins: {
-      tooltip: {
-        mode: "nearest",
-        intersect: true,
-        callbacks: {
-          label: (ctx) => {
-            const xVal = ctx.parsed.x;
-            const yVal = ctx.parsed.y;
-            // Round to one decimal
-            const formattedX = xVal.toFixed(1);
-            const formattedY = yVal.toFixed(1);
-
-            const dataObj = ctx.dataset.data[ctx.dataIndex];
-            const ticker = dataObj.ticker || ctx.dataset.label;
-
-            return `${ticker}: (Stability: ${formattedX}, Fundamental: ${formattedY})`;
-          },
-        },
-      },
-      legend: { display: true },
-      // Vertical/horizontal midlines
-      annotation: {
-        annotations: {
-          xMidline: {
-            type: "line",
-            xMin: 50,
-            xMax: 50,
-            borderColor: "rgba(0, 0, 0, 0.4)",
-            borderWidth: 1,
-          },
-          yMidline: {
-            type: "line",
-            yMin: 50,
-            yMax: 50,
-            borderColor: "rgba(0, 0, 0, 0.4)",
-            borderWidth: 1,
-          },
-        },
-      },
-      // Let the dataset-level "datalabels" config handle the style
-      datalabels: {},
-    },
-    scales: {
-        x: {
-          title: {
-            display: true,
-            text: "Stability Percentile",
-            color: "#5A153D", // Your theme color
-            font: { weight: "bold", size: 14 } // Increased font size here
-          },
-          min: 0,
-          max: 100,
-        },
-        y: {
-          title: {
-            display: true,
-            text: "Fundamental Percentile",
-            color: "#5A153D", // Your theme color
-            font: { weight: "bold", size: 14 } // Increased font size here
-          },
-          min: 0,
-          max: 100,
-        },
-      },       
-  };
-
+const ScoreBar = ({ label, value, higherIsBetter }) => {
+  const zScore = parseFloat(value) || 0;
+  const percentage = Math.max(0, Math.min(100, (zScore + 2.5) * 20));
+  const isGood = higherIsBetter ? zScore > 0 : zScore < 0;
+  const barColor = isGood ? 'rgba(34, 139, 34, 0.7)' : 'rgba(220, 20, 60, 0.7)';
   return (
-    <div
-      style={{
-        position: "fixed",
-        top: 0, left: 0, right: 0, bottom: 0,
-        backgroundColor: "rgba(0,0,0,0.5)",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        zIndex: 2000,
-      }}
-    >
-      <div
-        style={{
-          background: "#fff",
-          padding: "20px",
-          borderRadius: "8px",
-          width: "90%",
-          maxWidth: "1250px",
-          maxHeight: "90%",
-          overflowY: "auto",
-          position: "relative",
-        }}
-      >
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.color = "#B12D78";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.color = "#5A153D";
-          }}
-          style={{
-            position: "absolute",
-            top: "5px",
-            right: "5px",
-            background: "transparent",
-            border: "none",
-            fontSize: "1.8rem",
-            cursor: "pointer",
-          }}
-        >
-          &times;
-        </button>
-
-        {/* Tabs if multiple property types */}
-        {propertyTypes.length > 0 && (
-          <div
-            style={{
-              display: "flex",
-              borderBottom: "1px solid #ccc",
-              marginBottom: "10px",
-              paddingRight: "20px",
-              paddingLeft: "20px",
-            }}
-          >
-            {propertyTypes.map((type) => (
-              <button
-                key={type}
-                onClick={() => setSelectedType(type)}
-                style={{
-                  flex: 1,
-                  padding: "10px",
-                  background: selectedType === type ? "#faf0fb" : "transparent",
-                  border: "none",
-                  borderBottom: selectedType === type ? "3px solid #5A153D" : "none",
-                  cursor: "pointer",
-                  fontWeight: selectedType === type ? "bold" : "normal",
-                  transition: "background 0.3s",
-                  // Slightly rounded corners for the toggles
-                  borderRadius: "6px",
-                  // If selected, keep bottom radius 0 so the line doesn't look weird
-                  ...(selectedType === type
-                    ? { borderRadius: "6px 6px 0 0" }
-                    : {}),
-                }}
-              >
-                {type}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Scatter Chart */}
-        <Scatter data={chartData} options={chartOptions} />
+    <div style={{ marginBottom: '15px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', fontSize: '0.9rem' }}>
+        <span>{label}</span>
+        <span style={{ fontWeight: 'bold' }}>{zScore.toFixed(2)}</span>
+      </div>
+      <div style={{ background: '#e0e0e0', borderRadius: '4px', height: '10px', width: '100%' }}>
+        <div style={{ background: barColor, width: `${percentage}%`, height: '100%', borderRadius: '4px', transition: 'width 0.5s ease-in-out' }} />
       </div>
     </div>
   );
 };
 
-export default ScatterPlotOverlay;
+const ScoringDonutOverlay = ({ ticker, score, title, tooltipText, donutOptions, onClose }) => {
+  const [analysisData, setAnalysisData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [jobId, setJobId] = useState(null);
+  const pollingRef = useRef(null);
+
+  useEffect(() => {
+    // === Step 1: Start the analysis job ===
+    const startAnalysis = async () => {
+      if (!ticker) return;
+      console.log(`[Overlay] Requesting analysis for ${ticker}...`);
+      setIsLoading(true);
+      setError('');
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/reits/${ticker}/start-analysis`, { method: 'POST' });
+        const data = await response.json();
+        if (!response.ok || !data.task_id) {
+          throw new Error("Failed to start analysis job.");
+        }
+        console.log(`[Overlay] Job started with ID: ${data.task_id}`);
+        setJobId(data.task_id);
+      } catch (err) {
+        console.error(err);
+        setError("Could not start the analysis job.");
+        setIsLoading(false);
+      }
+    };
+    startAnalysis();
+    
+    // === Step 3: Cleanup function to stop polling when component unmounts ===
+    return () => {
+      if (pollingRef.current) {
+        console.log("[Overlay] Cleaning up polling interval.");
+        clearInterval(pollingRef.current);
+      }
+    };
+  }, [ticker]);
+
+  useEffect(() => {
+    // === Step 2: Poll for the result once we have a job ID ===
+    if (!jobId) return;
+
+    const pollForResult = async () => {
+      console.log(`[Overlay] Polling for result of job ${jobId}...`);
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/reits/analysis-result/${jobId}`);
+        const data = await response.json();
+        
+        if (data.status === 'SUCCESS') {
+          console.log("[Overlay] Job SUCCESS. Data received:", data.result);
+          setAnalysisData(data.result);
+          setIsLoading(false);
+          clearInterval(pollingRef.current);
+        } else if (data.status === 'FAILURE') {
+          console.error("[Overlay] Job FAILURE:", data.error);
+          setError(data.error || "Analysis job failed.");
+          setIsLoading(false);
+          clearInterval(pollingRef.current);
+        } else {
+          // Status is PENDING, do nothing and wait for the next poll.
+          console.log("[Overlay] Job PENDING...");
+        }
+      } catch (err) {
+        console.error("Polling error:", err);
+        setError("Error fetching analysis result.");
+        setIsLoading(false);
+        clearInterval(pollingRef.current);
+      }
+    };
+    
+    // Start polling every 4 seconds
+    pollingRef.current = setInterval(pollForResult, 4000);
+
+  }, [jobId]);
+
+  // The rest of the component for rendering remains largely the same
+  if (score === null || score === undefined) return null;
+  const scoreVal = Math.round(score);
+  const donutChartData = {
+    labels: ["Score", "Remaining"],
+    datasets: [{ data: [scoreVal, 100 - scoreVal], backgroundColor: ["#5A153D", "#e0e0e0"], borderWidth: 0, datalabels: { display: false } }],
+  };
+  const scoreComponents = analysisData?.z_scores ? [
+    { label: "Volatility", value: analysisData.z_scores.Z_Score_Std_Dev, higherIsBetter: false },
+    { label: "Illiquidity", value: analysisData.z_scores.Z_Score_Illiquidity, higherIsBetter: false },
+    { label: "Return", value: analysisData.z_scores.Z_Score_Return, higherIsBetter: true },
+    { label: "Negative Skew", value: analysisData.z_scores.Z_Score_Skew, higherIsBetter: false },
+    { label: "Tail Risk", value: analysisData.z_scores.Z_Score_Kurtosis, higherIsBetter: false },
+  ] : [];
+
+  return (
+    <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.6)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 2000 }}>
+      <div style={{ background: "#fff", padding: "20px 40px", borderRadius: "8px", width: "90%", maxWidth: "1000px", minHeight: "400px", display: "flex", gap: "30px", position: "relative" }}>
+        <button onClick={onClose} style={{ position: "absolute", top: "10px", right: "15px", background: "transparent", border: "none", fontSize: "1.8rem", cursor: "pointer", color: "#5A153D", lineHeight: 1 }}>&times;</button>
+        <div style={{ flex: 1, textAlign: 'center', paddingRight: '30px', borderRight: '1px solid #eee' }}>
+          <h4>{title}<span className="tooltip-icon" style={{ marginLeft: "6px", cursor: "pointer" }}>i<span className="tooltip-text">{tooltipText}</span></span></h4>
+          <div style={{ width: "200px", margin: "20px auto 0" }}><Doughnut data={donutChartData} options={donutOptions} /></div>
+          <p style={{ marginTop: "20px", fontSize: '1.2rem', fontWeight: 'bold' }}>{`${scoreVal}/100`}</p>
+        </div>
+        <div style={{ flex: 1, paddingRight: '30px', borderRight: '1px solid #eee' }}>
+          <h4 style={{ textAlign: 'center' }}>Score Components</h4>
+          {isLoading && !analysisData && <p>Analyzing Components...</p>}
+          {error && <p style={{ color: 'red', fontSize: '0.9rem' }}>{error}</p>}
+          {analysisData && scoreComponents.map(comp => <ScoreBar key={comp.label} {...comp} />)}
+        </div>
+        <div style={{ flex: 1 }}>
+          <h4 style={{ textAlign: 'center' }}>AI-Powered Analysis</h4>
+          {isLoading && !analysisData && <div style={{ textAlign: 'center', color: '#666', fontSize: '0.9rem', marginTop: '50px' }}><p>Crafting insights with Gemini... This may take a moment.</p></div>}
+          {error && <p style={{ color: 'red', fontSize: '0.9rem' }}>{error}</p>}
+          {analysisData && <p style={{ color: '#333', fontSize: '1rem', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>{analysisData.explanation}</p>}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ScoringDonutOverlay;
