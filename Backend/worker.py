@@ -50,18 +50,23 @@ def generate_stability_analysis_task(ticker):
         scores = {k: (v if v is not None else 0.0) for k, v in result._mapping.items()}
 
         # 2. Construct Prompt
+        # New, improved prompt for a human-friendly analysis
         prompt = f"""
-        Analyze the Stability Score components for the REIT with ticker {ticker}.
-        The components are Z-scores, where a higher score means more of that factor.
-        - Volatility (Standard Deviation Z-score): {scores['Z_Score_Std_Dev']:.2f} (Higher is riskier)
-        - Illiquidity Z-score: {scores['Z_Score_Illiquidity']:.2f} (Higher is riskier)
-        - Return Z-score: {scores['Z_Score_Return']:.2f} (Higher is better)
-        - Negative Skew Z-score: {scores['Z_Score_Skew']:.2f} (Higher is riskier)
-        - Tail Risk (Kurtosis Z-score): {scores['Z_Score_Kurtosis']:.2f} (Higher is riskier)
+        You are a savvy financial advisor explaining a REIT's risk profile to a smart but non-technical client.
+        Your tone should be clear, direct, and insightful. Avoid jargon.
+        Your goal is to explain what these Z-scores mean for a potential investor in plain English.
 
-        Based on these Z-scores, write a brief, one-paragraph analysis (around 50-70 words) for a financial analyst. 
-        Start by stating the primary driver of its risk profile.
-        Mention at least one positive and one negative contributing factor.
+        Here are the Z-scores for REIT ticker {ticker}, comparing it to its peers. A score near 0 is average.
+        - Price Stability (Volatility): {scores['Z_Score_Std_Dev']:.2f} (A lower score means fewer price swings and is better)
+        - Ease of Trading (Illiquidity): {scores['Z_Score_Illiquidity']:.2f} (A lower score means it's easier to trade and is better)
+        - Historical Performance (Return): {scores['Z_Score_Return']:.2f} (A higher score is better)
+        - Downside Protection (Negative Skew): {scores['Z_Score_Skew']:.2f} (A lower score means less risk of large, sudden drops and is better)
+        - Extreme Event Risk (Kurtosis): {scores['Z_Score_Kurtosis']:.2f} (A lower score means less risk of rare, extreme price moves and is better)
+
+        Based on these scores, please provide a 2-3 sentence summary analysis for an investor.
+        DO NOT repeat the numerical Z-scores in your output.
+        Focus on the practical implications. For example, instead of saying 'It has low volatility,' say 'Its stock price has been more stable than its peers.'
+        Start by summarizing the main trade-off (the primary strength vs. the primary weakness).
         """
 
         # 3. Call Gemini API
