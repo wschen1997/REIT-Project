@@ -6,23 +6,49 @@ import { Chart as ChartJS, ArcElement, Tooltip } from "chart.js";
 ChartJS.register(ArcElement, Tooltip);
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:5000";
 
-const ScoreBar = ({ label, value, higherIsBetter }) => {
-  const zScore = parseFloat(value) || 0;
-  const percentage = Math.max(0, Math.min(100, (zScore + 2.5) * 20));
-  const isGood = higherIsBetter ? zScore > 0 : zScore < 0;
-  const barColor = isGood ? 'rgba(34, 139, 34, 0.7)' : 'rgba(220, 20, 60, 0.7)';
+const LoadingIndicator = ({ text }) => {
+  const loadingStyle = {
+    textAlign: 'center',
+    color: '#666',
+    fontSize: '0.9rem',
+    animation: 'pulse 1.5s infinite ease-in-out'
+  };
+  return <p style={loadingStyle}>{text}</p>;
+};
+
+const ScoreBar = ({ label, percentile }) => {
+  const percentage = Math.max(0, Math.min(100, percentile || 0));
+  const barColor = percentage >= 50 ? '#5A153D' : '#d9534f';
+  
+  const getSuffix = (p) => {
+    if (p % 100 >= 11 && p % 100 <= 13) return 'th';
+    switch (p % 10) {
+      case 1: return 'st';
+      case 2: return 'nd';
+      case 3: return 'rd';
+      default: return 'th';
+    }
+  };
+
   return (
-    <div style={{ marginBottom: '15px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', fontSize: '0.9rem' }}>
-        <span>{label}</span>
-        <span style={{ fontWeight: 'bold' }}>{zScore.toFixed(2)}</span>
+    <div style={{ marginBottom: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: '20px', marginBottom: '5px', fontSize: '0.9rem', color: '#333' }}>
+        <span style={{ textAlign: 'left', whiteSpace: 'nowrap' }}>{label}</span>
+        <span style={{ fontWeight: 'bold', textAlign: 'right', whiteSpace: 'nowrap' }}>{`${percentage}${getSuffix(percentage)} Percentile`}</span>
       </div>
-      <div style={{ background: '#e0e0e0', borderRadius: '4px', height: '10px', width: '100%' }}>
-        <div style={{ background: barColor, width: `${percentage}%`, height: '100%', borderRadius: '4px', transition: 'width 0.5s ease-in-out' }} />
+      <div style={{ background: '#e9ecef', borderRadius: '5px', height: '10px', width: '100%' }}>
+        <div style={{
+          background: barColor,
+          width: `${percentage}%`,
+          height: '100%',
+          borderRadius: '5px',
+          transition: 'width 0.5s ease-in-out'
+        }} />
       </div>
     </div>
   );
 };
+
 
 const ScoringDonutOverlay = ({ ticker, score, title, tooltipText, donutOptions, onClose }) => {
   const [analysisData, setAnalysisData] = useState(null);
@@ -32,120 +58,136 @@ const ScoringDonutOverlay = ({ ticker, score, title, tooltipText, donutOptions, 
   const pollingRef = useRef(null);
 
   useEffect(() => {
-    // === Step 1: Start the analysis job ===
     const startAnalysis = async () => {
       if (!ticker) return;
-      console.log(`[1] FRONTEND: Attempting to start analysis job for ticker: ${ticker}`);
       setIsLoading(true);
       setError('');
       try {
         const url = `${API_BASE_URL}/api/reits/${ticker}/start-analysis`;
-        console.log(`[1a] FRONTEND: Making POST request to: ${url}`);
-        
         const response = await fetch(url, { method: 'POST' });
         const data = await response.json();
-
-        console.log('[1b] FRONTEND: Received response from server.', { status: response.status, ok: response.ok, data });
-
         if (!response.ok || !data.task_id) {
           throw new Error(data.error || "Failed to start analysis job.");
         }
-        
-        console.log(`[1c] FRONTEND: Job started successfully with ID: ${data.task_id}`);
         setJobId(data.task_id);
-
       } catch (err) {
-        console.error('[ERROR] FRONTEND: Failed during startAnalysis.', err);
         setError(`Failed to start job: ${err.message}`);
         setIsLoading(false);
       }
     };
     startAnalysis();
-    
-    // === Step 3: Cleanup function to stop polling when component unmounts ===
     return () => {
       if (pollingRef.current) {
-        console.log("[CLEANUP] FRONTEND: Component unmounted. Clearing polling interval.");
         clearInterval(pollingRef.current);
       }
     };
   }, [ticker]);
 
   useEffect(() => {
-    // === Step 2: Poll for the result once we have a job ID ===
     if (!jobId) return;
-
     const pollForResult = async () => {
-      console.log(`[2] FRONTEND: Polling for result of job ${jobId}...`);
       try {
         const url = `${API_BASE_URL}/api/reits/analysis-result/${jobId}`;
-        console.log(`[2a] FRONTEND: Making GET request to: ${url}`);
-        
         const response = await fetch(url);
         const data = await response.json();
-        console.log('[2b] FRONTEND: Received polling response from server.', { data });
         
         if (data.status === 'SUCCESS') {
-          console.log("[SUCCESS] FRONTEND: Job finished successfully. Final data:", data.result);
           setAnalysisData(data.result);
           setIsLoading(false);
           clearInterval(pollingRef.current);
         } else if (data.status === 'FAILURE') {
-          console.error("[FAILURE] FRONTEND: Backend task failed.", data.error);
           setError(data.error || "Analysis job failed on the backend.");
           setIsLoading(false);
           clearInterval(pollingRef.current);
-        } else {
-          console.log("[PENDING] FRONTEND: Job is still running...");
         }
       } catch (err) {
-        console.error("[ERROR] FRONTEND: Failed during polling.", err);
         setError(`Error fetching result: ${err.message}`);
         setIsLoading(false);
         clearInterval(pollingRef.current);
       }
     };
-    
-    // Start polling every 4 seconds
     pollingRef.current = setInterval(pollForResult, 4000);
-
   }, [jobId]);
 
-  // The rest of the component for rendering remains largely the same
   if (score === null || score === undefined) return null;
   const scoreVal = Math.round(score);
   const donutChartData = {
     labels: ["Score", "Remaining"],
     datasets: [{ data: [scoreVal, 100 - scoreVal], backgroundColor: ["#5A153D", "#e0e0e0"], borderWidth: 0, datalabels: { display: false } }],
   };
-  const scoreComponents = analysisData?.z_scores ? [
-    { label: "Volatility", value: analysisData.z_scores.Z_Score_Std_Dev, higherIsBetter: false },
-    { label: "Illiquidity", value: analysisData.z_scores.Z_Score_Illiquidity, higherIsBetter: false },
-    { label: "Return", value: analysisData.z_scores.Z_Score_Return, higherIsBetter: true },
-    { label: "Negative Skew", value: analysisData.z_scores.Z_Score_Skew, higherIsBetter: false },
-    { label: "Tail Risk", value: analysisData.z_scores.Z_Score_Kurtosis, higherIsBetter: false },
+  
+  const scoreComponents = analysisData?.percentile_ranks ? [
+    { label: "Price Stability (Volatility)", percentile: analysisData.percentile_ranks.Volatility },
+    { label: "Ease of Trading (Illiquidity)", percentile: analysisData.percentile_ranks.Illiquidity },
+    { label: "Historical Performance (Return)", percentile: analysisData.percentile_ranks.Return },
+    { label: "Downside Protection (Skew)", percentile: analysisData.percentile_ranks.NegativeSkew },
+    { label: "Extreme Event Risk (Kurtosis)", percentile: analysisData.percentile_ranks.TailRisk },
   ] : [];
+
+  const columnStyle = {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    textAlign: 'center',
+  };
+
+  // --- FINAL ALIGNMENT FIX: Reverting to 'center' to vertically align all content. ---
+  const columnContentStyle = {
+    flexGrow: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center', // This vertically centers the content
+    padding: '20px 0'
+  };
 
   return (
     <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.6)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 2000 }}>
-      <div style={{ background: "#fff", padding: "20px 40px", borderRadius: "8px", width: "90%", maxWidth: "1000px", minHeight: "400px", display: "flex", gap: "30px", position: "relative" }}>
-        <button onClick={onClose} style={{ position: "absolute", top: "10px", right: "15px", background: "transparent", border: "none", fontSize: "1.8rem", cursor: "pointer", color: "#5A153D", lineHeight: 1 }}>&times;</button>
-        <div style={{ flex: 1, textAlign: 'center', paddingRight: '30px', borderRight: '1px solid #eee' }}>
+      <style>
+        {`
+          @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+          }
+        `}
+      </style>
+      <div style={{ background: "#fff", padding: "20px 40px", borderRadius: "8px", width: "90%", maxWidth: "1200px", minHeight: "400px", display: "flex", gap: "40px", position: "relative" }}>
+        <button 
+          onClick={onClose} 
+          onMouseEnter={(e) => { e.currentTarget.style.color = "#B12D78"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = "#5A153D"; }}
+          style={{ position: "absolute", top: "10px", right: "15px", background: "transparent", border: "none", fontSize: "2rem", cursor: "pointer", color: "#5A153D", lineHeight: 1, transition: "color 0.2s ease" }}
+        >
+          &times;
+        </button>
+        
+        {/* Column 1: Donut */}
+        <div style={{ ...columnStyle, paddingRight: '40px', borderRight: '1px solid #eee' }}>
           <h4>{title}<span className="tooltip-icon" style={{ marginLeft: "6px", cursor: "pointer" }}>i<span className="tooltip-text">{tooltipText}</span></span></h4>
-          <div style={{ width: "200px", margin: "20px auto 0" }}><Doughnut data={donutChartData} options={donutOptions} /></div>
-          <p style={{ marginTop: "20px", fontSize: '1.2rem', fontWeight: 'bold' }}>{`${scoreVal}/100`}</p>
+          <div style={columnContentStyle}>
+            <div style={{ width: "200px", margin: "0 auto" }}><Doughnut data={donutChartData} options={donutOptions} /></div>
+            <p style={{ marginTop: "20px", fontSize: '1.2rem', fontWeight: 'bold' }}>{`${scoreVal}/100`}</p>
+          </div>
         </div>
-        <div style={{ flex: 1, paddingRight: '30px', borderRight: '1px solid #eee' }}>
-          <h4 style={{ textAlign: 'center' }}>Score Components</h4>
-          {isLoading && !analysisData && <p>Contacting server to begin analysis...</p>}
-          {error && <p style={{ color: 'red', fontSize: '0.9rem' }}>{error}</p>}
-          {analysisData && scoreComponents.map(comp => <ScoreBar key={comp.label} {...comp} />)}
+        
+        {/* Column 2: Score Components */}
+        <div style={{ ...columnStyle, paddingRight: '40px', borderRight: '1px solid #eee' }}>
+          <h4 style={{ marginBottom: 0 }}>Score Components</h4>
+          <div style={columnContentStyle}>
+            {isLoading && !analysisData && <LoadingIndicator text="Analyzing component scores..." />}
+            {error && <p style={{ color: 'red', fontSize: '0.9rem' }}>{error}</p>}
+            {analysisData && scoreComponents.map(comp => <ScoreBar key={comp.label} {...comp} />)}
+          </div>
         </div>
-        <div style={{ flex: 1 }}>
-          <h4 style={{ textAlign: 'center' }}>AI-Powered Analysis</h4>
-          {isLoading && !analysisData && <div style={{ textAlign: 'center', color: '#666', fontSize: '0.9rem', marginTop: '50px' }}><p>Waiting for analysis to complete...</p></div>}
-          {error && <p style={{ color: 'red', fontSize: '0.9rem' }}>{error}</p>}
-          {analysisData && <p style={{ color: '#333', fontSize: '1rem', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>{analysisData.explanation}</p>}
+
+        {/* Column 3: AI Analysis */}
+        <div style={columnStyle}>
+          <h4 style={{ marginBottom: 0 }}>AI-Powered Analysis</h4>
+          <div style={columnContentStyle}>
+            {isLoading && !analysisData && <LoadingIndicator text="Crafting insights with Gemini..." />}
+            {error && <p style={{ color: 'red', fontSize: '0.9rem' }}>{error}</p>}
+            {analysisData && <p style={{ textAlign: 'justify', color: '#333', fontSize: '1rem', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>{analysisData.explanation}</p>}
+          </div>
         </div>
       </div>
     </div>

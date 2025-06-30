@@ -1148,7 +1148,7 @@ function DetailPage({ userPlan }) {
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
-                marginBottom: "10px",
+                marginBottom: "30px",
               }}
             >
               <h3 style={{ margin: 0 }}>Daily Price & Volume</h3>
@@ -1174,7 +1174,7 @@ function DetailPage({ userPlan }) {
                   transition: "background-color 0.3s ease, color 0.3s ease",
                 }}
               >
-                View Scoring Details
+                AI-Powered Analysis
               </button>
             </div>
             
@@ -1189,116 +1189,6 @@ function DetailPage({ userPlan }) {
             )}
           </div>
 
-          <div style={sectionContainer}>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: "10px",
-              }}
-            >
-              <h3 style={{ margin: 0 }}>Quantitative Scoring</h3>
-              <button
-                onClick={() => setShowOverlay(true)}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = "#faf0fb";
-                  e.currentTarget.style.color = "#5A153D";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = "#5A153D";
-                  e.currentTarget.style.color = "#fff";
-                }}
-                style={{
-                  padding: "10px 20px",
-                  fontSize: "16px",
-                  borderRadius: "5px",
-                  backgroundColor: "#5A153D",
-                  color: "#fff",
-                  border: "none",
-                  cursor: "pointer",
-                  transition: "background-color 0.3s ease, color 0.3s ease",
-                }}
-              >
-                See Peer Comparison
-              </button>
-            </div>
-            <div style={gridStyle}>
-              {/* Stability */}
-              <div style={blockStyle}>
-                <h4>
-                  Stability Percentile
-                  <span
-                    className="tooltip-icon"
-                    style={{
-                      marginLeft: "6px",
-                      cursor: "pointer",
-                      fontSize: "0.8rem",
-                      width: "14px",
-                      height: "14px",
-                      display: "inline-block",
-                      textAlign: "center",
-                      lineHeight: "16px",
-                    }}
-                  >
-                    i
-                    <span className="tooltip-text">
-                      Stability Percentile measures price volatility risk. Our algorithm calculates
-                      it using average daily return, standard deviation, skewness, kurtosis, and
-                      trading volume over the last five years. A higher percentile indicates lower
-                      risk.
-                    </span>
-                  </span>
-                </h4>
-                <div style={{ width: "200px", margin: "0 auto" }}>
-                  <Doughnut
-                    data={stabilityChartData}
-                    options={donutOptions}
-                  />
-                </div>
-                <p style={{ marginTop: "10px" }}>
-                  {stabilityScore !== null ? `${stabilityVal}/100` : "N/A"}
-                </p>
-              </div>
-
-              {/* Fundamental */}
-              <div style={blockStyle}>
-                <h4>
-                  Fundamental Percentile
-                  <span
-                    className="tooltip-icon"
-                    style={{
-                      marginLeft: "6px",
-                      cursor: "pointer",
-                      fontSize: "0.8rem",
-                      width: "14px",
-                      height: "14px",
-                      display: "inline-block",
-                      textAlign: "center",
-                      lineHeight: "16px",
-                    }}
-                  >
-                    i
-                    <span className="tooltip-text">
-                      Fundamental Percentile reflects the underlying financial strength of the REIT.
-                      Our algorithm takes into account of factors like FFO Yield, FFO Payout, FFO
-                      Growth, and Dividend Predictability. A higher percentile indicates stronger
-                      fundamentals.
-                    </span>
-                  </span>
-                </h4>
-                <div style={{ width: "200px", margin: "0 auto" }}>
-                  <Doughnut
-                    data={fundamentalChartData}
-                    options={donutOptions}
-                  />
-                </div>
-                <p style={{ marginTop: "10px" }}>
-                  {fundamentalScore !== null ? `${fundamentalVal}/100` : "N/A"}
-                </p>
-              </div>
-            </div>
-          </div>
 
           {/* Additional Bar Charts (FFO, DVD, NOI) */}
           <div style={sectionContainer}>
@@ -1338,7 +1228,7 @@ function DetailPage({ userPlan }) {
               <ScoringDonutOverlay
                 ticker={ticker} 
                 score={stabilityScore}
-                title="Stability Percentile"
+                title="Overall Stability Percentile"
                 tooltipText="Stability Percentile measures price volatility risk. Our algorithm calculates it using average daily return, standard deviation, skewness, kurtosis, and trading volume over the last five years. A higher percentile indicates lower risk."
                 donutOptions={donutOptions} // Pass the existing options from DetailPage
                 onClose={() => setShowScoringOverlay(false)}
