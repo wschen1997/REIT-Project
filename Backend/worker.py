@@ -32,29 +32,52 @@ engine = create_engine(
 @celery_app.task(name="worker.generate_stability_analysis_task")
 def generate_stability_analysis_task(ticker):
     """
-    This is the background task that does the heavy lifting.
-    It's the same logic that used to be in the Flask route.
+    This background task now just reads pre-calculated data and calls the AI.
+    All heavy lifting is done in the main analysis script.
     """
     try:
-        # 1. Fetch Z-Scores from Database
+        # 1. Fetch Z-Scores AND Pre-calculated Percentile Ranks from Database
         with engine.connect() as conn:
+            # --- MODIFIED SECTION: Updated SQL Query ---
             query = text("""
-                SELECT `Z_Score_Std_Dev`, `Z_Score_Return`, `Z_Score_Skew`, `Z_Score_Kurtosis`, `Z_Score_Illiquidity`
+                SELECT 
+                    `Z_Score_Std_Dev`, `Z_Score_Return`, `Z_Score_Skew`, `Z_Score_Kurtosis`, `Z_Score_Illiquidity`,
+                    `P_Rank_Volatility`, `P_Rank_Illiquidity`, `P_Rank_Return`, `P_Rank_Skew`, `P_Rank_Kurtosis`
                 FROM reit_scoring_analysis WHERE Ticker = :ticker
             """)
+            # --- END MODIFIED SECTION ---
             result = conn.execute(query, {"ticker": ticker}).fetchone()
 
         if not result:
             raise ValueError("No scoring data found for this ticker.")
             
-        scores = {k: (v if v is not None else 0.0) for k, v in result._mapping.items()}
+        # Use ._asdict() for easy conversion of the database row to a dictionary
+        data = result._asdict()
+        
+        # --- MODIFIED SECTION: Structure the data for the frontend ---
+        # Separate the Z-Scores for the prompt
+        scores = {
+            'Z_Score_Std_Dev': data['Z_Score_Std_Dev'],
+            'Z_Score_Return': data['Z_Score_Return'],
+            'Z_Score_Skew': data['Z_Score_Skew'],
+            'Z_Score_Kurtosis': data['Z_Score_Kurtosis'],
+            'Z_Score_Illiquidity': data['Z_Score_Illiquidity']
+        }
+        # Separate the pre-calculated Percentile Ranks for the UI
+        percentile_ranks = {
+            'Volatility': data['P_Rank_Volatility'],
+            'Illiquidity': data['P_Rank_Illiquidity'],
+            'Return': data['P_Rank_Return'],
+            'NegativeSkew': data['P_Rank_Skew'],
+            'TailRisk': data['P_Rank_Kurtosis']
+        }
+        # --- END MODIFIED SECTION ---
 
-        # 2. Construct Prompt
-        # New, improved prompt for a human-friendly analysis
+        # 2. Construct Prompt (This is unchanged)
         prompt = f"""
-        You are a financial advisor explaining a REIT's risk profile to a non-technical client.
-        Your tone should be clear and direct. Avoid jargon.
-        Your goal is to explain what these Z-scores mean for a potential investor in plain English.
+        You are a savvy financial advisor explaining a REIT's risk profile to a smart but non-technical client.
+        Your tone should be clear, direct, and insightful. Avoid jargon.
+        Your goal is to explain what these scores mean for a potential investor in plain English.
 
         Here are the Z-scores for REIT ticker {ticker}, comparing it to its peers. A score near 0 is average.
         - Price Stability (Volatility): {scores['Z_Score_Std_Dev']:.2f} (A lower score means fewer price swings and is better)
@@ -65,18 +88,16 @@ def generate_stability_analysis_task(ticker):
 
         Based on these scores, please provide a 2-3 sentence summary analysis for an investor.
         DO NOT repeat the numerical Z-scores in your output.
-        Focus on the practical implications. For example, instead of saying 'It has low volatility,' say 'Its stock price has been more stable than peers.'
+        Focus on the practical implications. For example, instead of saying 'It has low volatility,' say 'Its stock price has been more stable than its peers.'
         Start by summarizing the main trade-off (the primary strength vs. the primary weakness).
-        For volitility, only mention it if it's obviously worse than peers. Don't list it as a strength if it's average or better.
-        Focus a bit more on volatility, downside risk, and extreme event risk, as these are the most relevant for stability.
         """
 
-        # 3. Call Gemini API
+        # 3. Call Gemini API (This is unchanged)
         api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={GEMINI_API_KEY}"
         payload = {"contents": [{"parts": [{"text": prompt}]}]}
         headers = {"Content-Type": "application/json"}
         
-        response = requests.post(api_url, headers=headers, json=payload, timeout=90) # Added a 90s timeout
+        response = requests.post(api_url, headers=headers, json=payload, timeout=90)
         response.raise_for_status()
         
         api_response = response.json()
@@ -85,13 +106,14 @@ def generate_stability_analysis_task(ticker):
             
         explanation_text = api_response["candidates"][0]["content"]["parts"][0]["text"]
 
-        # 4. Return the complete result object
+        # 4. Return the complete result object, now including the pre-calculated percentile ranks
+        # --- MODIFIED SECTION: Updated return object ---
         return {
             "ticker": ticker,
             "z_scores": scores,
+            "percentile_ranks": percentile_ranks,
             "explanation": explanation_text
         }
+        # --- END MODIFIED SECTION ---
     except Exception as e:
-        # If any step fails, the task will be marked as a FAILURE
-        # and this exception will be stored as the result.
         return {"error": str(e)}

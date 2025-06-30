@@ -118,50 +118,36 @@ stability_data['Risk Percentile'] = stability_data['Risk Score'].rank(pct=True, 
 stability_data['Stability Percentile'] = 100 - stability_data['Risk Percentile']
 
 
-# --- START: MODIFIED SECTION ---
-# Add the key Z-score components to the final DataFrame for later analysis.
-# We give them database-friendly names.
+# --- Add the key Z-score components to the final DataFrame ---
 stability_data['Z_Score_Std_Dev'] = z_scores['Standard Deviation']
 stability_data['Z_Score_Return'] = z_scores['Average Daily Return']
-# Note: We use the adjusted skewness score, which is more intuitive for risk analysis
 stability_data['Z_Score_Skew'] = z_scores['Skewness Adjustment'] 
 stability_data['Z_Score_Kurtosis'] = z_scores['Adjusted Kurtosis']
 stability_data['Z_Score_Illiquidity'] = z_scores['Illiquidity']
-# --- END: MODIFIED SECTION ---
 
 
-# --- Check if `reit_scoring_analysis` table exists ---
+# --- NEW SECTION: Calculate Intuitive Percentile Ranks ---
+print("✅ Calculating intuitive percentile ranks for all Z-score components...")
+# For "higher is better" metrics, a higher rank is better.
+stability_data['P_Rank_Return'] = stability_data['Z_Score_Return'].rank(pct=True).mul(100).round()
+
+# For "lower is better" metrics, a lower value is better, so we invert the rank.
+stability_data['P_Rank_Volatility'] = (1 - stability_data['Z_Score_Std_Dev'].rank(pct=True)).mul(100).round()
+stability_data['P_Rank_Skew'] = (1 - stability_data['Z_Score_Skew'].rank(pct=True)).mul(100).round()
+stability_data['P_Rank_Kurtosis'] = (1 - stability_data['Z_Score_Kurtosis'].rank(pct=True)).mul(100).round()
+stability_data['P_Rank_Illiquidity'] = (1 - stability_data['Z_Score_Illiquidity'].rank(pct=True)).mul(100).round()
+# --- END NEW SECTION ---
+
+
+# --- Save final data to MySQL ---
 try:
-    with engine.connect() as conn:
-        result = conn.execute(text("SHOW TABLES LIKE 'reit_scoring_analysis'"))
-        table_exists = result.fetchone() is not None
+    # Using 'replace' is the simplest way to ensure the table schema is updated with the new columns.
+    stability_data.to_sql('reit_scoring_analysis', con=engine, if_exists='replace', index=False)
+    print("✅ Stability scores, Z-scores, and Percentile Ranks saved successfully to MySQL.")
 except Exception as e:
-    print(f"❌ Error checking if table exists: {e}")
-    exit()
+    print(f"❌ Error saving final data to MySQL: {e}")
 
-# --- If table exists, clear existing data ---
-# Note: Since we use if_exists='replace' below, this manual deletion is redundant
-# but kept for logical clarity. The 'replace' will handle everything.
-if table_exists:
-    try:
-        with engine.begin() as conn:
-            conn.execute(text("DELETE FROM reit_scoring_analysis;"))
-            print("✅ Existing reit_scoring_analysis data cleared.")
-    except Exception as e:
-        print(f"❌ Error clearing reit_scoring_analysis table: {e}")
-        exit()
-else:
-    print("ℹ️ Table 'reit_scoring_analysis' does not exist yet. It will be created.")
-
-# --- Save Stability Percentile Data to MySQL (Replaces `reit_scoring_analysis`) ---
-try:
-    with engine.connect() as conn:
-        # Using 'replace' ensures the table schema is updated with the new Z-score columns
-        stability_data.to_sql('reit_scoring_analysis', con=engine, if_exists='replace', index=False)
-        print("✅ Stability scores and components saved successfully to MySQL (reit_scoring_analysis).")
-except Exception as e:
-    print(f"❌ Error saving stability scores to MySQL: {e}")
 
 # --- Display Sample Data ---
-print(stability_data.head())
-
+print("\n--- Final Data Sample ---")
+print(stability_data[['Ticker', 'Stability Percentile', 'P_Rank_Return', 'P_Rank_Volatility']].head())
