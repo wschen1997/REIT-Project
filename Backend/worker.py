@@ -32,17 +32,17 @@ engine = create_engine(
 @celery_app.task(name="worker.generate_stability_analysis_task")
 def generate_stability_analysis_task(ticker):
     """
-    This background task now just reads pre-calculated data and calls the AI.
-    All heavy lifting is done in the main analysis script.
+    This background task now checks for inactive stocks before calling the AI.
     """
     try:
-        # 1. Fetch Z-Scores AND Pre-calculated Percentile Ranks from Database
+        # 1. Fetch all necessary data from the database
         with engine.connect() as conn:
-            # --- MODIFIED SECTION: Updated SQL Query ---
+            # --- MODIFIED SECTION: Updated SQL Query to include Average Volume ---
             query = text("""
                 SELECT 
                     `Z_Score_Std_Dev`, `Z_Score_Return`, `Z_Score_Skew`, `Z_Score_Kurtosis`, `Z_Score_Illiquidity`,
-                    `P_Rank_Volatility`, `P_Rank_Illiquidity`, `P_Rank_Return`, `P_Rank_Skew`, `P_Rank_Kurtosis`
+                    `P_Rank_Volatility`, `P_Rank_Illiquidity`, `P_Rank_Return`, `P_Rank_Skew`, `P_Rank_Kurtosis`,
+                    `Average Volume`
                 FROM reit_scoring_analysis WHERE Ticker = :ticker
             """)
             # --- END MODIFIED SECTION ---
@@ -51,11 +51,19 @@ def generate_stability_analysis_task(ticker):
         if not result:
             raise ValueError("No scoring data found for this ticker.")
             
-        # Use ._asdict() for easy conversion of the database row to a dictionary
         data = result._asdict()
-        
-        # --- MODIFIED SECTION: Structure the data for the frontend ---
-        # Separate the Z-Scores for the prompt
+
+        # --- NEW: Check for inactive trading volume ---
+        # If average volume is less than 1,000, we consider it inactive/delisted
+        # and return a special status without calling the AI.
+        if data.get('Average Volume', 0) < 1000:
+            return {
+                "status": "DELISTED",
+                "message": "This security has negligible trading volume and may be delisted. It will be reviewed and removed from our database."
+            }
+        # --- END NEW CHECK ---
+
+        # If the stock is active, proceed as normal...
         scores = {
             'Z_Score_Std_Dev': data['Z_Score_Std_Dev'],
             'Z_Score_Return': data['Z_Score_Return'],
@@ -63,7 +71,6 @@ def generate_stability_analysis_task(ticker):
             'Z_Score_Kurtosis': data['Z_Score_Kurtosis'],
             'Z_Score_Illiquidity': data['Z_Score_Illiquidity']
         }
-        # Separate the pre-calculated Percentile Ranks for the UI
         percentile_ranks = {
             'Volatility': data['P_Rank_Volatility'],
             'Illiquidity': data['P_Rank_Illiquidity'],
@@ -71,13 +78,12 @@ def generate_stability_analysis_task(ticker):
             'NegativeSkew': data['P_Rank_Skew'],
             'TailRisk': data['P_Rank_Kurtosis']
         }
-        # --- END MODIFIED SECTION ---
 
-        # 2. Construct Prompt (This is unchanged)
+        # 2. Construct Prompt (Unchanged)
         prompt = f"""
         You are a savvy financial advisor explaining a REIT's risk profile to a smart but non-technical client.
         Your tone should be clear, direct, and insightful. Avoid jargon.
-        Your goal is to explain what these scores mean for a potential investor in plain English.
+        Your goal is to explain what these Z-scores mean for a potential investor in plain English.
 
         Here are the Z-scores for REIT ticker {ticker}, comparing it to its peers. A score near 0 is average.
         - Price Stability (Volatility): {scores['Z_Score_Std_Dev']:.2f} (A lower score means fewer price swings and is better)
@@ -89,10 +95,12 @@ def generate_stability_analysis_task(ticker):
         Based on these scores, please provide a 2-3 sentence summary analysis for an investor.
         DO NOT repeat the numerical Z-scores in your output.
         Focus on the practical implications. For example, instead of saying 'It has low volatility,' say 'Its stock price has been more stable than its peers.'
+        For liquidity, only mention it if the score is significantly low. Focus more on volitility, skewness, and kurtosis.
+        Don't be overly positive; just state the facts. Negative judgments are fine if warranted.
         Start by summarizing the main trade-off (the primary strength vs. the primary weakness).
         """
 
-        # 3. Call Gemini API (This is unchanged)
+        # 3. Call Gemini API (Unchanged)
         api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={GEMINI_API_KEY}"
         payload = {"contents": [{"parts": [{"text": prompt}]}]}
         headers = {"Content-Type": "application/json"}
@@ -106,14 +114,12 @@ def generate_stability_analysis_task(ticker):
             
         explanation_text = api_response["candidates"][0]["content"]["parts"][0]["text"]
 
-        # 4. Return the complete result object, now including the pre-calculated percentile ranks
-        # --- MODIFIED SECTION: Updated return object ---
+        # 4. Return the complete result object
         return {
             "ticker": ticker,
             "z_scores": scores,
             "percentile_ranks": percentile_ranks,
             "explanation": explanation_text
         }
-        # --- END MODIFIED SECTION ---
     except Exception as e:
         return {"error": str(e)}

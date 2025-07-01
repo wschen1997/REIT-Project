@@ -95,6 +95,10 @@ const ScoringDonutOverlay = ({ ticker, score, title, tooltipText, donutOptions, 
           setAnalysisData(data.result);
           setIsLoading(false);
           clearInterval(pollingRef.current);
+        } else if (data.status === 'DELISTED') { // <-- NEW: Handle delisted status
+          setError(data.message); // Use the custom message from the backend
+          setIsLoading(false);
+          clearInterval(pollingRef.current);
         } else if (data.status === 'FAILURE') {
           setError(data.error || "Analysis job failed on the backend.");
           setIsLoading(false);
@@ -131,12 +135,11 @@ const ScoringDonutOverlay = ({ ticker, score, title, tooltipText, donutOptions, 
     textAlign: 'center',
   };
 
-  // --- FINAL ALIGNMENT FIX: Reverting to 'center' to vertically align all content. ---
   const columnContentStyle = {
     flexGrow: 1,
     display: 'flex',
     flexDirection: 'column',
-    justifyContent: 'center', // This vertically centers the content
+    justifyContent: 'center',
     padding: '20px 0'
   };
 
@@ -161,18 +164,16 @@ const ScoringDonutOverlay = ({ ticker, score, title, tooltipText, donutOptions, 
           &times;
         </button>
         
-        {/* Column 1: Donut */}
         <div style={{ ...columnStyle, paddingRight: '40px', borderRight: '1px solid #eee' }}>
-          <h4>{title}<span className="tooltip-icon" style={{ marginLeft: "6px", cursor: "pointer" }}>i<span className="tooltip-text">{tooltipText}</span></span></h4>
+          <h4 style={{ minHeight: '3rem' }}>{title}<span className="tooltip-icon" style={{ marginLeft: "6px", cursor: "pointer" }}>i<span className="tooltip-text">{tooltipText}</span></span></h4>
           <div style={columnContentStyle}>
             <div style={{ width: "200px", margin: "0 auto" }}><Doughnut data={donutChartData} options={donutOptions} /></div>
             <p style={{ marginTop: "20px", fontSize: '1.2rem', fontWeight: 'bold' }}>{`${scoreVal}/100`}</p>
           </div>
         </div>
         
-        {/* Column 2: Score Components */}
         <div style={{ ...columnStyle, paddingRight: '40px', borderRight: '1px solid #eee' }}>
-          <h4 style={{ marginBottom: 0 }}>Score Components</h4>
+          <h4 style={{ marginBottom: 0, minHeight: '3rem' }}>Score Components</h4>
           <div style={columnContentStyle}>
             {isLoading && !analysisData && <LoadingIndicator text="Analyzing component scores..." />}
             {error && <p style={{ color: 'red', fontSize: '0.9rem' }}>{error}</p>}
@@ -180,9 +181,8 @@ const ScoringDonutOverlay = ({ ticker, score, title, tooltipText, donutOptions, 
           </div>
         </div>
 
-        {/* Column 3: AI Analysis */}
         <div style={columnStyle}>
-          <h4 style={{ marginBottom: 0 }}>AI-Powered Analysis</h4>
+          <h4 style={{ marginBottom: 0, minHeight: '3rem' }}>AI-Powered Analysis</h4>
           <div style={columnContentStyle}>
             {isLoading && !analysisData && <LoadingIndicator text="Crafting insights with Gemini..." />}
             {error && <p style={{ color: 'red', fontSize: '0.9rem' }}>{error}</p>}

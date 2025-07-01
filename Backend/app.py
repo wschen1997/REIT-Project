@@ -604,17 +604,27 @@ def get_analysis_result(task_id):
 
     if task_result.successful():
         result = task_result.get()
-        if result.get("error"): # Handle cases where the task failed internally
-             return jsonify({"status": "FAILURE", "error": result["error"]}), 200
+        
+        # NEW: Check for our custom "DELISTED" status from the worker
+        if result.get("status") == "DELISTED":
+            return jsonify(result), 200
+        
+        # Existing check for other internal errors
+        if result.get("error"):
+            return jsonify({"status": "FAILURE", "error": result["error"]}), 200
+        
+        # If no errors, it's a success
         return jsonify({
             "status": "SUCCESS",
             "result": result
         }), 200
+        
     elif task_result.failed():
         return jsonify({
             "status": "FAILURE",
             "error": str(task_result.info) # Get the exception info
         }), 200
+        
     else:
         # Task is still pending or in another state
         return jsonify({"status": "PENDING"}), 202
