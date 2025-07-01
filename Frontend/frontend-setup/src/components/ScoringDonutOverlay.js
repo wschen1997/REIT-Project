@@ -125,7 +125,6 @@ const ScoringDonutOverlay = ({ ticker, score, title, tooltipText, donutOptions, 
   
   const scoreComponents = analysisData ? [
     { label: "Price Stability (Volatility)", percentile: analysisData.percentile_ranks?.Volatility },
-    { label: "Ease of Trading (Liquidity)", tier: analysisData.liquidity_tier },
     { label: "Historical Performance (Return)", percentile: analysisData.percentile_ranks?.Return },
     { label: "Downside Protection (Skew)", percentile: analysisData.percentile_ranks?.NegativeSkew },
     { label: "Extreme Event Risk (Kurtosis)", percentile: analysisData.percentile_ranks?.TailRisk },
