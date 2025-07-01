@@ -61,6 +61,10 @@ def calculate_stability(group):
     # Volume-based metric: average volume
     avg_volume = group['volume'].mean()
     
+    # --- MODIFICATION: Calculate Average Dollar Volume ---
+    avg_price = group['close_price'].mean()
+    avg_dollar_volume = avg_price * avg_volume
+    
     data_length = len(group)
     
     return pd.Series({
@@ -71,6 +75,7 @@ def calculate_stability(group):
         'Skewness': skewness,
         'Kurtosis': kurtosis,
         'Average Volume': avg_volume,
+        'Average Dollar Volume': avg_dollar_volume, # <-- New metric
         'Data Length': data_length
     })
 
@@ -92,28 +97,21 @@ z_scores['Adjusted Kurtosis'] = (
 # Convert positive skew to negative (so positive skew = lower risk)
 z_scores['Skewness Adjustment'] = z_scores['Skewness'].apply(lambda x: x if x < 0 else -x)
 
-# 5) Add Volume Z-score to penalize illiquidity
-z_scores['Volume'] = (
-    (stability_data['Average Volume'] - stability_data['Average Volume'].mean())
-    / stability_data['Average Volume'].std()
-)
-z_scores['Illiquidity'] = -z_scores['Volume']
-
 # 6) Normalize data length factor
 stability_data['Data Length Factor'] = (
     stability_data['Data Length'] / stability_data['Data Length'].max()
 )
 
-# 7) Compute Risk Score
+# 7) --- MODIFICATION: Compute a purer Risk Score (liquidity removed) ---
+print("✅ Calculating purer stability risk score (liquidity component removed)...")
 stability_data['Risk Score'] = (
     (2.0 * z_scores['Standard Deviation']) +
     (0.7 * z_scores['Skewness Adjustment']) +
     (0.5 * z_scores['Adjusted Kurtosis']) -
-    (z_scores['Average Daily Return']) +
-    (0.8 * z_scores['Illiquidity'])
+    (z_scores['Average Daily Return'])
 ) * stability_data['Data Length Factor']
 
-# Compute Stability Percentile
+# Compute Stability Percentile (this is now a purer measure of price stability)
 stability_data['Risk Percentile'] = stability_data['Risk Score'].rank(pct=True, ascending=True) * 100
 stability_data['Stability Percentile'] = 100 - stability_data['Risk Percentile']
 
@@ -123,31 +121,41 @@ stability_data['Z_Score_Std_Dev'] = z_scores['Standard Deviation']
 stability_data['Z_Score_Return'] = z_scores['Average Daily Return']
 stability_data['Z_Score_Skew'] = z_scores['Skewness Adjustment'] 
 stability_data['Z_Score_Kurtosis'] = z_scores['Adjusted Kurtosis']
-stability_data['Z_Score_Illiquidity'] = z_scores['Illiquidity']
+# The old Illiquidity Z-score is no longer needed for the main score, but we can keep it for reference if needed
+z_scores['Volume'] = (stability_data['Average Volume'] - stability_data['Average Volume'].mean()) / stability_data['Average Volume'].std()
+stability_data['Z_Score_Illiquidity'] = -z_scores['Volume']
 
 
-# --- NEW SECTION: Calculate Intuitive Percentile Ranks ---
-print("✅ Calculating intuitive percentile ranks for all Z-score components...")
-# For "higher is better" metrics, a higher rank is better.
+# --- Calculate Intuitive Percentile Ranks for Price Stability Factors ---
+print("✅ Calculating intuitive percentile ranks for stability components...")
 stability_data['P_Rank_Return'] = stability_data['Z_Score_Return'].rank(pct=True).mul(100).round()
-
-# For "lower is better" metrics, a lower value is better, so we invert the rank.
 stability_data['P_Rank_Volatility'] = (1 - stability_data['Z_Score_Std_Dev'].rank(pct=True)).mul(100).round()
 stability_data['P_Rank_Skew'] = (1 - stability_data['Z_Score_Skew'].rank(pct=True)).mul(100).round()
 stability_data['P_Rank_Kurtosis'] = (1 - stability_data['Z_Score_Kurtosis'].rank(pct=True)).mul(100).round()
-stability_data['P_Rank_Illiquidity'] = (1 - stability_data['Z_Score_Illiquidity'].rank(pct=True)).mul(100).round()
+
+
+# --- NEW: Tiered Liquidity Score based on Absolute Dollar Volume ---
+print("✅ Calculating new tiered liquidity score based on absolute dollar volume...")
+def get_liquidity_tier(dollar_volume):
+    if dollar_volume > 25_000_000: return "Excellent" # > $25M daily
+    if dollar_volume > 5_000_000:  return "Good"      # > $5M daily
+    if dollar_volume > 1_000_000:  return "Moderate"  # > $1M daily
+    if dollar_volume > 250_000:    return "Low"       # > $250k daily
+    return "Very Low"
+    
+stability_data['Liquidity_Tier'] = stability_data['Average Dollar Volume'].apply(get_liquidity_tier)
 # --- END NEW SECTION ---
 
 
 # --- Save final data to MySQL ---
 try:
-    # Using 'replace' is the simplest way to ensure the table schema is updated with the new columns.
+    # Using 'replace' ensures the table schema is updated with all the new columns.
     stability_data.to_sql('reit_scoring_analysis', con=engine, if_exists='replace', index=False)
-    print("✅ Stability scores, Z-scores, and Percentile Ranks saved successfully to MySQL.")
+    print("✅ All analysis data saved successfully to MySQL.")
 except Exception as e:
     print(f"❌ Error saving final data to MySQL: {e}")
 
 
 # --- Display Sample Data ---
 print("\n--- Final Data Sample ---")
-print(stability_data[['Ticker', 'Stability Percentile', 'P_Rank_Return', 'P_Rank_Volatility']].head())
+print(stability_data[['Ticker', 'Stability Percentile', 'Average Dollar Volume', 'Liquidity_Tier']].head())

@@ -16,11 +16,17 @@ const LoadingIndicator = ({ text }) => {
   return <p style={loadingStyle}>{text}</p>;
 };
 
-const ScoreBar = ({ label, percentile }) => {
-  const percentage = Math.max(0, Math.min(100, percentile || 0));
-  const barColor = percentage >= 50 ? '#5A153D' : '#d9534f';
+const ScoreBar = ({ label, percentile, tier }) => {
+  // Map text-based tiers to a percentage for the bar width
+  const tierToPercentage = { "Excellent": 100, "Good": 75, "Moderate": 50, "Low": 25, "Very Low": 10 };
+  
+  const isTier = tier !== undefined;
+  
+  // Determine the bar's width and the text to display
+  const barPercentage = isTier ? (tierToPercentage[tier] || 0) : Math.max(0, Math.min(100, percentile || 0));
   
   const getSuffix = (p) => {
+    if (p === null || p === undefined) return '';
     if (p % 100 >= 11 && p % 100 <= 13) return 'th';
     switch (p % 10) {
       case 1: return 'st';
@@ -30,16 +36,19 @@ const ScoreBar = ({ label, percentile }) => {
     }
   };
 
+  const displayValue = isTier ? tier : `${barPercentage}${getSuffix(barPercentage)} Percentile`;
+  const barColor = barPercentage >= 50 ? '#5A153D' : '#d9534f';
+
   return (
     <div style={{ marginBottom: '20px' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: '20px', marginBottom: '5px', fontSize: '0.9rem', color: '#333' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: '20px', marginBottom: '5px', fontSize: '1rem', color: '#333' }}>
         <span style={{ textAlign: 'left', whiteSpace: 'nowrap' }}>{label}</span>
-        <span style={{ fontWeight: 'bold', textAlign: 'right', whiteSpace: 'nowrap' }}>{`${percentage}${getSuffix(percentage)} Percentile`}</span>
+        <span style={{ fontWeight: 'bold', textAlign: 'right', whiteSpace: 'nowrap' }}>{displayValue}</span>
       </div>
       <div style={{ background: '#e9ecef', borderRadius: '5px', height: '10px', width: '100%' }}>
         <div style={{
           background: barColor,
-          width: `${percentage}%`,
+          width: `${barPercentage}%`,
           height: '100%',
           borderRadius: '5px',
           transition: 'width 0.5s ease-in-out'
@@ -66,9 +75,7 @@ const ScoringDonutOverlay = ({ ticker, score, title, tooltipText, donutOptions, 
         const url = `${API_BASE_URL}/api/reits/${ticker}/start-analysis`;
         const response = await fetch(url, { method: 'POST' });
         const data = await response.json();
-        if (!response.ok || !data.task_id) {
-          throw new Error(data.error || "Failed to start analysis job.");
-        }
+        if (!response.ok || !data.task_id) { throw new Error(data.error || "Failed to start analysis job."); }
         setJobId(data.task_id);
       } catch (err) {
         setError(`Failed to start job: ${err.message}`);
@@ -76,11 +83,7 @@ const ScoringDonutOverlay = ({ ticker, score, title, tooltipText, donutOptions, 
       }
     };
     startAnalysis();
-    return () => {
-      if (pollingRef.current) {
-        clearInterval(pollingRef.current);
-      }
-    };
+    return () => { if (pollingRef.current) { clearInterval(pollingRef.current); }};
   }, [ticker]);
 
   useEffect(() => {
@@ -95,8 +98,8 @@ const ScoringDonutOverlay = ({ ticker, score, title, tooltipText, donutOptions, 
           setAnalysisData(data.result);
           setIsLoading(false);
           clearInterval(pollingRef.current);
-        } else if (data.status === 'DELISTED') { // <-- NEW: Handle delisted status
-          setError(data.message); // Use the custom message from the backend
+        } else if (data.status === 'DELISTED') {
+          setError(data.message);
           setIsLoading(false);
           clearInterval(pollingRef.current);
         } else if (data.status === 'FAILURE') {
@@ -120,49 +123,22 @@ const ScoringDonutOverlay = ({ ticker, score, title, tooltipText, donutOptions, 
     datasets: [{ data: [scoreVal, 100 - scoreVal], backgroundColor: ["#5A153D", "#e0e0e0"], borderWidth: 0, datalabels: { display: false } }],
   };
   
-  const scoreComponents = analysisData?.percentile_ranks ? [
-    { label: "Price Stability (Volatility)", percentile: analysisData.percentile_ranks.Volatility },
-    { label: "Ease of Trading (Illiquidity)", percentile: analysisData.percentile_ranks.Illiquidity },
-    { label: "Historical Performance (Return)", percentile: analysisData.percentile_ranks.Return },
-    { label: "Downside Protection (Skew)", percentile: analysisData.percentile_ranks.NegativeSkew },
-    { label: "Extreme Event Risk (Kurtosis)", percentile: analysisData.percentile_ranks.TailRisk },
+  const scoreComponents = analysisData ? [
+    { label: "Price Stability (Volatility)", percentile: analysisData.percentile_ranks?.Volatility },
+    { label: "Ease of Trading (Liquidity)", tier: analysisData.liquidity_tier },
+    { label: "Historical Performance (Return)", percentile: analysisData.percentile_ranks?.Return },
+    { label: "Downside Protection (Skew)", percentile: analysisData.percentile_ranks?.NegativeSkew },
+    { label: "Extreme Event Risk (Kurtosis)", percentile: analysisData.percentile_ranks?.TailRisk },
   ] : [];
 
-  const columnStyle = {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-    textAlign: 'center',
-  };
-
-  const columnContentStyle = {
-    flexGrow: 1,
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'center',
-    padding: '20px 0'
-  };
+  const columnStyle = { flex: 1, display: 'flex', flexDirection: 'column', textAlign: 'center' };
+  const columnContentStyle = { flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '20px 0' };
 
   return (
     <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.6)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 2000 }}>
-      <style>
-        {`
-          @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
-          }
-        `}
-      </style>
+      <style>{`@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }`}</style>
       <div style={{ background: "#fff", padding: "20px 40px", borderRadius: "8px", width: "90%", maxWidth: "1200px", minHeight: "400px", display: "flex", gap: "40px", position: "relative" }}>
-        <button 
-          onClick={onClose} 
-          onMouseEnter={(e) => { e.currentTarget.style.color = "#B12D78"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = "#5A153D"; }}
-          style={{ position: "absolute", top: "10px", right: "15px", background: "transparent", border: "none", fontSize: "2rem", cursor: "pointer", color: "#5A153D", lineHeight: 1, transition: "color 0.2s ease" }}
-        >
-          &times;
-        </button>
+        <button onClick={onClose} onMouseEnter={(e) => { e.currentTarget.style.color = "#B12D78"; }} onMouseLeave={(e) => { e.currentTarget.style.color = "#5A153D"; }} style={{ position: "absolute", top: "10px", right: "15px", background: "transparent", border: "none", fontSize: "2rem", cursor: "pointer", color: "#5A153D", lineHeight: 1, transition: "color 0.2s ease" }}>&times;</button>
         
         <div style={{ ...columnStyle, paddingRight: '40px', borderRight: '1px solid #eee' }}>
           <h4 style={{ minHeight: '3rem' }}>{title}<span className="tooltip-icon" style={{ marginLeft: "6px", cursor: "pointer" }}>i<span className="tooltip-text">{tooltipText}</span></span></h4>
