@@ -151,7 +151,7 @@ function AboutUs() {
                   Cleveland Office
                 </h4>
                 <p style={{ margin: 0, lineHeight: "1.6", fontSize: "1rem" }}>
-                  2020 Lorain Avenue
+                  2275 Professor Avenue
                   <br />
                   Cleveland, Ohio 44113
                 </p>
