@@ -1,4 +1,4 @@
-// Header.js – complete replacement (search bar now sits right next to logo)
+// Header.js – corrected and complete
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -333,26 +333,7 @@ const Header = ({ userPlan, setUserPlan }) => {
               </button>
             </>
           ) : (
-            <button
-              onClick={() => navigate("/login")}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = "#faf0fb";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = "#fff";
-              }}
-              style={{
-                padding: "8px 16px",
-                fontSize: "1rem",
-                border: "2px solid #5A153D",
-                borderRadius: "4px",
-                cursor: "pointer",
-                color: loginHovered ? "#fff" : "#5A153D",
-                backgroundColor: loginHovered ? "#B12D78" : "transparent",
-              }}
-            >
-              Sign In
-            </button>
+            null
           )}
         </div>
       </nav>
