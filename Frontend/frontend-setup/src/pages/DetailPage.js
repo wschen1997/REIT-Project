@@ -1105,7 +1105,6 @@ function DetailPage({ userPlan }) {
           { id: "financials", label: "Financials" },
           { id: "metrics", label: "REIT Specific Metrics" },
           { id: "portfolio", label: "Portfolio Breakdown" },
-          { id: "modeling", label: "Modeling" },
         ].map((tab) => {
           const isActive = (tab.id === activeTab);
 
@@ -1128,7 +1127,7 @@ function DetailPage({ userPlan }) {
           );
         })}
       </div>
-      {/* MODELING TAB */}
+      {/* MODELING TAB (HAULT) */}
       {activeTab === "modeling" && (
         <ModelTab ticker={ticker} />
       )}

@@ -124,8 +124,8 @@ function HomePage() {
               WITH VISERRA.
             </h1>
             <p style={{ fontSize: "1.2rem", color: "#444", marginBottom: "30px" }}>
-              Track and compare public REITs, explore crowdfunding opportunities,
-              and unlock powerful analytics — all in one place.
+              Track and compare public REITs, explore fundamental insights,
+              and unlock powerful AI analytics — all in one place.
             </p>
           </div>
 

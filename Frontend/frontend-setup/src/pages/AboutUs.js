@@ -132,34 +132,7 @@ function AboutUs() {
             </div>
           </div>
 
-          {/* -- LOCATION SECTION -- */}
-          <div style={{ marginTop: "7rem" }}>
-            <h2
-              style={{
-                fontSize: "1.7rem",
-                marginBottom: "1rem",
-                color: "#5A153D",
-              }}
-            >
-              Our Locations
-            </h2>
-
-            {/* Keep styling consistent with the rest */}
-            <div style={{ display: "flex", gap: "40px", flexWrap: "wrap" }}>
-              <div style={{ flex: "1", minWidth: "200px" }}>
-                <h4 style={{ color: "#B12D78", marginBottom: "0.5rem" }}>
-                  Cleveland Office
-                </h4>
-                <p style={{ margin: 0, lineHeight: "1.6", fontSize: "1rem" }}>
-                  2275 Professor Avenue
-                  <br />
-                  Cleveland, Ohio 44113
-                </p>
-              </div>
-
-              
-            </div>
-          </div>
+          
         </div>
       </div>
 
