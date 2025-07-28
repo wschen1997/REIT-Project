@@ -333,7 +333,26 @@ const Header = ({ userPlan, setUserPlan }) => {
               </button>
             </>
           ) : (
-            null
+            <button
+              onClick={() => navigate("/login")}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "#faf0fb";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "#fff";
+              }}
+              style={{
+                padding: "8px 16px",
+                fontSize: "1rem",
+                border: "2px solid #5A153D",
+                borderRadius: "4px",
+                cursor: "pointer",
+                color: "#5A153D",
+                backgroundColor: "transparent",
+              }}
+            >
+              Sign In
+            </button>
           )}
         </div>
       </nav>
