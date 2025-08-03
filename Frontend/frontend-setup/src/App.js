@@ -15,6 +15,8 @@ import Login from "./pages/Login.js";
 import Signup from "./pages/Signup.js";
 import Useraccount from "./pages/Useraccount.js";
 import Header from "./components/Header.js";
+import { auth } from "./firebase.js";
+import { onAuthStateChanged } from "firebase/auth";
 
 import "./App.css";
 
@@ -41,6 +43,16 @@ function AnalyticsTracker() {
 function App() {
   // Track the user's plan here in App, so Header can fill it, and DetailPage can use it
   const [userPlan, setUserPlan] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
+  // Listen for auth changes at the top level of the app
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      console.log("%cAuth state changed in App.js!", "color: blue; font-weight: bold;", user); //
+      setCurrentUser(user); // Set the user object when auth state changes
+    });
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
+  }, []);
 
   return (
     <div className="App">
@@ -48,7 +60,7 @@ function App() {
         <AnalyticsTracker />
 
         {/* 1) Render Header, passing userPlan & setUserPlan so it can update the plan */}
-        <Header userPlan={userPlan} setUserPlan={setUserPlan} />
+        <Header currentUser={currentUser} userPlan={userPlan} setUserPlan={setUserPlan} />
 
         <Routes>
           <Route path="/" element={<HomePage />} />
@@ -63,7 +75,7 @@ function App() {
           <Route path="/pricing" element={<PricingPage />} />
           <Route path="/user" element={<Useraccount />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
+          <Route path="/signup" element={<Signup currentUser={currentUser} />} />
         </Routes>
       </Router>
     </div>

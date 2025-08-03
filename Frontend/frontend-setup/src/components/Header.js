@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { auth } from "../firebase.js";
-import { onAuthStateChanged, signOut } from "firebase/auth";
+import { signOut } from "firebase/auth";
 import { db } from "../firebase.js";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import Sidebar from "./Sidebar.js";
@@ -14,40 +14,41 @@ const API_BASE_URL =
 // Tweak just this if the auth buttons ever shift left/right
 const AUTH_GROUP_STYLE = { marginRight: "55px" };
 
-const Header = ({ userPlan, setUserPlan }) => {
+const Header = ({ currentUser, userPlan, setUserPlan }) => {
   const navigate = useNavigate();
 
   /* ─────────────────────────  Firebase / user  ───────────────────────── */
-  const [currentUser, setCurrentUser] = useState(null);
   const [username, setUsername] = useState("");
   const [loginHovered, setLoginHovered] = useState(false);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (u) => {
-      setCurrentUser(u);
-      if (!u) {
-        setUsername("");
-        setUserPlan(null);
-        return;
-      }
-      // fetch Firestore doc
-      const q = query(collection(db, "users"), where("email", "==", u.email));
+    if (!currentUser || !currentUser.emailVerified) {
+      setUsername("");
+      setUserPlan(null);
+      return;
+    }
+
+    const fetchUserData = async () => {
+      const q = query(collection(db, "users"), where("email", "==", currentUser.email));
       try {
-        const qs = await getDocs(q);
-        if (qs.empty) throw new Error("No doc");
-        const data = qs.docs[0].data();
-        if (!["free", "premium"].includes(data.plan)) {
-          signOut(auth);
-          return;
-        }
-        setUsername(data.username || "");
-        setUserPlan(data.plan);
-      } catch {
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          const userData = querySnapshot.docs[0].data();
+          setUsername(userData.username || "");
+          setUserPlan(userData.plan);
+        } else {
+           // This handles cases where user exists in Firebase Auth but not in your database yet
+           // You might want to sign them out if their DB record is missing
+           // signOut(auth); // <-- Comment this out for now
+        }
+      } catch (error) {
+        console.error("Error fetching user data in Header:", error);
         signOut(auth);
       }
-    });
-    return () => unsub();
-  }, [setUserPlan]);
+    };
+
+    fetchUserData();
+  }, [currentUser, setUserPlan]);
 
   /* ─────────────────────────  sidebar  ───────────────────────── */
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -278,7 +279,7 @@ const Header = ({ userPlan, setUserPlan }) => {
             ...AUTH_GROUP_STYLE,
           }}
         >
-          {currentUser ? (
+          {currentUser && currentUser.emailVerified ? (
             <>
               {/* greeting dropdown */}
               <div

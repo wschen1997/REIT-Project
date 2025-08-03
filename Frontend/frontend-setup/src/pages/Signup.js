@@ -30,7 +30,7 @@ const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:5000
 // - At least 1 special character
 const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
-function Signup() {
+function Signup({ currentUser }) {
   const navigate = useNavigate();
 
   // -------------- Local UI States --------------
@@ -94,20 +94,38 @@ function Signup() {
   // --------------------------------------
   //  Poll for email verification if using normal email flow
   // --------------------------------------
-  useEffect(() => {
-    if (emailSent && !emailVerified) {
-      const intervalId = setInterval(async () => {
-        if (auth.currentUser) {
-          await auth.currentUser.reload();
-          if (auth.currentUser.emailVerified) {
-            setEmailVerified(true);
-            clearInterval(intervalId);
-          }
-        }
-      }, 5000);
-      return () => clearInterval(intervalId);
-    }
-  }, [emailSent, emailVerified]);
+  // This is the NEW, correct block to paste in.
+useEffect(() => {
+  console.log("%cSignup component received prop:", "color: orange;", currentUser);
+
+  // First, check if the user is already verified when the component receives the prop.
+  if (currentUser && currentUser.emailVerified) {
+    setEmailVerified(true);
+    setSuccessMessage("Your email has been successfully verified! Please choose a plan to continue.");
+    return; // Stop if we're already verified.
+  }
+
+  // If an email has been sent out and we have a user who is NOT yet verified, START POLLING.
+  if (emailSent && currentUser && !currentUser.emailVerified) {
+    const intervalId = setInterval(async () => {
+      // Tell the currentUser object to refresh its data from Firebase's servers.
+      await currentUser.reload();
+      console.log("Polling: Checking verification status...");
+
+      // After reloading, check the property again.
+      if (currentUser.emailVerified) {
+        console.log("%cPOLLING: User is now verified! Stopping poll.", "color: green; font-weight: bold;");
+        clearInterval(intervalId);
+        setEmailVerified(true);
+        setSuccessMessage("Your email has been successfully verified! Please choose a plan to continue.");
+        await auth.currentUser.getIdToken(true);
+      }
+    }, 3000); // Check every 3 seconds
+
+    // Clean up the interval when the component is no longer on screen.
+    return () => clearInterval(intervalId);
+  }
+}, [currentUser, emailSent]); // This effect runs when the user changes OR when the email is sent.
 
   // --------------------------------------
   //  Resend verification cooldown
@@ -226,19 +244,28 @@ function Signup() {
   const handleGoogleSignup = async () => {
     try {
       setError("");
+      console.log("Attempting to sign up with Google..."); // <-- LOG 1
+
       const result = await signInWithPopup(auth, googleProvider);
-  
+      console.log("Google sign-in popup successful. User object:", result.user); // <-- LOG 2
+
       // --- Duplicate Email Check Start ---
       const usersRef = collection(db, "users");
       const emailQuery = query(usersRef, where("email", "==", result.user.email));
+      
+      console.log("Checking if email already exists in Firestore..."); // <-- LOG 3
       const emailSnap = await getDocs(emailQuery);
+      
       if (!emailSnap.empty) {
+        console.log("Duplicate email found in Firestore. Aborting signup."); // <-- LOG 4
         setError("This email is already associated with an account. Please log in instead.");
         await signOut(auth); // Optionally sign the user out
         return; // Stop further execution
       }
       // --- Duplicate Email Check End ---
-  
+      
+      console.log("No duplicate email found. Proceeding with signup."); // <-- LOG 5
+
       // Proceed with Google sign-up if no duplicate found
       setIsGoogleUser(true);
       if (result.user.displayName) {
@@ -249,10 +276,10 @@ function Signup() {
         "Google sign-up successful. Please select a plan (free or premium) below."
       );
     } catch (err) {
-      console.error("Google signup error:", err);
+      console.error("Google signup error:", err); // <-- LOG 6 (This is where your error is happening)
       setError("Failed to sign up with Google. Please try again or use email/password.");
     }
-  };  
+  }; 
 
   // --------------------------------------
   //  Final signup logic
