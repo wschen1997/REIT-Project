@@ -15,6 +15,9 @@ import requests
 import traceback
 from worker import generate_stability_analysis_task
 from celery.result import AsyncResult
+from google.cloud import firestore
+import firebase_admin
+from firebase_admin import credentials, firestore as admin_firestore
 
 # Explicitly load environment variables from the Credentials.env file
 dotenv_path = os.path.abspath(
@@ -27,6 +30,7 @@ CORS(app, resources={r"/api/*": {"origins": ["http://localhost:3000", "https://w
 
 # get the stripe secret key from the environment variables
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
 
 # Load secret key for JWT auth (Log in and Sign up)
 app.config['SECRET_KEY'] = os.getenv("APP_SECRET_KEY")
@@ -636,80 +640,74 @@ def get_analysis_result(task_id):
 @app.route('/api/create-checkout-session', methods=['POST'])
 def create_checkout_session():
     data = request.json or {}
+    user_email = data.get("email")
 
-    # If not provided by the frontend, default to these:
-    success_url = data.get("success_url", "https://www.viserra-group.com/signup?status=success")
-    cancel_url = data.get("cancel_url", "https://www.viserra-group.com/signup?status=cancel")
+    if not user_email:
+        return jsonify({'error': 'User email is required to create a session.'}), 400
 
     try:
         session = stripe.checkout.Session.create(
             payment_method_types=['card'],
             mode='subscription',
             line_items=[{
-                'price': 'price_1R5WryL1vfYfs767GYSqHKn0',  #Test Price ID
+                'price': 'price_1R5WryL1vfYfs767GYSqHKn0',  # Your Premium Plan Price ID
                 'quantity': 1,
             }],
-            success_url=success_url,
-            cancel_url=cancel_url
+            client_reference_id=user_email,
+            success_url="https://www.viserra-group.com/pricing?status=success",
+            cancel_url="https://www.viserra-group.com/pricing?status=cancel"
         )
-
         return jsonify({'url': session.url})
-
     except Exception as e:
         print("Stripe Error:", str(e))
         return jsonify({'error': str(e)}), 500
 
-# -------------------------------------------------------------------------
-# ====================== premium user registration ===================
-# -------------------------------------------------------------------------
-@app.route('/api/register-premium-user', methods=['POST'])
-def register_premium_user():
-    """
-    This is called from the frontend AFTER payment succeeds to store premium user in Firestore.
-    """
-    from google.cloud import firestore
-    import firebase_admin
-    from firebase_admin import credentials, firestore as admin_firestore
+
+@app.route('/api/stripe-webhook', methods=['POST'])
+def stripe_webhook():
+    payload = request.data
+    sig_header = request.headers.get('Stripe-Signature')
 
     try:
-        if not firebase_admin._apps:
-            raw_cred = os.getenv("FIREBASE_SERVICE_ACCOUNT")
-            if not raw_cred:
-                print("🔥 Missing FIREBASE_SERVICE_ACCOUNT environment variable")
-                return jsonify({"error": "Server misconfiguration: Firebase credentials missing."}), 500
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, STRIPE_WEBHOOK_SECRET
+        )
+    except ValueError as e:
+        return 'Invalid payload', 400
+    except stripe.error.SignatureVerificationError as e:
+        return 'Invalid signature', 400
 
-            # Try parsing it
-            cred_json = json.loads(raw_cred)
-            print("✅ FIREBASE_SERVICE_ACCOUNT keys loaded:", list(cred_json.keys()))
+    if event['type'] == 'checkout.session.completed':
+        session = event['data']['object']
+        user_email = session.get('client_reference_id')
 
-            cred = credentials.Certificate(cred_json)
-            firebase_admin.initialize_app(cred)
+        if not user_email:
+            print("🔥 Webhook error: No client_reference_id in session.")
+            return "Webhook Error: Missing user identifier", 400
 
-        db_fs = admin_firestore.client()
+        try:
+            if not firebase_admin._apps:
+                raw_cred = os.getenv("FIREBASE_SERVICE_ACCOUNT")
+                cred_json = json.loads(raw_cred)
+                cred = credentials.Certificate(cred_json)
+                firebase_admin.initialize_app(cred)
+            
+            db_fs = admin_firestore.client()
+            users_ref = db_fs.collection("users")
+            query = users_ref.where("email", "==", user_email).limit(1)
+            docs = query.stream()
+            user_doc = next(docs, None)
 
-        data = request.get_json()
-        email = data.get("email")
-        username = data.get("username")
-        plan = "premium"
+            if user_doc:
+                user_doc.reference.update({"plan": "premium"})
+                print(f"✅ Successfully upgraded user {user_email} to premium.")
+            else:
+                print(f"🔥 Webhook error: User not found with email {user_email}.")
+        except Exception as e:
+            print(f"🔥 Firebase update error in webhook: {e}")
+            return "Server error during user update", 500
 
-        if not email or not username:
-            print("Missing email or username in request body")
-            return jsonify({"error": "Missing required fields"}), 400
-
-        doc_ref = db_fs.collection("users").document(email)
-        doc_ref.set({
-            "email": email,
-            "username": username,
-            "plan": plan,
-            "createdAt": datetime.utcnow().isoformat()
-        })
-
-        print(f"✅ Premium user created in Firestore: {email}")
-        return jsonify({"message": "Premium user successfully registered."}), 200
-
-    except Exception as e:
-        print("🔥 Exception while registering premium user:", str(e))
-        return jsonify({"error": f"Failed to save user: {str(e)}"}), 500
+    return 'Success', 200
 
 # -------------------------------------------------------------------------
 # =========================== Peer Scatter ENDPOINTS ==============================

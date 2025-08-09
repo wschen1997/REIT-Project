@@ -73,6 +73,35 @@ const Useraccount = () => {
         <p style={{ fontSize: "1.1rem", marginBottom: "0.5rem" }}>
           <strong>Current Plan:</strong> {userData.plan}
         </p>
+
+        {/* MODIFIED: This block adds the "Upgrade" button for free users */}
+        {userData.plan === 'free' && (
+          <div style={{ textAlign: 'center', marginTop: '25px' }}>
+            <button
+              onClick={() => navigate('/pricing')}
+              onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "#faf0fb";
+                  e.currentTarget.style.color = "#B12D78";
+              }}
+              onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "#B12D78";
+                  e.currentTarget.style.color = "#fff";
+              }}
+              style={{
+                padding: '10px 20px',
+                fontSize: '1rem',
+                color: '#fff',
+                backgroundColor: '#B12D78', // A different, vibrant color
+                border: '2px solid #B12D78',
+                borderRadius: '5px',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s, color 0.2s'
+              }}
+            >
+              Upgrade to Premium
+            </button>
+          </div>
+        )}
       </div>
       <div style={{ textAlign: "center", marginTop: "2rem" }}>
       <button

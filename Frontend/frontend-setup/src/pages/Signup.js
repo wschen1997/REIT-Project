@@ -34,7 +34,6 @@ function Signup({ currentUser }) {
   const navigate = useNavigate();
 
   // -------------- Local UI States --------------
-  const [hoveredPlan, setHoveredPlan] = useState(null);
   const [emailVerified, setEmailVerified] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [emailSent, setEmailSent] = useState(false);
@@ -44,7 +43,7 @@ function Signup({ currentUser }) {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [plan, setPlan] = useState(null); // "free" or "premium"
+  
 
   // -------------- Validation & Error States --------------
   const [error, setError] = useState("");
@@ -60,37 +59,7 @@ function Signup({ currentUser }) {
   // -------------- Track if user is from Google --------------
   const [isGoogleUser, setIsGoogleUser] = useState(false);
 
-  // --------------------------------------
-  //  Handle Stripe success from ?status=success
-  // --------------------------------------
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const status = urlParams.get("status");
-    const emailFromURL = urlParams.get("email");
-    const usernameFromURL = urlParams.get("username");
-
-    if (status === "success" && emailFromURL && usernameFromURL) {
-      const registerUser = async () => {
-        try {
-          const response = await fetch(`${API_BASE_URL}/api/register-premium-user`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email: emailFromURL, username: usernameFromURL }),
-          });
-          const result = await response.json();
-          if (!response.ok) throw new Error(result.error || "Failed to register");
-
-          // On success, direct to login
-          navigate("/login?status=activated");
-        } catch (err) {
-          console.error("Post-payment setup error:", err);
-          setError("Payment succeeded but account setup failed. Please contact support.");
-        }
-      };
-      registerUser();
-    }
-  }, [navigate]);
-
+  
   // --------------------------------------
   //  Poll for email verification if using normal email flow
   // --------------------------------------
@@ -101,7 +70,7 @@ useEffect(() => {
   // First, check if the user is already verified when the component receives the prop.
   if (currentUser && currentUser.emailVerified) {
     setEmailVerified(true);
-    setSuccessMessage("Your email has been successfully verified! Please choose a plan to continue.");
+    setSuccessMessage("Your email has been successfully verified! Please click 'Continue' to create your account.");
     return; // Stop if we're already verified.
   }
 
@@ -273,7 +242,7 @@ useEffect(() => {
       }
       setEmail(result.user.email);
       setSuccessMessage(
-        "Google sign-up successful. Please select a plan (free or premium) below."
+        "Google sign-up successful. Please click 'Continue' to create your account."
       );
     } catch (err) {
       console.error("Google signup error:", err); // <-- LOG 6 (This is where your error is happening)
@@ -285,8 +254,9 @@ useEffect(() => {
   //  Final signup logic
   // --------------------------------------
   const handleSignup = async () => {
-    // If not google user => normal checks
+    // --- Step 1: Validate the form ---
     if (!isGoogleUser) {
+      // Validation for regular email/password signup
       if (
         usernameError ||
         emailError ||
@@ -302,73 +272,46 @@ useEffect(() => {
         setError("Please verify your email before continuing.");
         return;
       }
-      if (!username || !email || !password || !plan) {
+      if (!username || !email || !password) {
         setError("All fields are required.");
         return;
       }
     } else {
-      // If google user => skip password & email verification
+      // Validation for a user who signed up with Google
       if (!username) {
         setError("Please set a username before continuing.");
         return;
       }
-      if (!plan) {
-        setError("Please select a plan (free or premium) before continuing.");
-        return;
-      }
     }
 
+    // --- Step 2: Create the user in the database ---
     try {
       setError("");
-
       const usersRef = collection(db, "users");
 
-      // 1) If plan === premium => stripe checkout
-      if (plan === "premium") {
-        const response = await fetch(`${API_BASE_URL}/api/create-checkout-session`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            success_url: `${window.location.origin}/signup?status=success&email=${email}&username=${username}`,
-            cancel_url: `${window.location.origin}/signup?status=cancel`,
-          }),
-        });
-        const data = await response.json();
-        if (data.url) {
-          window.location.href = data.url;
-          return;
-        } else {
-          throw new Error("Stripe session creation failed");
-        }
-      } else {
-        // 2) plan === "free"
-        const emailQuery = query(usersRef, where("email", "==", email));
-        const emailSnap = await getDocs(emailQuery);
+      // Check if user already exists in Firestore before creating
+      const emailQuery = query(usersRef, where("email", "==", email));
+      const emailSnap = await getDocs(emailQuery);
 
-        if (emailSnap.empty) {
-          // No doc => create
-          await addDoc(usersRef, {
-            username,
-            email,
-            password: isGoogleUser ? "" : password,
-            plan,
-            createdAt: new Date().toISOString(),
-          });
-        } else {
-          // doc exist => update
-          const existingDoc = emailSnap.docs[0];
-          const docRef = existingDoc.ref;
-          await updateDoc(docRef, {
-            username,
-            plan,
-            password: isGoogleUser ? "" : password,
-          });
-        }
-
-        // sign out from Firebase so user can log in again
-        await signOut(auth);
-        navigate("/login?status=activated");
+      if (!emailSnap.empty) {
+        setError("An account with this email already exists. Please log in.");
+        return;
       }
+
+      // Create the user document in Firestore with a 'free' plan by default
+      await addDoc(usersRef, {
+        username,
+        email,
+        plan: "free", // Always 'free' on signup
+        createdAt: new Date().toISOString(),
+      });
+      
+      // --- Step 3: Finish and redirect ---
+      // Sign out from the temporary signup session so the user can log in properly.
+      await signOut(auth);
+      // Redirect to the login page with a success message
+      navigate("/login?status=activated");
+
     } catch (err) {
       console.error("Signup error:", err);
       setError(err.message);
@@ -552,66 +495,6 @@ useEffect(() => {
               </button>
             </>
           )}
-
-          {/* Divider line + small text for plan explanation */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              width: "100%",
-              margin: "0.5rem 0 0.8rem 0",
-            }}
-          >
-            <div style={{ flex: 1, height: "1px", backgroundColor: "#ccc" }} />
-            <span style={{ margin: "0 10px", color: "#666", fontSize: "0.9rem" }}>
-              Choose Your Plan
-            </span>
-            <div style={{ flex: 1, height: "1px", backgroundColor: "#ccc" }} />
-          </div>
-
-          {/* PLAN SELECTOR (evenly spaced) */}
-          <div
-            style={{
-              display: "flex",
-              gap: "1rem",
-              justifyContent: "center",
-              width: "105%",
-              height: "45px",
-              marginTop: "0.5rem",
-            }}
-          >
-            <button
-              onClick={() => setPlan("free")}
-              onMouseEnter={() => setHoveredPlan("free")}
-              onMouseLeave={() => setHoveredPlan(null)}
-              style={{
-                ...planButtonStyle,
-                ...(plan === "free"
-                  ? activePlanStyle
-                  : hoveredPlan === "free"
-                  ? { ...inactivePlanStyle, backgroundColor: "#faf0fb" }
-                  : inactivePlanStyle),
-              }}
-            >
-              Free
-            </button>
-
-            <button
-              onClick={() => setPlan("premium")}
-              onMouseEnter={() => setHoveredPlan("premium")}
-              onMouseLeave={() => setHoveredPlan(null)}
-              style={{
-                ...planButtonStyle,
-                ...(plan === "premium"
-                  ? activePlanStyle
-                  : hoveredPlan === "premium"
-                  ? { ...inactivePlanStyle, backgroundColor: "#faf0fb" }
-                  : inactivePlanStyle),
-              }}
-            >
-              Premium
-            </button>
-          </div>
 
           {/* CONTINUE BUTTON */}
           <button
