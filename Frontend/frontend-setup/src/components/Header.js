@@ -280,7 +280,7 @@ const Header = ({ currentUser, userPlan, setUserPlan }) => {
             ...AUTH_GROUP_STYLE,
           }}
         >
-          {currentUser && currentUser.emailVerified ? (
+          {currentUser && currentUser.emailVerified && location.pathname !== '/signup' ? (
             <>
               {/* greeting dropdown */}
               <div

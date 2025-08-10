@@ -37,6 +37,7 @@ const Login = ({ setCurrentUser }) => {
       if (searchParams.get('status') === 'created') {
         setSuccessMessage("Account created! We've sent a link to your email. Please verify before logging in.");
         setShowResendLink(true);
+        setResendCooldown(60); // <-- ADD THIS LINE
         window.history.replaceState(null, '', window.location.pathname);
       } else if (searchParams.get('verified') === 'true') {
         setSuccessMessage('Success! Your email has been verified. You can now log in.');
@@ -54,7 +55,7 @@ const Login = ({ setCurrentUser }) => {
 
   const handleResendVerification = async () => {
     if (!email || !password) {
-      setError("Please enter your email and password to resend the verification link.");
+      setError("For security purpose, please enter your email and password to resend the link.");
       return;
     }
     try {
@@ -190,6 +191,17 @@ const Login = ({ setCurrentUser }) => {
               <button
                 onClick={handleResendVerification}
                 disabled={resendCooldown > 0}
+                onMouseEnter={(e) => {
+                  if (resendCooldown === 0) { 
+                    e.currentTarget.style.color = "#B12D78";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  // Only change color back if the button is active (not counting down)
+                  if (resendCooldown === 0) { 
+                    e.currentTarget.style.color = "#5A153D";
+                  }
+                }}
                 style={{
                   color: resendCooldown > 0 ? "#999" : "#5A153D",
                   background: "none",
@@ -197,7 +209,7 @@ const Login = ({ setCurrentUser }) => {
                   textDecoration: "underline",
                   cursor: resendCooldown > 0 ? "default" : "pointer",
                   padding: 0,
-                  fontSize: "0.9rem"
+                  fontSize: "0.9rem",
                 }}
               >
                 {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend verification link"}

@@ -72,7 +72,7 @@ function App() {
           <Route path="/Crowdfunding/:vehicle" element={<RecDetailPage userPlan={userPlan} />} />
           <Route path="/about" element={<AboutUs />} />
           <Route path="/contact" element={<ContactUs />} />
-          <Route path="/pricing" element={<PricingPage />} />
+          <Route path="/pricing" element={<PricingPage currentUser={currentUser} userPlan={userPlan} />} />
           <Route path="/user" element={<Useraccount />} />
           <Route path="/login" element={<Login currentUser={currentUser} setCurrentUser={setCurrentUser} />} />
           <Route path="/signup" element={<Signup currentUser={currentUser} />} />

@@ -2,45 +2,22 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import BottomBanner from "../components/BottomBanner.js";
 import Loading from "../components/Loading.js";
-import { auth, db } from "../firebase.js";
-import { onAuthStateChanged } from "firebase/auth";
-import { collection, query, where, getDocs } from "firebase/firestore";
 
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:5000";
 
-function PricingPage() {
+// The component now accepts props from App.js
+function PricingPage({ currentUser, userPlan }) {
   const navigate = useNavigate();
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [showCancelPopup, setShowCancelPopup] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
-  const [userPlan, setUserPlan] = useState(null);
 
-  // MODIFIED: This useEffect now also checks for the logged-in user and their plan.
+  // This useEffect is now MUCH simpler. It only handles the redirect from Stripe.
   useEffect(() => {
-    // Listen for user auth state changes
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        // User is logged in, set them in state
-        setCurrentUser(user);
-        // Fetch their plan from Firestore
-        const q = query(collection(db, "users"), where("email", "==", user.email));
-        const querySnapshot = await getDocs(q);
-        if (!querySnapshot.empty) {
-          setUserPlan(querySnapshot.docs[0].data().plan);
-        }
-      } else {
-        // User is not logged in
-        setCurrentUser(null);
-        setUserPlan(null);
-      }
-    });
-
     if (performance.getEntriesByType("navigation")[0]?.type === "back_forward") {
       setIsLoading(false);
     }
 
-    // This part handles the redirect from Stripe and is unchanged
     const params = new URLSearchParams(window.location.search);
     if (params.get("status") === "success") {
       setShowSuccessPopup(true);
@@ -50,20 +27,17 @@ function PricingPage() {
       setShowCancelPopup(true);
       window.history.replaceState({}, document.title, "/pricing");
     }
+  }, []); // The dependency array is empty as it only needs to run once.
 
-    // Cleanup the auth listener when the component unmounts
-    return () => unsubscribe();
-  }, []);
-
-  // MODIFIED: This function now handles upgrades for logged-in users.
+  // This function now uses the currentUser prop.
   const handleSubscribe = async () => {
     // If no user is logged in, redirect them to the login page.
     if (!currentUser) {
       navigate('/login');
       return;
     }
-    
-    setIsLoading(true); // show loading spinner
+
+    setIsLoading(true);
     try {
       const response = await fetch(`${API_BASE_URL}/api/create-checkout-session`, {
         method: "POST",
@@ -76,13 +50,12 @@ function PricingPage() {
       if (data.url) {
         window.location.href = data.url;
       } else {
-        // Use a more user-friendly error message
         alert("Unable to create Stripe session: " + (data.error || "Unknown error"));
-        setIsLoading(false); // hide loading on failure
+        setIsLoading(false);
       }
     } catch (err) {
       console.error("Error:", err);
-      setIsLoading(false); // hide loading on error
+      setIsLoading(false);
     }
   };
 
@@ -94,7 +67,7 @@ function PricingPage() {
           Upgrade to Premium for full access to all our analytical tools and data.
         </p>
 
-        {/* MODIFIED: The button now changes based on the user's plan */}
+        {/* This button now uses the userPlan prop */}
         <button
           onClick={handleSubscribe}
           disabled={isLoading || userPlan === 'premium'}
@@ -106,9 +79,9 @@ function PricingPage() {
           }}
           onMouseLeave={(e) => {
              if (userPlan !== 'premium') {
-              e.currentTarget.style.backgroundColor = "#5A153D";
-              e.currentTarget.style.color = "#fff";
-            }
+               e.currentTarget.style.backgroundColor = "#5A153D";
+               e.currentTarget.style.color = "#fff";
+             }
           }}
           style={{
             backgroundColor: userPlan === 'premium' ? "#ccc" : "#5A153D",

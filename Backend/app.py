@@ -639,6 +639,12 @@ def get_analysis_result(task_id):
 
 @app.route('/api/create-checkout-session', methods=['POST'])
 def create_checkout_session():
+    # Determine the domain dynamically based on the environment
+    if os.environ.get('FLASK_ENV') == 'production':
+        YOUR_DOMAIN = 'https://www.viserra-group.com'
+    else:
+        YOUR_DOMAIN = 'http://localhost:3000'
+
     data = request.json or {}
     user_email = data.get("email")
 
@@ -654,8 +660,9 @@ def create_checkout_session():
                 'quantity': 1,
             }],
             client_reference_id=user_email,
-            success_url="https://www.viserra-group.com/pricing?status=success",
-            cancel_url="https://www.viserra-group.com/pricing?status=cancel"
+            # Use an f-string to build the URL with the correct domain
+            success_url=f"{YOUR_DOMAIN}/pricing?status=success",
+            cancel_url=f"{YOUR_DOMAIN}/pricing?status=cancel"
         )
         return jsonify({'url': session.url})
     except Exception as e:
