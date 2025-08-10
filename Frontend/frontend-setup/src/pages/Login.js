@@ -5,18 +5,22 @@ import {
   signOut,
   GoogleAuthProvider,
   signInWithPopup,
+  sendEmailVerification,
+  applyActionCode,
 } from "firebase/auth";
 import { auth } from "../firebase.js";
 import { db } from "../firebase.js";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import BottomBanner from "../components/BottomBanner.js";
 
-const Login = () => {
+const Login = ({ setCurrentUser }) => {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [showResendLink, setShowResendLink] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   const inputStyle = {
     width: "95%",
@@ -28,73 +32,104 @@ const Login = () => {
   };
 
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const status = urlParams.get("status");
-    if (status === "activated") {
-      setSuccessMessage("Your account has been activated. Please log in.");
-      signOut(auth); // Clear any previous user cache before login
-      window.history.replaceState({}, document.title, "/login"); // clean URL
-    }
-  }, []);
+      const searchParams = new URLSearchParams(window.location.search);
 
-  // Existing email/password login
+      if (searchParams.get('status') === 'created') {
+        setSuccessMessage("Account created! We've sent a link to your email. Please verify before logging in.");
+        setShowResendLink(true);
+        window.history.replaceState(null, '', window.location.pathname);
+      } else if (searchParams.get('verified') === 'true') {
+        setSuccessMessage('Success! Your email has been verified. You can now log in.');
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+  }, []); 
+
+  useEffect(() => {
+    let timer;
+    if (resendCooldown > 0) {
+      timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
+
+  const handleResendVerification = async () => {
+    if (!email || !password) {
+      setError("Please enter your email and password to resend the verification link.");
+      return;
+    }
+    try {
+      setError("");
+      setSuccessMessage("");
+      const userCred = await signInWithEmailAndPassword(auth, email, password);
+      if (userCred.user && !userCred.user.emailVerified) {
+        const actionCodeSettings = {
+          url: `${window.location.origin}/login?verified=true`,
+        };
+        await sendEmailVerification(userCred.user, actionCodeSettings);
+        setSuccessMessage("A new verification link has been sent to your email.");
+        setResendCooldown(60);
+      }
+      await signOut(auth);
+    } catch (err) {
+      if (err.code === 'auth/too-many-requests') {
+        setError("Too many requests. Please wait a moment before trying again.");
+        setResendCooldown(60);
+      } else {
+        setError("Failed to resend email. Please check your credentials.");
+      }
+      console.error("Resend error:", err);
+    }
+  };
+
   const handleLogin = async () => {
     try {
       setError("");
+      setSuccessMessage(""); // Clear success message on new login attempt
+      setShowResendLink(false);
       const userCred = await signInWithEmailAndPassword(auth, email, password);
+
+      await userCred.user.reload();
 
       if (!userCred.user.emailVerified) {
         setError("Please verify your email before logging in.");
-        return;
-      }
-
-      // Check if user exists in Firestore
-      const q = query(collection(db, "users"), where("email", "==", email));
-      const snapshot = await getDocs(q);
-      if (snapshot.empty) {
-        // User hasn’t completed payment, so log them out
-        setError("Your account is not active yet. Please complete payment.");
+        setShowResendLink(true);
         await signOut(auth);
         return;
       }
 
-      // User exists and is verified
+      const q = query(collection(db, "users"), where("email", "==", email));
+      const snapshot = await getDocs(q);
+      if (snapshot.empty) {
+        setError("Your account setup is not complete. Please sign up again.");
+        await signOut(auth);
+        return;
+      }
+
+      setCurrentUser(userCred.user);
       navigate("/");
     } catch (err) {
       setError("Invalid email or password");
+      setShowResendLink(false);
       console.error("Login error:", err);
     }
   };
 
-  // Google login logic
   const googleProvider = new GoogleAuthProvider();
-
   const handleGoogleLogin = async () => {
     try {
       setError("");
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
-      console.log("Google user is:", user);
-
-      // Check if Firestore doc exists
+      
       const q = query(collection(db, "users"), where("email", "==", user.email));
       const snap = await getDocs(q);
       if (snap.empty) {
-        // Means user doc doesn't exist => not fully registered
         setError("Your account is not active yet. Please complete the signup process.");
         await signOut(auth);
         return;
       }
-
-      // If doc found, check plan
-      const userDoc = snap.docs[0].data();
-      if (!["free", "premium"].includes(userDoc.plan)) {
-        setError("Your account is not active yet. Please complete payment or signup.");
-        await signOut(auth);
-        return;
-      }
-
-      // plan is valid => navigate home
+      
+      setCurrentUser(user);
       navigate("/");
     } catch (err) {
       console.error("Google login error:", err);
@@ -149,7 +184,27 @@ const Login = () => {
             <p style={{ color: "red", marginBottom: "1rem" }}>{error}</p>
           )}
 
-          {/* Email/Password login button */}
+          {showResendLink && (
+            <div style={{ marginBottom: "1rem", fontSize: "0.9rem", textAlign: "center" }}>
+              <span>Didn't receive an email? </span>
+              <button
+                onClick={handleResendVerification}
+                disabled={resendCooldown > 0}
+                style={{
+                  color: resendCooldown > 0 ? "#999" : "#5A153D",
+                  background: "none",
+                  border: "none",
+                  textDecoration: "underline",
+                  cursor: resendCooldown > 0 ? "default" : "pointer",
+                  padding: 0,
+                  fontSize: "0.9rem"
+                }}
+              >
+                {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend verification link"}
+              </button>
+            </div>
+          )}
+
           <button
             onClick={handleLogin}
             onMouseEnter={(e) => {
@@ -165,7 +220,7 @@ const Login = () => {
               padding: "0.75rem",
               backgroundColor: "#5A153D",
               color: "#fff",
-              border: "none",
+              border: "2px solid #5A153D", // Added for consistency
               borderRadius: "6px",
               fontSize: "1rem",
               cursor: "pointer",
@@ -174,7 +229,6 @@ const Login = () => {
             Login
           </button>
 
-          {/* Divider line with text "Or login using" */}
           <div
             style={{
               display: "flex",
@@ -190,16 +244,13 @@ const Login = () => {
             <div style={{ flex: 1, height: "1px", backgroundColor: "#ccc" }} />
           </div>
 
-          {/* Google Login button, same style as "Sign up with Google" from Signup */}
           <button
             onClick={handleGoogleLogin}
             onMouseEnter={(e) => {
               e.currentTarget.style.backgroundColor = "#faf0fb";
-              e.currentTarget.style.color = "#5A153D";
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = "#fff";
-              e.currentTarget.style.color = "#5A153D";
             }}
             style={{
               width: "100%",
@@ -216,16 +267,13 @@ const Login = () => {
             Google Account
           </button>
 
-          {/* Return Home button, matching same style & width */}
           <button
             onClick={() => navigate("/")}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = "#faf0fb";
-              e.currentTarget.style.color = "#5A153D";
+              e.currentTarget.style.backgroundColor = "#ccc"; // Darken on hover
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "#ddd";
-              e.currentTarget.style.color = "#333";
+              e.currentTarget.style.backgroundColor = "#ddd"; // Revert on leave
             }}
             style={{
               width: "100%",
@@ -249,7 +297,7 @@ const Login = () => {
               color: "#333",
             }}
           >
-            Don&apos;t have an account?
+            Don't have an account?
             <span
               onMouseEnter={(e) => {
                 e.currentTarget.style.color = "#B12D78";
@@ -270,7 +318,6 @@ const Login = () => {
           </div>
         </div>
       </div>
-
       <BottomBanner />
     </>
   );

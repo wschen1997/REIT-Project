@@ -47,85 +47,114 @@ const Useraccount = () => {
     );
   }
 
-  return (
-    <div className="App">
-      <h1 style={{ textAlign: "center", marginBottom: "1.5rem" }}>My Account</h1>
-      <div
-        style={{
-          maxWidth: "600px",
-          margin: "0 auto",
-          background: "#fff",
-          padding: "30px",
-          borderRadius: "10px",
-          boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.1)"
-        }}
-      >
-        <p style={{ fontSize: "1.1rem", marginBottom: "0.5rem" }}>
-          <strong>Username:</strong> {userData.username}
-        </p>
-        <p style={{ fontSize: "1.1rem", marginBottom: "0.5rem" }}>
-          <strong>Email:</strong> {userData.email}
-        </p>
-        <p style={{ fontSize: "1.1rem", marginBottom: "0.5rem" }}>
-          <strong>Registered Date:</strong>{" "}
-          {userData.createdAt ? new Date(userData.createdAt).toLocaleDateString() : "N/A"}
-        </p>
-        <p style={{ fontSize: "1.1rem", marginBottom: "0.5rem" }}>
-          <strong>Current Plan:</strong> {userData.plan}
-        </p>
+  // --- Style definitions for the new look ---
+  const containerStyle = {
+    maxWidth: "700px",
+    margin: "0 30px",
+    padding: "0 20px",
+    textAlign: "left", // This will now correctly align everything inside
+  };
 
-        {/* MODIFIED: This block adds the "Upgrade" button for free users */}
-        {userData.plan === 'free' && (
-          <div style={{ textAlign: 'center', marginTop: '25px' }}>
+  const sectionStyle = {
+    border: "1px solid #e0e0e0",
+    borderRadius: "8px",
+    padding: "24px",
+    marginBottom: "20px",
+  };
+  
+  const infoRowStyle = {
+    display: "flex",
+    justifyContent: "space-between", // Changed back to space-between for clean columns
+    alignItems: "center",
+    padding: "12px 0",
+    borderBottom: "1px solid #f0f0f0",
+    fontSize: "1rem"
+  };
+
+  const buttonContainerStyle = {
+    display: "flex",
+    justifyContent: "flex-start",
+    gap: "15px",
+    marginTop: "30px",
+  };
+
+  const buttonStyle = {
+    padding: "10px 20px",
+    fontSize: "16px",
+    borderRadius: "5px",
+    backgroundColor: "#5A153D",
+    color: "#fff",
+    border: "2px solid #5A153D",
+    cursor: "pointer",
+    transition: "background-color 0.2s, color 0.2s"
+  };
+
+  return (
+    // We leave the outer "App" div alone as it's part of the global layout
+    <div className="App" style={{ paddingTop: "1rem" }}>
+      {/* We add a NEW container div inside to control this page's specific layout */}
+      <div style={containerStyle}>
+        <h2 style={{ marginBottom: "1rem", fontSize: "1.75rem" }}>My Account</h2>
+        
+        <hr style={{ border: "none", borderBottom: "1px solid #e0e0e0", marginBottom: "2rem" }} />
+        
+        <div style={sectionStyle}>
+            <h2 style={{marginTop: 0, borderBottom: '1px solid #eee', paddingBottom: '15px', fontSize: '1.5rem'}}>User Information</h2>
+            <div style={infoRowStyle}>
+                <strong style={{color: '#555'}}>Username:</strong>
+                <span>{userData.username}</span>
+            </div>
+            <div style={infoRowStyle}>
+                <strong style={{color: '#555'}}>Email:</strong>
+                <span>{userData.email}</span>
+            </div>
+             <div style={{...infoRowStyle, borderBottom: 'none'}}>
+                <strong style={{color: '#555'}}>Registered Date:</strong>
+                <span>{userData.createdAt ? new Date(userData.createdAt).toLocaleDateString() : "N/A"}</span>
+            </div>
+        </div>
+
+        <div style={sectionStyle}>
+            <h2 style={{marginTop: 0, borderBottom: '1px solid #eee', paddingBottom: '15px', fontSize: '1.5rem'}}>Subscription</h2>
+             <div style={{...infoRowStyle, borderBottom: 'none'}}>
+                <strong style={{color: '#555'}}>Current Plan:</strong>
+                <span style={{textTransform: 'capitalize', fontWeight: 'bold'}}>{userData.plan}</span>
+            </div>
+        </div>
+
+        <div style={buttonContainerStyle}>
+          <button
+            onClick={() => navigate("/")}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "#faf0fb";
+              e.currentTarget.style.color = "#5A153D";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "#5A153D";
+              e.currentTarget.style.color = "#fff";
+            }}
+            style={buttonStyle}
+          >
+            Back to Home
+          </button>
+
+          {userData.plan === 'free' && (
             <button
               onClick={() => navigate('/pricing')}
-              onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = "#faf0fb";
-                  e.currentTarget.style.color = "#B12D78";
+               onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "#faf0fb";
+                e.currentTarget.style.color = "#5A153D";
               }}
               onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = "#B12D78";
-                  e.currentTarget.style.color = "#fff";
+                e.currentTarget.style.backgroundColor = "#5A153D";
+                e.currentTarget.style.color = "#fff";
               }}
-              style={{
-                padding: '10px 20px',
-                fontSize: '1rem',
-                color: '#fff',
-                backgroundColor: '#B12D78', // A different, vibrant color
-                border: '2px solid #B12D78',
-                borderRadius: '5px',
-                cursor: 'pointer',
-                transition: 'background-color 0.2s, color 0.2s'
-              }}
+              style={buttonStyle}
             >
               Upgrade to Premium
             </button>
-          </div>
-        )}
-      </div>
-      <div style={{ textAlign: "center", marginTop: "2rem" }}>
-      <button
-        onClick={() => navigate("/")}
-        onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = "#faf0fb";
-            e.currentTarget.style.color = "#5A153D";
-        }}
-        onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = "#5A153D";
-            e.currentTarget.style.color = "#fff";
-        }}
-        style={{
-            padding: "10px 20px",
-            fontSize: "16px",
-            borderRadius: "5px",
-            backgroundColor: "#5A153D",
-            color: "#fff",
-            border: "none",
-            cursor: "pointer",
-        }}
-        >
-        Back to Home
-        </button>
+          )}
+        </div>
       </div>
       <BottomBanner />
     </div>

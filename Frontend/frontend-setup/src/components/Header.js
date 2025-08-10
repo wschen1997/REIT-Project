@@ -1,6 +1,6 @@
 // Header.js – corrected and complete
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { auth } from "../firebase.js";
 import { signOut } from "firebase/auth";
@@ -16,6 +16,7 @@ const AUTH_GROUP_STYLE = { marginRight: "55px" };
 
 const Header = ({ currentUser, userPlan, setUserPlan }) => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   /* ─────────────────────────  Firebase / user  ───────────────────────── */
   const [username, setUsername] = useState("");
@@ -48,7 +49,7 @@ const Header = ({ currentUser, userPlan, setUserPlan }) => {
     };
 
     fetchUserData();
-  }, [currentUser, setUserPlan]);
+  }, [currentUser, setUserPlan, location]); 
 
   /* ─────────────────────────  sidebar  ───────────────────────── */
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);

@@ -3,8 +3,6 @@ import { useNavigate } from "react-router-dom";
 import {
   createUserWithEmailAndPassword,
   sendEmailVerification,
-  signInWithEmailAndPassword,
-  fetchSignInMethodsForEmail,
   signOut,
   GoogleAuthProvider,
   signInWithPopup,
@@ -15,36 +13,22 @@ import {
   getDocs,
   query,
   where,
-  doc,
-  updateDoc,
-} from "firebase/firestore"; // doc, updateDoc for updates
+} from "firebase/firestore";
 import { auth, db } from "../firebase.js";
 import BottomBanner from "../components/BottomBanner.js";
 
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:5000";
 
-// A naive regex enforcing:
-// - At least 8 characters
-// - At least 1 letter
-// - At least 1 digit
-// - At least 1 special character
 const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
 function Signup({ currentUser }) {
   const navigate = useNavigate();
-
-  // -------------- Local UI States --------------
-  const [emailVerified, setEmailVerified] = useState(false);
-  const [resendCooldown, setResendCooldown] = useState(0);
-  const [emailSent, setEmailSent] = useState(false);
-  const [sendingEmail, setSendingEmail] = useState(false);
 
   // -------------- Form Fields --------------
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   
-
   // -------------- Validation & Error States --------------
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -59,56 +43,8 @@ function Signup({ currentUser }) {
   // -------------- Track if user is from Google --------------
   const [isGoogleUser, setIsGoogleUser] = useState(false);
 
-  
   // --------------------------------------
-  //  Poll for email verification if using normal email flow
-  // --------------------------------------
-  // This is the NEW, correct block to paste in.
-useEffect(() => {
-  console.log("%cSignup component received prop:", "color: orange;", currentUser);
-
-  // First, check if the user is already verified when the component receives the prop.
-  if (currentUser && currentUser.emailVerified) {
-    setEmailVerified(true);
-    setSuccessMessage("Your email has been successfully verified! Please click 'Continue' to create your account.");
-    return; // Stop if we're already verified.
-  }
-
-  // If an email has been sent out and we have a user who is NOT yet verified, START POLLING.
-  if (emailSent && currentUser && !currentUser.emailVerified) {
-    const intervalId = setInterval(async () => {
-      // Tell the currentUser object to refresh its data from Firebase's servers.
-      await currentUser.reload();
-      console.log("Polling: Checking verification status...");
-
-      // After reloading, check the property again.
-      if (currentUser.emailVerified) {
-        console.log("%cPOLLING: User is now verified! Stopping poll.", "color: green; font-weight: bold;");
-        clearInterval(intervalId);
-        setEmailVerified(true);
-        setSuccessMessage("Your email has been successfully verified! Please choose a plan to continue.");
-        await auth.currentUser.getIdToken(true);
-      }
-    }, 3000); // Check every 3 seconds
-
-    // Clean up the interval when the component is no longer on screen.
-    return () => clearInterval(intervalId);
-  }
-}, [currentUser, emailSent]); // This effect runs when the user changes OR when the email is sent.
-
-  // --------------------------------------
-  //  Resend verification cooldown
-  // --------------------------------------
-  useEffect(() => {
-    let timer;
-    if (resendCooldown > 0) {
-      timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
-    }
-    return () => clearTimeout(timer);
-  }, [resendCooldown]);
-
-  // --------------------------------------
-  //  Username check
+  //  Username check (This function is unchanged)
   // --------------------------------------
   async function checkUsernameInUse() {
     setUsernameError("");
@@ -127,13 +63,12 @@ useEffect(() => {
   }
 
   // --------------------------------------
-  //  Email check
+  //  Email check (This function is unchanged)
   // --------------------------------------
   async function checkEmailInUse() {
     setEmailError("");
     if (!email) return;
     try {
-      // First, check Firestore for a user document with the given email.
       const usersRef = collection(db, "users");
       const qEmail = query(usersRef, where("email", "==", email));
       const snap = await getDocs(qEmail);
@@ -141,23 +76,14 @@ useEffect(() => {
         setEmailError("An account with this email already exists.");
         return;
       }
-      
-      // Optionally, if you want additional info from Auth, you can fetch the sign-in methods.
-      // But in this case, if no Firestore doc exists, we allow the user to proceed,
-      // even if there's an Auth record from an incomplete signup.
-      // const methods = await fetchSignInMethodsForEmail(auth, email);
-      // if (methods.length > 0) {
-      //   setEmailError("This email is associated with an incomplete signup. Please complete your verification.");
-      //   return;
-      // }
     } catch (err) {
       console.error("Error checking email:", err);
       setEmailError("Unable to check email right now.");
     }
-  }  
+  } 
 
   // --------------------------------------
-  //  Validate password format
+  //  Validate password format (This function is unchanged)
   // --------------------------------------
   function validatePasswordFormat(newPass) {
     setPassMinLength(newPass.length >= 8);
@@ -165,98 +91,45 @@ useEffect(() => {
     setPassHasNumber(/\d/.test(newPass));
     setPassHasSpecial(/[^A-Za-z0-9]/.test(newPass));
   }
-
-  // --------------------------------------
-  //  Send verification email (normal email flow)
-  // --------------------------------------
-  const handleSendVerification = async () => {
-    if (!email || !password) {
-      setError("Email and password are required for verification.");
-      return;
-    }
-    try {
-      setSendingEmail(true);
-      setError("");
-
-      const methods = await fetchSignInMethodsForEmail(auth, email);
-
-      if (methods.length === 0) {
-        // No user => create in Firebase Auth
-        const userCred = await createUserWithEmailAndPassword(auth, email, password);
-        await sendEmailVerification(userCred.user);
-        setEmailSent(true);
-        setResendCooldown(50);
-      } else {
-        // There's a user => sign in to see if verified
-        const userCred = await signInWithEmailAndPassword(auth, email, password);
-        if (userCred.user.emailVerified) {
-          setEmailVerified(true);
-        } else {
-          await sendEmailVerification(userCred.user);
-        }
-        setEmailSent(true);
-        setResendCooldown(50);
-      }
-    } catch (err) {
-      console.error("Verification email error:", err);
-      setError("This email is already in use. Please log in or reset your password.");
-    } finally {
-      setSendingEmail(false);
-    }
-  };
   
   // --------------------------------------
-  //  Google sign-up logic
+  //  Google sign-up logic (This function is unchanged)
   // --------------------------------------
   const googleProvider = new GoogleAuthProvider();
 
   const handleGoogleSignup = async () => {
     try {
       setError("");
-      console.log("Attempting to sign up with Google..."); // <-- LOG 1
-
       const result = await signInWithPopup(auth, googleProvider);
-      console.log("Google sign-in popup successful. User object:", result.user); // <-- LOG 2
-
-      // --- Duplicate Email Check Start ---
       const usersRef = collection(db, "users");
       const emailQuery = query(usersRef, where("email", "==", result.user.email));
-      
-      console.log("Checking if email already exists in Firestore..."); // <-- LOG 3
       const emailSnap = await getDocs(emailQuery);
       
       if (!emailSnap.empty) {
-        console.log("Duplicate email found in Firestore. Aborting signup."); // <-- LOG 4
         setError("This email is already associated with an account. Please log in instead.");
-        await signOut(auth); // Optionally sign the user out
-        return; // Stop further execution
+        await signOut(auth);
+        return;
       }
-      // --- Duplicate Email Check End ---
       
-      console.log("No duplicate email found. Proceeding with signup."); // <-- LOG 5
-
-      // Proceed with Google sign-up if no duplicate found
       setIsGoogleUser(true);
       if (result.user.displayName) {
         setUsername(result.user.displayName.replace(/\s+/g, ""));
       }
       setEmail(result.user.email);
       setSuccessMessage(
-        "Google sign-up successful. Please click 'Continue' to create your account."
+        "Google sign-up successful. Please confirm your username and click 'Create Free Account'."
       );
     } catch (err) {
-      console.error("Google signup error:", err); // <-- LOG 6 (This is where your error is happening)
+      console.error("Google signup error:", err);
       setError("Failed to sign up with Google. Please try again or use email/password.");
     }
   }; 
 
   // --------------------------------------
-  //  Final signup logic
+  //  Final signup logic (MODIFIED for the new flow)
   // --------------------------------------
   const handleSignup = async () => {
-    // --- Step 1: Validate the form ---
     if (!isGoogleUser) {
-      // Validation for regular email/password signup
       if (
         usernameError ||
         emailError ||
@@ -268,59 +141,64 @@ useEffect(() => {
         setError("Please fix the errors above before continuing.");
         return;
       }
-      if (!emailVerified) {
-        setError("Please verify your email before continuing.");
-        return;
-      }
       if (!username || !email || !password) {
         setError("All fields are required.");
         return;
       }
     } else {
-      // Validation for a user who signed up with Google
       if (!username) {
         setError("Please set a username before continuing.");
         return;
       }
     }
 
-    // --- Step 2: Create the user in the database ---
     try {
       setError("");
-      const usersRef = collection(db, "users");
+      
+      if (!isGoogleUser) {
+        const userCred = await createUserWithEmailAndPassword(auth, email, password);
 
-      // Check if user already exists in Firestore before creating
+        const actionCodeSettings = {
+          url: `${window.location.origin}/login?verified=true`,
+        };
+
+        await sendEmailVerification(userCred.user, actionCodeSettings);
+        await signOut(auth); 
+      }
+
+      const usersRef = collection(db, "users");
       const emailQuery = query(usersRef, where("email", "==", email));
       const emailSnap = await getDocs(emailQuery);
 
       if (!emailSnap.empty) {
         setError("An account with this email already exists. Please log in.");
+        if (isGoogleUser) await signOut(auth); // Sign out Google user if they exist
         return;
       }
 
-      // Create the user document in Firestore with a 'free' plan by default
       await addDoc(usersRef, {
         username,
         email,
-        plan: "free", // Always 'free' on signup
+        plan: "free",
         createdAt: new Date().toISOString(),
       });
       
-      // --- Step 3: Finish and redirect ---
-      // Sign out from the temporary signup session so the user can log in properly.
-      await signOut(auth);
-      // Redirect to the login page with a success message
-      navigate("/login?status=activated");
+      if (isGoogleUser) {
+        navigate("/");
+      } else {
+        navigate("/login?status=created");
+      }
 
     } catch (err) {
-      console.error("Signup error:", err);
-      setError(err.message);
+      if (err.code === 'auth/email-already-in-use') {
+        setError("This email is already registered. Please log in or use a different email.");
+      } else {
+        console.error("Signup error:", err);
+        setError(err.message);
+      }
     }
   };
 
-  // --------------------------------------
-  //  Render
-  // --------------------------------------
   return (
     <>
       <div style={{ backgroundColor: "#fff", minHeight: "100vh" }}>
@@ -341,7 +219,6 @@ useEffect(() => {
           {successMessage && <p style={{ color: "green" }}>{successMessage}</p>}
           {error && <p style={{ color: "red" }}>{error}</p>}
 
-          {/* USERNAME */}
           <input
             type="text"
             placeholder="Username"
@@ -357,7 +234,6 @@ useEffect(() => {
             <p style={{ color: "red", marginTop: "-0.5rem" }}>{usernameError}</p>
           )}
 
-          {/* PASSWORD (hidden for google user) */}
           {!isGoogleUser && (
             <>
               <input
@@ -396,7 +272,6 @@ useEffect(() => {
             </>
           )}
 
-          {/* EMAIL */}
           <input
             type="email"
             placeholder="Email"
@@ -413,43 +288,6 @@ useEffect(() => {
             <p style={{ color: "red", marginTop: "-0.5rem" }}>{emailError}</p>
           )}
 
-          {/* SEND VERIFICATION (hidden if google user) */}
-          {!isGoogleUser && (
-            <button
-              onClick={handleSendVerification}
-              disabled={resendCooldown > 0 || sendingEmail || emailVerified}
-              onMouseEnter={(e) => {
-                if (!emailVerified && !sendingEmail && resendCooldown === 0) {
-                  e.currentTarget.style.color = "#B12D78";
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!emailVerified && !sendingEmail && resendCooldown === 0) {
-                  e.currentTarget.style.color = "#5A153D";
-                }
-              }}
-              style={{
-                marginBottom: "0.5rem",
-                color: emailVerified ? "green" : resendCooldown > 0 ? "#333" : "#5A153D",
-                backgroundColor: "transparent",
-                border: "none",
-                fontWeight: "bold",
-                cursor: emailVerified ? "default" : "pointer",
-              }}
-            >
-              {emailVerified
-                ? "Email Verified"
-                : sendingEmail
-                ? "Sending..."
-                : resendCooldown > 0
-                ? `Verification Sent (${resendCooldown}s)`
-                : emailSent
-                ? "Resend Verification Email"
-                : "Click here to verify your email"}
-            </button>
-          )}
-
-          {/* "Or sign up using" + Google button => hidden if isGoogleUser is true */}
           {!isGoogleUser && (
             <>
               <div
@@ -467,7 +305,6 @@ useEffect(() => {
                 <div style={{ flex: 1, height: "1px", backgroundColor: "#ccc" }} />
               </div>
 
-              {/* Google Sign-Up Button */}
               <button
                 onClick={handleGoogleSignup}
                 onMouseEnter={(e) => {
@@ -496,7 +333,6 @@ useEffect(() => {
             </>
           )}
 
-          {/* CONTINUE BUTTON */}
           <button
             onClick={handleSignup}
             onMouseEnter={(e) => {
@@ -509,10 +345,9 @@ useEffect(() => {
             }}
             style={signupBtn}
           >
-            Continue
+            Create Free Account
           </button>
 
-          {/* "Already have an account?" */}
           <div
             style={{
               marginTop: "1.5rem",
@@ -542,7 +377,6 @@ useEffect(() => {
           </div>
         </div>
       </div>
-
       <BottomBanner />
     </>
   );
@@ -556,27 +390,6 @@ const inputStyle = {
   fontSize: "1rem",
   borderRadius: "6px",
   border: "1px solid #ccc",
-};
-
-// Reused style for plan buttons
-const planButtonStyle = {
-  flex: 1,
-  padding: "0.75rem 1.25rem",
-  borderRadius: "6px",
-  cursor: "pointer",
-  border: "2px solid #5A153D",
-  textAlign: "center",
-  fontSize: "1rem",
-};
-
-const activePlanStyle = {
-  backgroundColor: "#faf0fb",
-  color: "#5A153D",
-};
-
-const inactivePlanStyle = {
-  backgroundColor: "white",
-  color: "#5A153D",
 };
 
 const signupBtn = {
