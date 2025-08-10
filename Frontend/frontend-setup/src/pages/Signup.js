@@ -16,6 +16,7 @@ import {
 } from "firebase/firestore";
 import { auth, db } from "../firebase.js";
 import BottomBanner from "../components/BottomBanner.js";
+import Loading from "../components/Loading.js";
 
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:5000";
 
@@ -23,6 +24,7 @@ const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
 function Signup({ currentUser }) {
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false); 
 
   // -------------- Form Fields --------------
   const [username, setUsername] = useState("");
@@ -129,74 +131,78 @@ function Signup({ currentUser }) {
   //  Final signup logic (MODIFIED for the new flow)
   // --------------------------------------
   const handleSignup = async () => {
-    if (!isGoogleUser) {
-      if (
-        usernameError ||
-        emailError ||
-        !passMinLength ||
-        !passHasLetter ||
-        !passHasNumber ||
-        !passHasSpecial
-      ) {
-        setError("Please fix the errors above before continuing.");
-        return;
-      }
-      if (!username || !email || !password) {
-        setError("All fields are required.");
-        return;
-      }
-    } else {
-      if (!username) {
-        setError("Please set a username before continuing.");
-        return;
-      }
-    }
-
-    try {
-      setError("");
-      
       if (!isGoogleUser) {
-        const userCred = await createUserWithEmailAndPassword(auth, email, password);
-
-        const actionCodeSettings = {
-          url: `${window.location.origin}/login?verified=true`,
-        };
-
-        await sendEmailVerification(userCred.user, actionCodeSettings);
-        await signOut(auth); 
-      }
-
-      const usersRef = collection(db, "users");
-      const emailQuery = query(usersRef, where("email", "==", email));
-      const emailSnap = await getDocs(emailQuery);
-
-      if (!emailSnap.empty) {
-        setError("An account with this email already exists. Please log in.");
-        if (isGoogleUser) await signOut(auth); // Sign out Google user if they exist
-        return;
-      }
-
-      await addDoc(usersRef, {
-        username,
-        email,
-        plan: "free",
-        createdAt: new Date().toISOString(),
-      });
-      
-      if (isGoogleUser) {
-        navigate("/");
+        if (
+          usernameError ||
+          emailError ||
+          !passMinLength ||
+          !passHasLetter ||
+          !passHasNumber ||
+          !passHasSpecial
+        ) {
+          setError("Please fix the errors above before continuing.");
+          return;
+        }
+        if (!username || !email || !password) {
+          setError("All fields are required.");
+          return;
+        }
       } else {
-        navigate("/login?status=created");
+        if (!username) {
+          setError("Please set a username before continuing.");
+          return;
+        }
       }
 
-    } catch (err) {
-      if (err.code === 'auth/email-already-in-use') {
-        setError("This email is already registered. Please log in or use a different email.");
-      } else {
-        console.error("Signup error:", err);
-        setError(err.message);
+      setIsLoading(true); // <-- TURN ON LOADING
+      try {
+        setError("");
+
+        if (!isGoogleUser) {
+          const userCred = await createUserWithEmailAndPassword(auth, email, password);
+
+          const actionCodeSettings = {
+            url: `${window.location.origin}/login?verified=true`,
+          };
+
+          await sendEmailVerification(userCred.user, actionCodeSettings);
+          await signOut(auth); 
+        }
+
+        const usersRef = collection(db, "users");
+        const emailQuery = query(usersRef, where("email", "==", email));
+        const emailSnap = await getDocs(emailQuery);
+
+        if (!emailSnap.empty) {
+          setError("An account with this email already exists. Please log in.");
+          if (isGoogleUser) await signOut(auth);
+          setIsLoading(false); // <-- TURN OFF LOADING
+          return;
+        }
+
+        await addDoc(usersRef, {
+          username,
+          email,
+          plan: "free",
+          createdAt: new Date().toISOString(),
+        });
+
+        setIsLoading(false); // <-- TURN OFF LOADING
+        if (isGoogleUser) {
+          navigate("/");
+        } else {
+          navigate("/login?status=created");
+        }
+
+      } catch (err) {
+        setIsLoading(false); // <-- TURN OFF LOADING ON ERROR
+        if (err.code === 'auth/email-already-in-use') {
+          setError("This email is already registered. Please log in or use a different email.");
+        } else {
+          console.error("Signup error:", err);
+          setError(err.message);
+        }
       }
-    }
   };
 
   return (
@@ -377,10 +383,11 @@ function Signup({ currentUser }) {
           </div>
         </div>
       </div>
+      {isLoading && <Loading />}
       <BottomBanner />
     </>
   );
-}
+  }
 
 // styling
 const inputStyle = {

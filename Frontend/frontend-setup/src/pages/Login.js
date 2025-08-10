@@ -12,9 +12,11 @@ import { auth } from "../firebase.js";
 import { db } from "../firebase.js";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import BottomBanner from "../components/BottomBanner.js";
+import Loading from "../components/Loading.js";
 
 const Login = ({ setCurrentUser }) => {
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -83,59 +85,69 @@ const Login = ({ setCurrentUser }) => {
   };
 
   const handleLogin = async () => {
-    try {
-      setError("");
-      setSuccessMessage(""); // Clear success message on new login attempt
-      setShowResendLink(false);
-      const userCred = await signInWithEmailAndPassword(auth, email, password);
+      setIsLoading(true); // <-- TURN ON LOADING
+      try {
+        setError("");
+        setSuccessMessage(""); 
+        setShowResendLink(false);
+        const userCred = await signInWithEmailAndPassword(auth, email, password);
 
-      await userCred.user.reload();
+        await userCred.user.reload();
 
-      if (!userCred.user.emailVerified) {
-        setError("Please verify your email before logging in.");
-        setShowResendLink(true);
-        await signOut(auth);
-        return;
+        if (!userCred.user.emailVerified) {
+          setError("Please verify your email before logging in.");
+          setShowResendLink(true);
+          await signOut(auth);
+          setIsLoading(false); // <-- TURN OFF LOADING
+          return;
+        }
+
+        const q = query(collection(db, "users"), where("email", "==", email));
+        const snapshot = await getDocs(q);
+        if (snapshot.empty) {
+          setError("Your account setup is not complete. Please sign up again.");
+          await signOut(auth);
+          setIsLoading(false); // <-- TURN OFF LOADING
+          return;
+        }
+
+        setCurrentUser(userCred.user);
+        setIsLoading(false); // <-- TURN OFF LOADING
+        navigate("/");
+      } catch (err) {
+        setIsLoading(false); // <-- TURN OFF LOADING ON ERROR
+        setError("Invalid email or password");
+        setShowResendLink(false);
+        console.error("Login error:", err);
       }
-
-      const q = query(collection(db, "users"), where("email", "==", email));
-      const snapshot = await getDocs(q);
-      if (snapshot.empty) {
-        setError("Your account setup is not complete. Please sign up again.");
-        await signOut(auth);
-        return;
-      }
-
-      setCurrentUser(userCred.user);
-      navigate("/");
-    } catch (err) {
-      setError("Invalid email or password");
-      setShowResendLink(false);
-      console.error("Login error:", err);
-    }
   };
 
   const googleProvider = new GoogleAuthProvider();
+
   const handleGoogleLogin = async () => {
-    try {
-      setError("");
-      const result = await signInWithPopup(auth, googleProvider);
-      const user = result.user;
-      
-      const q = query(collection(db, "users"), where("email", "==", user.email));
-      const snap = await getDocs(q);
-      if (snap.empty) {
-        setError("Your account is not active yet. Please complete the signup process.");
-        await signOut(auth);
-        return;
+      setIsLoading(true); // <-- TURN ON LOADING
+      try {
+        setError("");
+        const result = await signInWithPopup(auth, googleProvider);
+        const user = result.user;
+
+        const q = query(collection(db, "users"), where("email", "==", user.email));
+        const snap = await getDocs(q);
+        if (snap.empty) {
+          setError("Your account is not active yet. Please complete the signup process.");
+          await signOut(auth);
+          setIsLoading(false); // <-- TURN OFF LOADING
+          return;
+        }
+
+        setCurrentUser(user);
+        setIsLoading(false); // <-- TURN OFF LOADING
+        navigate("/");
+      } catch (err) {
+        setIsLoading(false); // <-- TURN OFF LOADING ON ERROR
+        console.error("Google login error:", err);
+        setError("Failed to log in with Google. Please try again or use email/password.");
       }
-      
-      setCurrentUser(user);
-      navigate("/");
-    } catch (err) {
-      console.error("Google login error:", err);
-      setError("Failed to log in with Google. Please try again or use email/password.");
-    }
   };
 
   return (
@@ -330,6 +342,7 @@ const Login = ({ setCurrentUser }) => {
           </div>
         </div>
       </div>
+      {isLoading && <Loading />}
       <BottomBanner />
     </>
   );
