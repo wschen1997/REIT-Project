@@ -2,11 +2,8 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
-import { auth } from "../firebase.js";
-import { signOut } from "firebase/auth";
-import { db } from "../firebase.js";
-import { collection, query, where, getDocs } from "firebase/firestore";
 import Sidebar from "./Sidebar.js";
+import { SignedIn, SignedOut, UserButton, useUser, useClerk } from "@clerk/clerk-react";
 
 const API_BASE_URL =
   process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:5000";
@@ -18,39 +15,10 @@ const Header = ({ currentUser, userPlan, setUserPlan }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  /* ─────────────────────────  Firebase / user  ───────────────────────── */
-  const [username, setUsername] = useState("");
-  const [loginHovered, setLoginHovered] = useState(false);
-
-  useEffect(() => {
-    if (!currentUser || !currentUser.emailVerified) {
-      setUsername("");
-      setUserPlan(null);
-      return;
-    }
-
-    const fetchUserData = async () => {
-      const q = query(collection(db, "users"), where("email", "==", currentUser.email));
-      try {
-        const querySnapshot = await getDocs(q);
-        if (!querySnapshot.empty) {
-          const userData = querySnapshot.docs[0].data();
-          setUsername(userData.username || "");
-          setUserPlan(userData.plan);
-        } else {
-           // This handles cases where user exists in Firebase Auth but not in your database yet
-           // You might want to sign them out if their DB record is missing
-           // signOut(auth); // <-- Comment this out for now
-        }
-      } catch (error) {
-        console.error("Error fetching user data in Header:", error);
-        signOut(auth);
-      }
-    };
-
-    fetchUserData();
-  }, [currentUser, setUserPlan, location]); 
-
+  /* ─────────────────────────  Clerk / user  ───────────────────────── */
+  const { user } = useUser();
+  const { signOut } = useClerk();
+  
   /* ─────────────────────────  sidebar  ───────────────────────── */
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
@@ -280,63 +248,68 @@ const Header = ({ currentUser, userPlan, setUserPlan }) => {
             ...AUTH_GROUP_STYLE,
           }}
         >
-          {currentUser && currentUser.emailVerified && location.pathname !== '/signup' ? (
-            <>
-              {/* greeting dropdown */}
-              <div
-                className="nav-link dropdown-trigger"
-                onMouseEnter={(e) =>
-                  e.currentTarget
-                    .querySelector(".acct-dd")
-                    .classList.add("show")
-                }
-                onMouseLeave={(e) =>
-                  e.currentTarget
-                    .querySelector(".acct-dd")
-                    .classList.remove("show")
-                }
-                style={{ cursor: "pointer" }}
-              >
-                Hello, {username || currentUser.email}
-                <div className="acct-dd dropdown-menu">
-                  <div
-                    className="dropdown-item"
-                    onClick={() => navigate("/user")}
-                  >
-                    My Account
-                  </div>
+          <SignedIn>
+            {/* This content shows ONLY when a user is signed in with Clerk */}
+            {/* We are re-creating your original dropdown menu */}
+            <div
+              className="nav-link dropdown-trigger"
+              onMouseEnter={(e) =>
+                e.currentTarget
+                  .querySelector(".acct-dd")
+                  .classList.add("show")
+              }
+              onMouseLeave={(e) =>
+                e.currentTarget
+                  .querySelector(".acct-dd")
+                  .classList.remove("show")
+              }
+              style={{ cursor: "pointer" }}
+            >
+              {/* The greeting text is now pulled from Clerk */}
+              Hello, {user?.firstName || user?.username}
+              <div className="acct-dd dropdown-menu">
+                <div
+                  className="dropdown-item"
+                  onClick={() => navigate("/user")}
+                >
+                  My Account
+                </div>
+                {/* We can put the UserButton in the dropdown as a bonus */}
+                <div style={{ padding: '8px 16px', display: 'flex', justifyContent: 'center' }}>
+                    <UserButton afterSignOutUrl="/" />
                 </div>
               </div>
-              {/* logout */}
-              <button
-                onClick={() => {
-                  setUsername("");
-                  signOut(auth);
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = "#faf0fb";
-                  e.currentTarget.style.color = "#5A153D";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = "#5A153D";
-                  e.currentTarget.style.color = "#fff";
-                }}
-                style={{
-                  padding: "8px 16px",
-                  fontSize: "1rem",
-                  border: "none",
-                  color: "#fff",
-                  backgroundColor: "#5A153D",
-                  borderRadius: "4px",
-                  cursor: "pointer",
-                }}
-              >
-                Logout
-              </button>
-            </>
-          ) : (
+            </div>
+            
+            {/* This is the separate logout button with your original styling */}
             <button
-              onClick={() => navigate("/login")}
+              onClick={() => signOut(() => navigate("/"))}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "#faf0fb";
+                e.currentTarget.style.color = "#5A153D";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "#5A153D";
+                e.currentTarget.style.color = "#fff";
+              }}
+              style={{
+                padding: "8px 16px",
+                fontSize: "1rem",
+                border: "none",
+                color: "#fff",
+                backgroundColor: "#5A153D",
+                borderRadius: "4px",
+                cursor: "pointer",
+              }}
+            >
+              Logout
+            </button>
+          </SignedIn>
+
+          <SignedOut>
+            {/* This content shows ONLY when a user is signed out */}
+            <button
+              onClick={() => navigate("/clerk-signin")}
               onMouseEnter={(e) => {
                 e.currentTarget.style.backgroundColor = "#faf0fb";
               }}
@@ -355,7 +328,7 @@ const Header = ({ currentUser, userPlan, setUserPlan }) => {
             >
               Sign In
             </button>
-          )}
+          </SignedOut>
         </div>
       </nav>
     </>

@@ -1,10 +1,22 @@
 import React from 'react';
-import { createRoot } from 'react-dom/client';
-import App from './App.js';
+import ReactDOM from 'react-dom/client';
+import { ClerkProvider } from '@clerk/clerk-react';
+import App from './App.js'; // This is correct, it uses App.css
 
-const rootElement = document.getElementById('root');
-const root = createRoot(rootElement);
+// There is no index.css file, so we do not import it here.
 
+// Paste your Publishable Key from the Clerk Dashboard here
+const PUBLISHABLE_KEY = process.env.REACT_APP_CLERK_PUBLISHABLE_KEY; 
+
+if (!PUBLISHABLE_KEY) {
+  throw new Error("Missing Publishable Key from Clerk Dashboard");
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
-  <App />
+  <React.StrictMode>
+    <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
+      <App />
+    </ClerkProvider>
+  </React.StrictMode>
 );

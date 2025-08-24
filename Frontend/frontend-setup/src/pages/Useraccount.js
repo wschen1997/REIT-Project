@@ -1,42 +1,59 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { auth, db } from "../firebase.js";
-import { onAuthStateChanged } from "firebase/auth";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { db } from "../firebase.js";
+import { collection, query, where, getDocs, doc, setDoc } from "firebase/firestore";
 import BottomBanner from "../components/BottomBanner.js";
+import { useUser, useAuth } from "@clerk/clerk-react";
+import Loading from "../components/Loading.js";
 
 const Useraccount = () => {
   const navigate = useNavigate();
+  const { isSignedIn, user, isLoaded } = useUser();
+  const { signOut } = useAuth();
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
+    if (!isLoaded) {
+      return;
+    }
+
+    const fetchFirestoreData = async () => {
+      if (isSignedIn && user) {
+        const userEmail = user.primaryEmailAddress.emailAddress;
         const usersRef = collection(db, "users");
-        const q = query(usersRef, where("email", "==", user.email));
-        const snapshot = await getDocs(q);
-        if (!snapshot.empty) {
-          const data = snapshot.docs[0].data();
-          setUserData(data);
-        } else {
-          console.error("No user document found");
-          navigate("/signup");
+        const q = query(usersRef, where("email", "==", userEmail));
+
+        try {
+          const snapshot = await getDocs(q);
+          if (!snapshot.empty) {
+            setUserData(snapshot.docs[0].data());
+          } else {
+            const newUserData = {
+              username: user.username || user.firstName || user.primaryEmailAddress.emailAddress.split('@')[0],
+              email: user.primaryEmailAddress.emailAddress,
+              plan: "free",
+              createdAt: new Date().toISOString(),
+            };
+            
+            const userDocRef = doc(db, "users", user.id);
+            await setDoc(userDocRef, newUserData);
+            setUserData(newUserData);
+          }
+        } catch (error) {
+          console.error("Error fetching or creating user data in Firestore:", error);
         }
       } else {
-        navigate("/login");
+        navigate("/clerk-signin");
       }
       setLoading(false);
-    });
-    return () => unsubscribe();
-  }, [navigate]);
+    };
+
+    fetchFirestoreData();
+  }, [isLoaded, isSignedIn, user, navigate, signOut]);
 
   if (loading) {
-    return (
-      <div className="App" style={{ padding: "2rem", textAlign: "center" }}>
-        Loading...
-      </div>
-    );
+    return <Loading />;
   }
 
   if (!userData) {
@@ -52,7 +69,7 @@ const Useraccount = () => {
     maxWidth: "700px",
     margin: "0 30px",
     padding: "0 20px",
-    textAlign: "left", // This will now correctly align everything inside
+    textAlign: "left",
   };
 
   const sectionStyle = {
@@ -64,7 +81,7 @@ const Useraccount = () => {
   
   const infoRowStyle = {
     display: "flex",
-    justifyContent: "space-between", // Changed back to space-between for clean columns
+    justifyContent: "space-between",
     alignItems: "center",
     padding: "12px 0",
     borderBottom: "1px solid #f0f0f0",
@@ -90,36 +107,34 @@ const Useraccount = () => {
   };
 
   return (
-    // We leave the outer "App" div alone as it's part of the global layout
     <div className="App" style={{ paddingTop: "1rem" }}>
-      {/* We add a NEW container div inside to control this page's specific layout */}
       <div style={containerStyle}>
         <h2 style={{ marginBottom: "1rem", fontSize: "1.75rem" }}>My Account</h2>
         
         <hr style={{ border: "none", borderBottom: "1px solid #e0e0e0", marginBottom: "2rem" }} />
         
         <div style={sectionStyle}>
-            <h2 style={{marginTop: 0, borderBottom: '1px solid #eee', paddingBottom: '15px', fontSize: '1.5rem'}}>User Information</h2>
-            <div style={infoRowStyle}>
-                <strong style={{color: '#555'}}>Username:</strong>
-                <span>{userData.username}</span>
-            </div>
-            <div style={infoRowStyle}>
-                <strong style={{color: '#555'}}>Email:</strong>
-                <span>{userData.email}</span>
-            </div>
-             <div style={{...infoRowStyle, borderBottom: 'none'}}>
-                <strong style={{color: '#555'}}>Registered Date:</strong>
-                <span>{userData.createdAt ? new Date(userData.createdAt).toLocaleDateString() : "N/A"}</span>
-            </div>
+          <h2 style={{marginTop: 0, borderBottom: '1px solid #eee', paddingBottom: '15px', fontSize: '1.5rem'}}>User Information</h2>
+          <div style={infoRowStyle}>
+            <strong style={{color: '#555'}}>Username:</strong>
+            <span>{userData.username}</span>
+          </div>
+          <div style={infoRowStyle}>
+            <strong style={{color: '#555'}}>Email:</strong>
+            <span>{userData.email}</span>
+          </div>
+          <div style={{...infoRowStyle, borderBottom: 'none'}}>
+            <strong style={{color: '#555'}}>Registered Date:</strong>
+            <span>{userData.createdAt ? new Date(userData.createdAt).toLocaleDateString() : "N/A"}</span>
+          </div>
         </div>
 
         <div style={sectionStyle}>
-            <h2 style={{marginTop: 0, borderBottom: '1px solid #eee', paddingBottom: '15px', fontSize: '1.5rem'}}>Subscription</h2>
-             <div style={{...infoRowStyle, borderBottom: 'none'}}>
-                <strong style={{color: '#555'}}>Current Plan:</strong>
-                <span style={{textTransform: 'capitalize', fontWeight: 'bold'}}>{userData.plan}</span>
-            </div>
+          <h2 style={{marginTop: 0, borderBottom: '1px solid #eee', paddingBottom: '15px', fontSize: '1.5rem'}}>Subscription</h2>
+          <div style={{...infoRowStyle, borderBottom: 'none'}}>
+            <strong style={{color: '#555'}}>Current Plan:</strong>
+            <span style={{textTransform: 'capitalize', fontWeight: 'bold'}}>{userData.plan}</span>
+          </div>
         </div>
 
         <div style={buttonContainerStyle}>
@@ -141,7 +156,7 @@ const Useraccount = () => {
           {userData.plan === 'free' && (
             <button
               onClick={() => navigate('/pricing')}
-               onMouseEnter={(e) => {
+              onMouseEnter={(e) => {
                 e.currentTarget.style.backgroundColor = "#faf0fb";
                 e.currentTarget.style.color = "#5A153D";
               }}
