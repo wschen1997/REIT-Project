@@ -7,7 +7,7 @@ const ClerkSignInPage = () => {
   const { isSignedIn, user } = useUser();
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', paddingTop: '80px' }}>
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', paddingTop: '50px' }}>
       
       <SignedIn>
         {/* --- THIS IS WHAT YOU SEE WHEN YOU ARE SIGNED IN --- */}

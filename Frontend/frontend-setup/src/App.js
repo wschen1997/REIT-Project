@@ -1,4 +1,3 @@
-// App.js
 import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
 import * as ReactGaModule from "react-ga4";
@@ -11,6 +10,7 @@ import RecDetailPage from "./pages/RecDetailPage.js";
 import AboutUs from "./pages/AboutUs.js";
 import ContactUs from "./pages/ContactUs.js";
 import PricingPage from "./pages/Pricing.js";
+// These old pages are no longer used but we will leave the imports for now
 import Login from "./pages/Login.js";
 import Signup from "./pages/Signup.js";
 import Useraccount from "./pages/Useraccount.js";
@@ -33,41 +33,45 @@ realGA.initialize(TRACKING_ID);
 
 // Track pageviews on route change
 function AnalyticsTracker() {
-  const location = useLocation();
-  useEffect(() => {
-    realGA.send({ hitType: "pageview", page: location.pathname });
-  }, [location]);
-  return null;
+  const location = useLocation();
+  useEffect(() => {
+    realGA.send({ hitType: "pageview", page: location.pathname });
+  }, [location]);
+  return null;
 }
 
 function App() {
-  // Track the user's plan here in App, so Header can fill it, and DetailPage can use it
+  return (
+    <div className="App">
+      <Router>
+        <AnalyticsTracker />
 
-  return (
-    <div className="App">
-      <Router>
-        <AnalyticsTracker />
+        <Header />
 
-        <Header />
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/filter" element={<FilterPage />} />
+          <Route path="/reits/:ticker" element={<DetailPage />} />
+          <Route path="/Crowdfunding" element={<CrowdfundingPage />} />
+          <Route path="/Crowdfunding/:vehicle" element={<RecDetailPage />} />
+          <Route path="/about" element={<AboutUs />} />
+          <Route path="/contact" element={<ContactUs />} />
+          <Route path="/pricing" element={<PricingPage />} />
+          <Route path="/user" element={<Useraccount />} />
+          
+          {/* --- CHANGE #1 START --- */}
+          {/* Added a wildcard (*) to allow Clerk's multi-step sign-in flow */}
+          <Route path="/clerk-signin/*" element={<ClerkSignInPage />} />
+          {/* --- CHANGE #1 END --- */}
 
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/filter" element={<FilterPage />} />
-
-          {/* 2) Pass userPlan to DetailPage for content gating */}
-          <Route path="/reits/:ticker" element={<DetailPage />} />
-          <Route path="/Crowdfunding" element={<CrowdfundingPage />} />
-          <Route path="/Crowdfunding/:vehicle" element={<RecDetailPage />} />
-          <Route path="/about" element={<AboutUs />} />
-          <Route path="/contact" element={<ContactUs />} />
-          <Route path="/pricing" element={<PricingPage />} />
-          <Route path="/user" element={<Useraccount />} />
-          <Route path="/clerk-signin" element={<ClerkSignInPage />} />
-          <Route path="/clerk-signup" element={<ClerkSignUpPage />} />
-        </Routes>
-      </Router>
-    </div>
-  );
+          {/* --- CHANGE #2 START --- */}
+          {/* Added a wildcard (*) to allow Clerk's multi-step sign-up flow (like email verification) */}
+          <Route path="/clerk-signup/*" element={<ClerkSignUpPage />} />
+          {/* --- CHANGE #2 END --- */}
+        </Routes>
+      </Router>
+    </div>
+  );
 }
 
 export default App;

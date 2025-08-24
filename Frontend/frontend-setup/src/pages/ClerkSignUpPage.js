@@ -3,7 +3,7 @@ import React from 'react';
 
 const ClerkSignUpPage = () => {
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', paddingTop: '80px' }}>
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', paddingTop: '50px' }}>
       {/* --- CHANGE START --- */}
       {/* We've added the afterSignUpUrl prop to redirect users to their account page */}
       <SignUp 
