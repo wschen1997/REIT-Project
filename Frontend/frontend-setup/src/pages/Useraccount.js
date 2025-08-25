@@ -3,11 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { db } from "../firebase.js";
 import { collection, query, where, getDocs, doc, setDoc } from "firebase/firestore";
 import BottomBanner from "../components/BottomBanner.js";
-import { useUser, useAuth } from "@clerk/clerk-react";
+import { useUser, useAuth, UserProfile } from "@clerk/clerk-react";
 import Loading from "../components/Loading.js";
 
 const Useraccount = () => {
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState('profile');
   const { isSignedIn, user, isLoaded } = useUser();
   const { signOut } = useAuth();
   const [userData, setUserData] = useState(null);
@@ -64,11 +65,13 @@ const Useraccount = () => {
     );
   }
 
-  // --- Style definitions for the new look ---
   const containerStyle = {
     maxWidth: "700px",
+    // --- CHANGE #1 START ---
+    // Changed margin back to restore left alignment
     margin: "0 30px",
-    padding: "0 20px",
+    // --- CHANGE #1 END ---
+    padding: "0 30px",
     textAlign: "left",
   };
 
@@ -106,70 +109,148 @@ const Useraccount = () => {
     transition: "background-color 0.2s, color 0.2s"
   };
 
+  const tabStyle = (isActive) => ({
+    padding: "10px 20px",
+    cursor: "pointer",
+    backgroundColor: "transparent",
+    border: "none",
+    fontWeight: isActive ? "bold" : "normal",
+    color: isActive ? "#5A153D" : "#333",
+    borderBottom: isActive ? "3px solid #5A153D" : "3px solid transparent",
+    outline: "none",
+    transition: "background-color 0.3s, color 0.3s", // Added transition for smooth hover
+  });
+
   return (
     <div className="App" style={{ paddingTop: "1rem" }}>
       <div style={containerStyle}>
         <h2 style={{ marginBottom: "1rem", fontSize: "1.75rem" }}>My Account</h2>
         
-        <hr style={{ border: "none", borderBottom: "1px solid #e0e0e0", marginBottom: "2rem" }} />
-        
-        <div style={sectionStyle}>
-          <h2 style={{marginTop: 0, borderBottom: '1px solid #eee', paddingBottom: '15px', fontSize: '1.5rem'}}>User Information</h2>
-          <div style={infoRowStyle}>
-            <strong style={{color: '#555'}}>Username:</strong>
-            <span>{userData.username}</span>
-          </div>
-          <div style={infoRowStyle}>
-            <strong style={{color: '#555'}}>Email:</strong>
-            <span>{userData.email}</span>
-          </div>
-          <div style={{...infoRowStyle, borderBottom: 'none'}}>
-            <strong style={{color: '#555'}}>Registered Date:</strong>
-            <span>{userData.createdAt ? new Date(userData.createdAt).toLocaleDateString() : "N/A"}</span>
-          </div>
-        </div>
-
-        <div style={sectionStyle}>
-          <h2 style={{marginTop: 0, borderBottom: '1px solid #eee', paddingBottom: '15px', fontSize: '1.5rem'}}>Subscription</h2>
-          <div style={{...infoRowStyle, borderBottom: 'none'}}>
-            <strong style={{color: '#555'}}>Current Plan:</strong>
-            <span style={{textTransform: 'capitalize', fontWeight: 'bold'}}>{userData.plan}</span>
-          </div>
-        </div>
-
-        <div style={buttonContainerStyle}>
+        <div style={{ display: "flex", gap: "20px", borderBottom: "1px solid #ccc", marginBottom: "20px" }}>
           <button
-            onClick={() => navigate("/")}
+            onClick={() => setActiveTab('profile')}
+            style={tabStyle(activeTab === 'profile')}
+            // --- CHANGE #2 START ---
+            // Added hover effect handlers
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = "#faf0fb";
-              e.currentTarget.style.color = "#5A153D";
+              if (activeTab !== 'profile') {
+                e.currentTarget.style.backgroundColor = "#faf0fb";
+              }
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "#5A153D";
-              e.currentTarget.style.color = "#fff";
+              e.currentTarget.style.backgroundColor = "transparent";
             }}
-            style={buttonStyle}
+            // --- CHANGE #2 END ---
           >
-            Back to Home
+            Profile & Subscription
           </button>
-
-          {userData.plan === 'free' && (
-            <button
-              onClick={() => navigate('/pricing')}
-              onMouseEnter={(e) => {
+          <button
+            onClick={() => setActiveTab('security')}
+            style={tabStyle(activeTab === 'security')}
+            // --- CHANGE #3 START ---
+            // Added hover effect handlers
+            onMouseEnter={(e) => {
+              if (activeTab !== 'security') {
                 e.currentTarget.style.backgroundColor = "#faf0fb";
-                e.currentTarget.style.color = "#5A153D";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = "#5A153D";
-                e.currentTarget.style.color = "#fff";
-              }}
-              style={buttonStyle}
-            >
-              Upgrade to Premium
-            </button>
-          )}
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "transparent";
+            }}
+            // --- CHANGE #3 END ---
+          >
+            Security
+          </button>
         </div>
+
+        {activeTab === 'profile' && (
+          <>
+            <div style={sectionStyle}>
+              <h2 style={{marginTop: 0, borderBottom: '1px solid #eee', paddingBottom: '15px', fontSize: '1.5rem'}}>User Information</h2>
+              <div style={infoRowStyle}>
+                <strong style={{color: '#555'}}>Username:</strong>
+                <span>{userData.username}</span>
+              </div>
+              <div style={infoRowStyle}>
+                <strong style={{color: '#555'}}>Email:</strong>
+                <span>{userData.email}</span>
+              </div>
+              <div style={{...infoRowStyle, borderBottom: 'none'}}>
+                <strong style={{color: '#555'}}>Registered Date:</strong>
+                <span>{userData.createdAt ? new Date(userData.createdAt).toLocaleDateString() : "N/A"}</span>
+              </div>
+            </div>
+
+            <div style={sectionStyle}>
+              <h2 style={{marginTop: 0, borderBottom: '1px solid #eee', paddingBottom: '15px', fontSize: '1.5rem'}}>Subscription</h2>
+              <div style={{...infoRowStyle, borderBottom: 'none'}}>
+                <strong style={{color: '#555'}}>Current Plan:</strong>
+                <span style={{textTransform: 'capitalize', fontWeight: 'bold'}}>{userData.plan}</span>
+              </div>
+            </div>
+
+            <div style={buttonContainerStyle}>
+              <button
+                onClick={() => navigate("/")}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "#faf0fb";
+                  e.currentTarget.style.color = "#5A153D";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "#5A153D";
+                  e.currentTarget.style.color = "#fff";
+                }}
+                style={buttonStyle}
+              >
+                Back to Home
+              </button>
+
+              {userData.plan === 'free' && (
+                <button
+                  onClick={() => navigate('/pricing')}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = "#faf0fb";
+                    e.currentTarget.style.color = "#5A153D";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = "#5A153D";
+                    e.currentTarget.style.color = "#fff";
+                  }}
+                  style={buttonStyle}
+                >
+                  Upgrade to Premium
+                </button>
+              )}
+            </div>
+          </>
+        )}
+
+        {activeTab === 'security' && (
+          <div style={{marginTop: '20px'}}>
+            {/* The UserProfile component has its own internal styling */}
+            <UserProfile
+              routing="hash"
+              appearance={{
+                elements: {
+                  cardBox: {
+                    boxShadow: 'none',
+                    borderRadius: '0px',
+                    border: '1px solid #e0e0e0'
+                  },
+                  navbar: {
+                    display: 'none'
+                  },
+                  // --- ADD THIS PART ---
+                  footer: {
+                    display: 'none'
+                  }
+                  // --- END OF ADDITION ---
+                }
+              }}
+            />
+          </div>
+        )}
+
       </div>
       <BottomBanner />
     </div>

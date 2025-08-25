@@ -274,10 +274,6 @@ const Header = ({ currentUser, userPlan, setUserPlan }) => {
                 >
                   My Account
                 </div>
-                {/* We can put the UserButton in the dropdown as a bonus */}
-                <div style={{ padding: '8px 16px', display: 'flex', justifyContent: 'center' }}>
-                    <UserButton afterSignOutUrl="/" />
-                </div>
               </div>
             </div>
             
