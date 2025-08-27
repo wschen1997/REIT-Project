@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { db } from "../firebase.js";
 import { collection, query, where, getDocs, doc, setDoc } from "firebase/firestore";
 import BottomBanner from "../components/BottomBanner.js";
@@ -8,11 +8,21 @@ import Loading from "../components/Loading.js";
 
 const Useraccount = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  
   const [activeTab, setActiveTab] = useState('profile');
   const { isSignedIn, user, isLoaded } = useUser();
   const { signOut } = useAuth();
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (location.pathname.includes('/subscription')) {
+      setActiveTab('subscription');
+    } else {
+      setActiveTab('profile');
+    }
+  }, [location.pathname]);
 
   useEffect(() => {
     if (!isLoaded) {
@@ -67,10 +77,7 @@ const Useraccount = () => {
 
   const containerStyle = {
     maxWidth: "700px",
-    // --- CHANGE #1 START ---
-    // Changed margin back to restore left alignment
     margin: "0 30px",
-    // --- CHANGE #1 END ---
     padding: "0 30px",
     textAlign: "left",
   };
@@ -88,7 +95,7 @@ const Useraccount = () => {
     alignItems: "center",
     padding: "12px 0",
     borderBottom: "1px solid #f0f0f0",
-    fontSize: "1rem"
+    fontSize: "0.82rem"
   };
 
   const buttonContainerStyle = {
@@ -118,20 +125,18 @@ const Useraccount = () => {
     color: isActive ? "#5A153D" : "#333",
     borderBottom: isActive ? "3px solid #5A153D" : "3px solid transparent",
     outline: "none",
-    transition: "background-color 0.3s, color 0.3s", // Added transition for smooth hover
+    transition: "background-color 0.3s, color 0.3s",
   });
 
   return (
-    <div className="App" style={{ paddingTop: "1rem" }}>
+    <div className="App" style={{ paddingTop: "0.5rem" }}>
       <div style={containerStyle}>
-        <h2 style={{ marginBottom: "1rem", fontSize: "1.75rem" }}>My Account</h2>
+        <h2 style={{ marginBottom: "1rem", fontSize: "1.5rem" }}>My Account</h2>
         
         <div style={{ display: "flex", gap: "20px", borderBottom: "1px solid #ccc", marginBottom: "20px" }}>
           <button
-            onClick={() => setActiveTab('profile')}
+            onClick={() => navigate('/user')}
             style={tabStyle(activeTab === 'profile')}
-            // --- CHANGE #2 START ---
-            // Added hover effect handlers
             onMouseEnter={(e) => {
               if (activeTab !== 'profile') {
                 e.currentTarget.style.backgroundColor = "#faf0fb";
@@ -140,96 +145,29 @@ const Useraccount = () => {
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = "transparent";
             }}
-            // --- CHANGE #2 END ---
           >
-            Profile & Subscription
+            Profile & Security
           </button>
           <button
-            onClick={() => setActiveTab('security')}
-            style={tabStyle(activeTab === 'security')}
-            // --- CHANGE #3 START ---
-            // Added hover effect handlers
+            onClick={() => navigate('/user/subscription')}
+            style={tabStyle(activeTab === 'subscription')}
             onMouseEnter={(e) => {
-              if (activeTab !== 'security') {
+              if (activeTab !== 'subscription') {
                 e.currentTarget.style.backgroundColor = "#faf0fb";
               }
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = "transparent";
             }}
-            // --- CHANGE #3 END ---
           >
-            Security
+            Subscription
           </button>
         </div>
 
         {activeTab === 'profile' && (
-          <>
-            <div style={sectionStyle}>
-              <h2 style={{marginTop: 0, borderBottom: '1px solid #eee', paddingBottom: '15px', fontSize: '1.5rem'}}>User Information</h2>
-              <div style={infoRowStyle}>
-                <strong style={{color: '#555'}}>Username:</strong>
-                <span>{userData.username}</span>
-              </div>
-              <div style={infoRowStyle}>
-                <strong style={{color: '#555'}}>Email:</strong>
-                <span>{userData.email}</span>
-              </div>
-              <div style={{...infoRowStyle, borderBottom: 'none'}}>
-                <strong style={{color: '#555'}}>Registered Date:</strong>
-                <span>{userData.createdAt ? new Date(userData.createdAt).toLocaleDateString() : "N/A"}</span>
-              </div>
-            </div>
-
-            <div style={sectionStyle}>
-              <h2 style={{marginTop: 0, borderBottom: '1px solid #eee', paddingBottom: '15px', fontSize: '1.5rem'}}>Subscription</h2>
-              <div style={{...infoRowStyle, borderBottom: 'none'}}>
-                <strong style={{color: '#555'}}>Current Plan:</strong>
-                <span style={{textTransform: 'capitalize', fontWeight: 'bold'}}>{userData.plan}</span>
-              </div>
-            </div>
-
-            <div style={buttonContainerStyle}>
-              <button
-                onClick={() => navigate("/")}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = "#faf0fb";
-                  e.currentTarget.style.color = "#5A153D";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = "#5A153D";
-                  e.currentTarget.style.color = "#fff";
-                }}
-                style={buttonStyle}
-              >
-                Back to Home
-              </button>
-
-              {userData.plan === 'free' && (
-                <button
-                  onClick={() => navigate('/pricing')}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = "#faf0fb";
-                    e.currentTarget.style.color = "#5A153D";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = "#5A153D";
-                    e.currentTarget.style.color = "#fff";
-                  }}
-                  style={buttonStyle}
-                >
-                  Upgrade to Premium
-                </button>
-              )}
-            </div>
-          </>
-        )}
-
-        {activeTab === 'security' && (
           <div style={{marginTop: '20px'}}>
-            {/* The UserProfile component has its own internal styling */}
             <UserProfile
-              routing="hash"
+              path="/user"
               appearance={{
                 elements: {
                   cardBox: {
@@ -237,19 +175,60 @@ const Useraccount = () => {
                     borderRadius: '0px',
                     border: '1px solid #e0e0e0'
                   },
-                  navbar: {
-                    display: 'none'
-                  },
-                  // --- ADD THIS PART ---
                   footer: {
                     display: 'none'
                   }
-                  // --- END OF ADDITION ---
                 }
               }}
             />
           </div>
         )}
+
+        {activeTab === 'subscription' && (
+          <div style={sectionStyle}>
+            <h2 style={{marginTop: 0, borderBottom: '1px solid #eee', paddingBottom: '15px', fontSize: '1.02rem'}}>Subscription</h2>
+            <div style={{...infoRowStyle, borderBottom: 'none'}}>
+              <span style={{color: '#555', paddingRight: '10px'}}>Current plan:</span>
+              <span style={{textTransform: 'capitalize', fontWeight: 'bold'}}>{userData.plan}</span>
+            </div>
+          </div>
+        )}
+
+        {/* --- MODIFICATION START: Buttons are now outside the tabs --- */}
+        <div style={buttonContainerStyle}>
+          <button
+            onClick={() => navigate("/")}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "#faf0fb";
+              e.currentTarget.style.color = "#5A153D";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "#5A153D";
+              e.currentTarget.style.color = "#fff";
+            }}
+            style={buttonStyle}
+          >
+            Back to Home
+          </button>
+
+          {userData.plan === 'free' && (
+            <button
+              onClick={() => navigate('/pricing')}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "#faf0fb";
+                e.currentTarget.style.color = "#5A153D";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "#5A153D";
+                e.currentTarget.style.color = "#fff";
+              }}
+              style={buttonStyle}
+            >
+              Upgrade to Premium
+            </button>
+          )}
+        </div>
+        {/* --- MODIFICATION END --- */}
 
       </div>
       <BottomBanner />

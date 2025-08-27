@@ -266,7 +266,7 @@ const Header = ({ currentUser, userPlan, setUserPlan }) => {
               style={{ cursor: "pointer" }}
             >
               {/* The greeting text is now pulled from Clerk */}
-              Hello, {user?.firstName || user?.username}
+              Hello, {user?.username || user?.firstName}
               <div className="acct-dd dropdown-menu">
                 <div
                   className="dropdown-item"

@@ -57,7 +57,7 @@ function App() {
           <Route path="/about" element={<AboutUs />} />
           <Route path="/contact" element={<ContactUs />} />
           <Route path="/pricing" element={<PricingPage />} />
-          <Route path="/user" element={<Useraccount />} />
+          <Route path="/user/*" element={<Useraccount />} />
           
           {/* --- CHANGE #1 START --- */}
           {/* Added a wildcard (*) to allow Clerk's multi-step sign-in flow */}
