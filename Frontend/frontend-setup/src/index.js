@@ -1,27 +1,33 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { ClerkProvider } from '@clerk/clerk-react';
-import App from './App.js'; // This is correct, it uses App.css
+import App from './App.js';
 
-// There is no index.css file, so we do not import it here.
-
-// Paste your Publishable Key from the Clerk Dashboard here
-const PUBLISHABLE_KEY = process.env.REACT_APP_CLERK_PUBLISHABLE_KEY; 
+const PUBLISHABLE_KEY = process.env.REACT_APP_CLERK_PUBLISHABLE_KEY;
 
 if (!PUBLISHABLE_KEY) {
-  throw new Error("Missing Publishable Key from Clerk Dashboard");
+  throw new Error("Missing Clerk Publishable Key from Clerk Dashboard");
+}
+
+// Create an object to hold the props for ClerkProvider
+const clerkProviderProps = {
+  publishableKey: PUBLISHABLE_KEY,
+};
+
+// Only add the frontendApi prop if we are in production
+if (process.env.NODE_ENV === 'production') {
+  const FRONTEND_API = process.env.REACT_APP_CLERK_FRONTEND_API;
+  if (!FRONTEND_API) {
+    throw new Error("Missing Clerk Frontend API URL for production build");
+  }
+  clerkProviderProps.frontendApi = FRONTEND_API;
 }
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    <ClerkProvider 
-      publishableKey={PUBLISHABLE_KEY}
-      // --- MODIFICATION START ---
-      // This tells Clerk to use the proxy URL you configured
-      proxyUrl="https://www.viserra-group.com/clerk-proxy"
-      // --- MODIFICATION END ---
-    >
+    {/* Spread the props into the ClerkProvider */}
+    <ClerkProvider {...clerkProviderProps}>
       <App />
     </ClerkProvider>
   </React.StrictMode>
