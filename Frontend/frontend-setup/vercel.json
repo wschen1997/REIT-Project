@@ -1,8 +1,0 @@
-{
-  "rewrites": [
-    {
-      "source": "/clerk-proxy/:path*",
-      "destination": "https://frontend-api.clerk.services/:path*"
-    }
-  ]
-}
