@@ -9,16 +9,24 @@ if (!PUBLISHABLE_KEY) {
   throw new Error('Missing Clerk Publishable Key from Clerk Dashboard');
 }
 
+// Use the proxy only in production (Vercel rewrite exists there).
+const clerkProps =
+  process.env.NODE_ENV === 'production'
+    ? {
+        publishableKey: PUBLISHABLE_KEY,
+        proxyUrl: '/clerk-proxy',
+        // Safe: load the Clerk JS bundle from the official CDN
+        clerkJSUrl:
+          'https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js',
+      }
+    : {
+        publishableKey: PUBLISHABLE_KEY,
+      };
+
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    <ClerkProvider
-      publishableKey={PUBLISHABLE_KEY}
-      // Route Clerk traffic through your own domain so the browser never hits the broken custom CNAME.
-      proxyUrl="/clerk-proxy"
-      // (Optional but safe) Fetch the Clerk JS bundle from the official CDN to avoid any stale custom-domain pointers.
-      clerkJSUrl="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js"
-    >
+    <ClerkProvider {...clerkProps}>
       <App />
     </ClerkProvider>
   </React.StrictMode>
