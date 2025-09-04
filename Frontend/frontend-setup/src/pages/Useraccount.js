@@ -1,9 +1,11 @@
+// Useraccount.js – MODIFIED FOR SUPABASE
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { db } from "../firebase.js";
 import { collection, query, where, getDocs, doc, setDoc } from "firebase/firestore";
 import BottomBanner from "../components/BottomBanner.js";
-import { useUser, useAuth, UserProfile } from "@clerk/clerk-react";
+// --- CHANGE #1: Import Supabase hook instead of Clerk ---
+import { useSessionContext } from "@supabase/auth-helpers-react";
 import Loading from "../components/Loading.js";
 
 const Useraccount = () => {
@@ -11,9 +13,12 @@ const Useraccount = () => {
   const location = useLocation();
   
   const [activeTab, setActiveTab] = useState('profile');
-  const { isSignedIn, user, isLoaded } = useUser();
-  const { signOut } = useAuth();
+  // --- CHANGE #2: Get session from Supabase context ---
+  const { session, isLoading } = useSessionContext();
+  const user = session?.user;
+
   const [userData, setUserData] = useState(null);
+  // --- CHANGE #3: Use Supabase's isLoading state ---
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -25,13 +30,17 @@ const Useraccount = () => {
   }, [location.pathname]);
 
   useEffect(() => {
-    if (!isLoaded) {
+    // --- CHANGE #4: Check Supabase's loading state ---
+    if (isLoading) {
+      setLoading(true);
       return;
     }
 
     const fetchFirestoreData = async () => {
-      if (isSignedIn && user) {
-        const userEmail = user.primaryEmailAddress.emailAddress;
+      // --- CHANGE #5: Check for Supabase session and user ---
+      if (session && user) {
+        // --- CHANGE #6: Get email and ID from Supabase user object ---
+        const userEmail = user.email;
         const usersRef = collection(db, "users");
         const q = query(usersRef, where("email", "==", userEmail));
 
@@ -40,13 +49,16 @@ const Useraccount = () => {
           if (!snapshot.empty) {
             setUserData(snapshot.docs[0].data());
           } else {
+            // Logic to create a new user in Firestore is preserved
             const newUserData = {
-              username: user.username || user.firstName || user.primaryEmailAddress.emailAddress.split('@')[0],
-              email: user.primaryEmailAddress.emailAddress,
+              // Get username from email as a fallback
+              username: user.user_metadata.full_name || user.email.split('@')[0],
+              email: user.email,
               plan: "free",
               createdAt: new Date().toISOString(),
             };
             
+            // Use the Supabase user ID for the document reference
             const userDocRef = doc(db, "users", user.id);
             await setDoc(userDocRef, newUserData);
             setUserData(newUserData);
@@ -55,13 +67,15 @@ const Useraccount = () => {
           console.error("Error fetching or creating user data in Firestore:", error);
         }
       } else {
-        navigate("/clerk-signin");
+        // --- CHANGE #7: Navigate to the new login page ---
+        navigate("/login");
       }
       setLoading(false);
     };
 
     fetchFirestoreData();
-  }, [isLoaded, isSignedIn, user, navigate, signOut]);
+  // --- CHANGE #8: Update dependency array for Supabase hooks ---
+  }, [isLoading, session, user, navigate]);
 
   if (loading) {
     return <Loading />;
@@ -164,23 +178,19 @@ const Useraccount = () => {
           </button>
         </div>
 
+        {/* --- CHANGE #9: Replace Clerk's <UserProfile /> with a simple display --- */}
         {activeTab === 'profile' && (
-          <div style={{marginTop: '20px'}}>
-            <UserProfile
-              path="/user"
-              appearance={{
-                elements: {
-                  cardBox: {
-                    boxShadow: 'none',
-                    borderRadius: '0px',
-                    border: '1px solid #e0e0e0'
-                  },
-                  footer: {
-                    display: 'none'
-                  }
-                }
-              }}
-            />
+          <div style={sectionStyle}>
+            <h2 style={{marginTop: 0, borderBottom: '1px solid #eee', paddingBottom: '15px', fontSize: '1.02rem'}}>
+              Profile
+            </h2>
+            <div style={{...infoRowStyle, borderBottom: 'none'}}>
+              <span style={{color: '#555', paddingRight: '10px'}}>Email:</span>
+              <span style={{fontWeight: 'bold'}}>{userData.email}</span>
+            </div>
+            <p style={{marginTop: '20px', fontSize: '0.9rem', color: '#666'}}>
+              To manage your account details, please log in through your identity provider (e.g., Google).
+            </p>
           </div>
         )}
 
@@ -194,7 +204,6 @@ const Useraccount = () => {
           </div>
         )}
 
-        {/* --- MODIFICATION START: Buttons are now outside the tabs --- */}
         <div style={buttonContainerStyle}>
           <button
             onClick={() => navigate("/")}
@@ -228,8 +237,6 @@ const Useraccount = () => {
             </button>
           )}
         </div>
-        {/* --- MODIFICATION END --- */}
-
       </div>
       <BottomBanner />
     </div>

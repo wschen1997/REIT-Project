@@ -1,3 +1,4 @@
+// App.js – MODIFIED FOR SUPABASE
 import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
 import * as ReactGaModule from "react-ga4";
@@ -15,8 +16,8 @@ import Login from "./pages/Login.js";
 import Signup from "./pages/Signup.js";
 import Useraccount from "./pages/Useraccount.js";
 import Header from "./components/Header.js";
-import ClerkSignInPage from "./pages/ClerkSignInPage.js";
-import ClerkSignUpPage from "./pages/ClerkSignUpPage.js";
+// --- CHANGE #1: Import the new AuthPage and remove Clerk pages ---
+import AuthPage from "./pages/AuthPage.js";
 
 import "./App.css";
 
@@ -33,45 +34,39 @@ realGA.initialize(TRACKING_ID);
 
 // Track pageviews on route change
 function AnalyticsTracker() {
-  const location = useLocation();
-  useEffect(() => {
-    realGA.send({ hitType: "pageview", page: location.pathname });
-  }, [location]);
-  return null;
+  const location = useLocation();
+  useEffect(() => {
+    realGA.send({ hitType: "pageview", page: location.pathname });
+  }, [location]);
+  return null;
 }
 
 function App() {
-  return (
-    <div className="App">
-      <Router>
-        <AnalyticsTracker />
+  return (
+    <div className="App">
+      <Router>
+        <AnalyticsTracker />
 
-        <Header />
+        <Header />
 
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/filter" element={<FilterPage />} />
-          <Route path="/reits/:ticker" element={<DetailPage />} />
-          <Route path="/Crowdfunding" element={<CrowdfundingPage />} />
-          <Route path="/Crowdfunding/:vehicle" element={<RecDetailPage />} />
-          <Route path="/about" element={<AboutUs />} />
-          <Route path="/contact" element={<ContactUs />} />
-          <Route path="/pricing" element={<PricingPage />} />
-          <Route path="/user/*" element={<Useraccount />} />
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/filter" element={<FilterPage />} />
+          <Route path="/reits/:ticker" element={<DetailPage />} />
+          <Route path="/Crowdfunding" element={<CrowdfundingPage />} />
+          <Route path="/Crowdfunding/:vehicle" element={<RecDetailPage />} />
+          <Route path="/about" element={<AboutUs />} />
+          <Route path="/contact" element={<ContactUs />} />
+          <Route path="/pricing" element={<PricingPage />} />
+          <Route path="/user/*" element={<Useraccount />} />
           
-          {/* --- CHANGE #1 START --- */}
-          {/* Added a wildcard (*) to allow Clerk's multi-step sign-in flow */}
-          <Route path="/clerk-signin/*" element={<ClerkSignInPage />} />
-          {/* --- CHANGE #1 END --- */}
+          {/* --- CHANGE #2: Replace the old Clerk routes with a single login route --- */}
+          <Route path="/login" element={<AuthPage />} />
 
-          {/* --- CHANGE #2 START --- */}
-          {/* Added a wildcard (*) to allow Clerk's multi-step sign-up flow (like email verification) */}
-          <Route path="/clerk-signup/*" element={<ClerkSignUpPage />} />
-          {/* --- CHANGE #2 END --- */}
-        </Routes>
-      </Router>
-    </div>
-  );
+        </Routes>
+      </Router>
+    </div>
+  );
 }
 
 export default App;

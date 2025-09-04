@@ -1,9 +1,10 @@
-// Header.js – corrected and complete
+// Header.js – MODIFIED FOR SUPABASE
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import Sidebar from "./Sidebar.js";
-import { SignedIn, SignedOut, UserButton, useUser, useClerk } from "@clerk/clerk-react";
+// --- CHANGE #1: Import Supabase hook instead of Clerk ---
+import { useSessionContext } from "@supabase/auth-helpers-react";
 
 const API_BASE_URL =
   process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:5000";
@@ -15,14 +16,14 @@ const Header = ({ currentUser, userPlan, setUserPlan }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  /* ─────────────────────────  Clerk / user  ───────────────────────── */
-  const { user } = useUser();
-  const { signOut } = useClerk();
-  
-  /* ─────────────────────────  sidebar  ───────────────────────── */
+  // --- CHANGE #2: Get session and client from Supabase context ---
+  const { session, supabaseClient } = useSessionContext();
+  const user = session?.user;
+
+  /* ─────────────────────────  sidebar  ───────────────────────── */
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  /* ─────────────────────────  search box  ────────────────────── */
+  /* ─────────────────────────  search box  ────────────────────── */
   const [searchQuery, setSearchQuery] = useState("");
   const [suggestions, setSuggestions] = useState([]);
   const [isFetching, setIsFetching] = useState(false);
@@ -78,7 +79,7 @@ const Header = ({ currentUser, userPlan, setUserPlan }) => {
     navigate(`/reits/${item.Ticker}`);
   };
 
-  /* ─────────────────────────  render  ───────────────────────── */
+  /* ─────────────────────────  render  ───────────────────────── */
   return (
     <>
       {/* Sidebar overlay */}
@@ -118,7 +119,7 @@ const Header = ({ currentUser, userPlan, setUserPlan }) => {
           zIndex: 1100,
         }}
       >
-        {/* LEFT:  hamburger + logo + search */}
+        {/* LEFT:  hamburger + logo + search */}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           {/* ☰ hamburger */}
           <div
@@ -239,7 +240,7 @@ const Header = ({ currentUser, userPlan, setUserPlan }) => {
           </div>
         </div>
 
-        {/* RIGHT:  auth buttons / greeting */}
+        {/* RIGHT:  auth buttons / greeting */}
         <div
           style={{
             display: "flex",
@@ -248,64 +249,69 @@ const Header = ({ currentUser, userPlan, setUserPlan }) => {
             ...AUTH_GROUP_STYLE,
           }}
         >
-          <SignedIn>
-            {/* This content shows ONLY when a user is signed in with Clerk */}
-            {/* We are re-creating your original dropdown menu */}
-            <div
-              className="nav-link dropdown-trigger"
-              onMouseEnter={(e) =>
-                e.currentTarget
-                  .querySelector(".acct-dd")
-                  .classList.add("show")
-              }
-              onMouseLeave={(e) =>
-                e.currentTarget
-                  .querySelector(".acct-dd")
-                  .classList.remove("show")
-              }
-              style={{ cursor: "pointer" }}
-            >
-              {/* The greeting text is now pulled from Clerk */}
-              Hello, {user?.username || user?.firstName}
-              <div className="acct-dd dropdown-menu">
-                <div
-                  className="dropdown-item"
-                  onClick={() => navigate("/user")}
-                >
-                  My Account
+          {/* --- CHANGE #3: Replaced <SignedIn> with a check on the session object --- */}
+          {session && (
+            <>
+              <div
+                className="nav-link dropdown-trigger"
+                onMouseEnter={(e) =>
+                  e.currentTarget
+                    .querySelector(".acct-dd")
+                    .classList.add("show")
+                }
+                onMouseLeave={(e) =>
+                  e.currentTarget
+                    .querySelector(".acct-dd")
+                    .classList.remove("show")
+                }
+                style={{ cursor: "pointer" }}
+              >
+                {/* --- CHANGE #4: Get user's email from the Supabase user object --- */}
+                Hello, {user?.email}
+                <div className="acct-dd dropdown-menu">
+                  <div
+                    className="dropdown-item"
+                    onClick={() => navigate("/user")}
+                  >
+                    My Account
+                  </div>
                 </div>
               </div>
-            </div>
-            
-            {/* This is the separate logout button with your original styling */}
-            <button
-              onClick={() => signOut(() => navigate("/"))}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = "#faf0fb";
-                e.currentTarget.style.color = "#5A153D";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = "#5A153D";
-                e.currentTarget.style.color = "#fff";
-              }}
-              style={{
-                padding: "8px 16px",
-                fontSize: "1rem",
-                border: "none",
-                color: "#fff",
-                backgroundColor: "#5A153D",
-                borderRadius: "4px",
-                cursor: "pointer",
-              }}
-            >
-              Logout
-            </button>
-          </SignedIn>
 
-          <SignedOut>
-            {/* This content shows ONLY when a user is signed out */}
+              <button
+                // --- CHANGE #5: Call Supabase signOut function ---
+                onClick={async () => {
+                  await supabaseClient.auth.signOut();
+                  navigate("/");
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "#faf0fb";
+                  e.currentTarget.style.color = "#5A153D";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "#5A153D";
+                  e.currentTarget.style.color = "#fff";
+                }}
+                style={{
+                  padding: "8px 16px",
+                  fontSize: "1rem",
+                  border: "none",
+                  color: "#fff",
+                  backgroundColor: "#5A153D",
+                  borderRadius: "4px",
+                  cursor: "pointer",
+                }}
+              >
+                Logout
+              </button>
+            </>
+          )}
+
+          {/* --- CHANGE #6: Replaced <SignedOut> with a check for no session --- */}
+          {!session && (
             <button
-              onClick={() => navigate("/clerk-signin")}
+              // --- CHANGE #7: Navigate to our new /login page ---
+              onClick={() => navigate("/login")}
               onMouseEnter={(e) => {
                 e.currentTarget.style.backgroundColor = "#faf0fb";
               }}
@@ -324,7 +330,7 @@ const Header = ({ currentUser, userPlan, setUserPlan }) => {
             >
               Sign In
             </button>
-          </SignedOut>
+          )}
         </div>
       </nav>
     </>

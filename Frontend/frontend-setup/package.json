@@ -19,6 +19,8 @@
     "@clerk/clerk-react": "^5.43.1",
     "@stripe/react-stripe-js": "^3.5.1",
     "@stripe/stripe-js": "^6.1.0",
+    "@supabase/auth-helpers-react": "^0.5.0",
+    "@supabase/supabase-js": "^2.57.0",
     "ajv": "^8.17.1",
     "axios": "1.7.9",
     "chart.js": "4.1.1",

@@ -1,23 +1,24 @@
+// Pricing.js – MODIFIED FOR SUPABASE
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import BottomBanner from "../components/BottomBanner.js";
 import Loading from "../components/Loading.js";
-// --- CHANGE #1: Import Clerk and Firestore tools ---
-import { useUser } from "@clerk/clerk-react";
+// --- CHANGE #1: Import Supabase hook instead of Clerk ---
+import { useSessionContext } from "@supabase/auth-helpers-react";
 import { db } from "../firebase.js";
 import { collection, query, where, getDocs } from "firebase/firestore";
 
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://1227.0.0.1:5000";
 
-// --- CHANGE #2: Remove props from the component definition ---
 function PricingPage() {
   const navigate = useNavigate();
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [showCancelPopup, setShowCancelPopup] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // --- CHANGE #3: Get user from Clerk and create state for the plan ---
-  const { user, isSignedIn, isLoaded } = useUser();
+  // --- CHANGE #2: Get session from Supabase context ---
+  const { session, isLoading: isSessionLoading } = useSessionContext();
+  const user = session?.user;
   const [userPlan, setUserPlan] = useState(null);
 
   // This useEffect handles the redirect back from Stripe. It is unchanged.
@@ -35,14 +36,16 @@ function PricingPage() {
     }
   }, []);
 
-  // --- CHANGE #4: Add a new useEffect to fetch the user's plan from Firestore ---
+  // --- CHANGE #3: Update useEffect to fetch plan using the Supabase user ---
   useEffect(() => {
-    // Wait for Clerk to load the user
-    if (!isLoaded) return;
+    // Wait for Supabase to load the session
+    if (isSessionLoading) return;
 
     const fetchUserPlan = async () => {
-      if (isSignedIn && user) {
-        const userEmail = user.primaryEmailAddress.emailAddress;
+      // Check for a Supabase session and user object
+      if (session && user) {
+        // Get email from the Supabase user object
+        const userEmail = user.email;
         const usersRef = collection(db, "users");
         const q = query(usersRef, where("email", "==", userEmail));
         const snapshot = await getDocs(q);
@@ -50,15 +53,19 @@ function PricingPage() {
           const userData = snapshot.docs[0].data();
           setUserPlan(userData.plan); // Set the plan from Firestore
         }
+      } else {
+        // If there's no user, we can assume the plan is not premium
+        setUserPlan('free'); 
       }
     };
     fetchUserPlan();
-  }, [isLoaded, isSignedIn, user]); // Rerun when user state changes
+  }, [isSessionLoading, session, user]); // Rerun when Supabase state changes
 
-  // --- CHANGE #5: Update handleSubscribe to use the Clerk user ---
+  // --- CHANGE #4: Update handleSubscribe to use the Supabase user ---
   const handleSubscribe = async () => {
-    if (!isSignedIn) {
-      navigate('/clerk-signin'); // Redirect to Clerk sign-in if not logged in
+    // Check for a Supabase session
+    if (!session) {
+      navigate('/login'); // Redirect to our new login page if not logged in
       return;
     }
 
@@ -67,15 +74,14 @@ function PricingPage() {
       const response = await fetch(`${API_BASE_URL}/api/create-checkout-session`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // Send the Clerk user's email to the backend
-        body: JSON.stringify({ email: user.primaryEmailAddress.emailAddress })
+        // Send the Supabase user's email to the backend
+        body: JSON.stringify({ email: user.email })
       });
 
       const data = await response.json();
       if (data.url) {
         window.location.href = data.url;
       } else {
-        // Use a more user-friendly error display instead of alert()
         console.error("Stripe session error:", data.error);
         setIsLoading(false);
       }
@@ -93,7 +99,6 @@ function PricingPage() {
           Upgrade to Premium for full access to all our analytical tools and data.
         </p>
 
-        {/* This button now correctly uses the userPlan state fetched from Firestore */}
         <button
           onClick={handleSubscribe}
           disabled={isLoading || userPlan === 'premium'}
