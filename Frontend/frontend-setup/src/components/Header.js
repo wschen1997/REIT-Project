@@ -1,10 +1,11 @@
-// Header.js – MODIFIED FOR SUPABASE
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
+import { auth } from "../firebase.js";
+import { signOut } from "firebase/auth";
+import { db } from "../firebase.js";
+import { collection, query, where, getDocs } from "firebase/firestore";
 import Sidebar from "./Sidebar.js";
-// --- CHANGE #1: Import Supabase hook instead of Clerk ---
-import { useSessionContext } from "@supabase/auth-helpers-react";
 
 const API_BASE_URL =
   process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:5000";
@@ -16,14 +17,43 @@ const Header = ({ currentUser, userPlan, setUserPlan }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // --- CHANGE #2: Get session and client from Supabase context ---
-  const { session, supabaseClient } = useSessionContext();
-  const user = session?.user;
+  /* ─────────────────────────  Firebase / user  ───────────────────────── */
+  const [username, setUsername] = useState("");
+  const [loginHovered, setLoginHovered] = useState(false);
 
-  /* ─────────────────────────  sidebar  ───────────────────────── */
+  useEffect(() => {
+    if (!currentUser || !currentUser.emailVerified) {
+      setUsername("");
+      setUserPlan(null);
+      return;
+    }
+
+    const fetchUserData = async () => {
+      const q = query(collection(db, "users"), where("email", "==", currentUser.email));
+      try {
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          const userData = querySnapshot.docs[0].data();
+          setUsername(userData.username || "");
+          setUserPlan(userData.plan);
+        } else {
+           // This handles cases where user exists in Firebase Auth but not in your database yet
+           // You might want to sign them out if their DB record is missing
+           // signOut(auth); // <-- Comment this out for now
+        }
+      } catch (error) {
+        console.error("Error fetching user data in Header:", error);
+        signOut(auth);
+      }
+    };
+
+    fetchUserData();
+  }, [currentUser, setUserPlan, location]); 
+
+  /* ─────────────────────────  sidebar  ───────────────────────── */
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  /* ─────────────────────────  search box  ────────────────────── */
+  /* ─────────────────────────  search box  ────────────────────── */
   const [searchQuery, setSearchQuery] = useState("");
   const [suggestions, setSuggestions] = useState([]);
   const [isFetching, setIsFetching] = useState(false);
@@ -79,7 +109,7 @@ const Header = ({ currentUser, userPlan, setUserPlan }) => {
     navigate(`/reits/${item.Ticker}`);
   };
 
-  /* ─────────────────────────  render  ───────────────────────── */
+  /* ─────────────────────────  render  ───────────────────────── */
   return (
     <>
       {/* Sidebar overlay */}
@@ -119,7 +149,7 @@ const Header = ({ currentUser, userPlan, setUserPlan }) => {
           zIndex: 1100,
         }}
       >
-        {/* LEFT:  hamburger + logo + search */}
+        {/* LEFT:  hamburger + logo + search */}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           {/* ☰ hamburger */}
           <div
@@ -240,7 +270,7 @@ const Header = ({ currentUser, userPlan, setUserPlan }) => {
           </div>
         </div>
 
-        {/* RIGHT:  auth buttons / greeting */}
+        {/* RIGHT:  auth buttons / greeting */}
         <div
           style={{
             display: "flex",
@@ -249,9 +279,9 @@ const Header = ({ currentUser, userPlan, setUserPlan }) => {
             ...AUTH_GROUP_STYLE,
           }}
         >
-          {/* --- CHANGE #3: Replaced <SignedIn> with a check on the session object --- */}
-          {session && (
+          {currentUser && currentUser.emailVerified && location.pathname !== '/signup' ? (
             <>
+              {/* greeting dropdown */}
               <div
                 className="nav-link dropdown-trigger"
                 onMouseEnter={(e) =>
@@ -266,8 +296,7 @@ const Header = ({ currentUser, userPlan, setUserPlan }) => {
                 }
                 style={{ cursor: "pointer" }}
               >
-                {/* --- CHANGE #4: Get user's email from the Supabase user object --- */}
-                Hello, {user?.email}
+                Hello, {username || currentUser.email}
                 <div className="acct-dd dropdown-menu">
                   <div
                     className="dropdown-item"
@@ -277,12 +306,11 @@ const Header = ({ currentUser, userPlan, setUserPlan }) => {
                   </div>
                 </div>
               </div>
-
+              {/* logout */}
               <button
-                // --- CHANGE #5: Call Supabase signOut function ---
-                onClick={async () => {
-                  await supabaseClient.auth.signOut();
-                  navigate("/");
+                onClick={() => {
+                  setUsername("");
+                  signOut(auth);
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.backgroundColor = "#faf0fb";
@@ -305,12 +333,8 @@ const Header = ({ currentUser, userPlan, setUserPlan }) => {
                 Logout
               </button>
             </>
-          )}
-
-          {/* --- CHANGE #6: Replaced <SignedOut> with a check for no session --- */}
-          {!session && (
+          ) : (
             <button
-              // --- CHANGE #7: Navigate to our new /login page ---
               onClick={() => navigate("/login")}
               onMouseEnter={(e) => {
                 e.currentTarget.style.backgroundColor = "#faf0fb";

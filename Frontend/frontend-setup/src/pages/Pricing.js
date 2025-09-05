@@ -1,71 +1,39 @@
-// Pricing.js – MODIFIED FOR SUPABASE
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import BottomBanner from "../components/BottomBanner.js";
 import Loading from "../components/Loading.js";
-// --- CHANGE #1: Import Supabase hook instead of Clerk ---
-import { useSessionContext } from "@supabase/auth-helpers-react";
-import { db } from "../firebase.js";
-import { collection, query, where, getDocs } from "firebase/firestore";
 
-const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://1227.0.0.1:5000";
+const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:5000";
 
-function PricingPage() {
+// The component now accepts props from App.js
+function PricingPage({ currentUser, userPlan }) {
   const navigate = useNavigate();
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [showCancelPopup, setShowCancelPopup] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // --- CHANGE #2: Get session from Supabase context ---
-  const { session, isLoading: isSessionLoading } = useSessionContext();
-  const user = session?.user;
-  const [userPlan, setUserPlan] = useState(null);
-
-  // This useEffect handles the redirect back from Stripe. It is unchanged.
+  // This useEffect is now MUCH simpler. It only handles the redirect from Stripe.
   useEffect(() => {
     if (performance.getEntriesByType("navigation")[0]?.type === "back_forward") {
       setIsLoading(false);
     }
+
     const params = new URLSearchParams(window.location.search);
     if (params.get("status") === "success") {
       setShowSuccessPopup(true);
+      // Clean up the URL so the popup doesn't reappear on refresh
       window.history.replaceState({}, document.title, "/pricing");
     } else if (params.get("status") === "cancel") {
       setShowCancelPopup(true);
       window.history.replaceState({}, document.title, "/pricing");
     }
-  }, []);
+  }, []); // The dependency array is empty as it only needs to run once.
 
-  // --- CHANGE #3: Update useEffect to fetch plan using the Supabase user ---
-  useEffect(() => {
-    // Wait for Supabase to load the session
-    if (isSessionLoading) return;
-
-    const fetchUserPlan = async () => {
-      // Check for a Supabase session and user object
-      if (session && user) {
-        // Get email from the Supabase user object
-        const userEmail = user.email;
-        const usersRef = collection(db, "users");
-        const q = query(usersRef, where("email", "==", userEmail));
-        const snapshot = await getDocs(q);
-        if (!snapshot.empty) {
-          const userData = snapshot.docs[0].data();
-          setUserPlan(userData.plan); // Set the plan from Firestore
-        }
-      } else {
-        // If there's no user, we can assume the plan is not premium
-        setUserPlan('free'); 
-      }
-    };
-    fetchUserPlan();
-  }, [isSessionLoading, session, user]); // Rerun when Supabase state changes
-
-  // --- CHANGE #4: Update handleSubscribe to use the Supabase user ---
+  // This function now uses the currentUser prop.
   const handleSubscribe = async () => {
-    // Check for a Supabase session
-    if (!session) {
-      navigate('/login'); // Redirect to our new login page if not logged in
+    // If no user is logged in, redirect them to the login page.
+    if (!currentUser) {
+      navigate('/login');
       return;
     }
 
@@ -74,15 +42,15 @@ function PricingPage() {
       const response = await fetch(`${API_BASE_URL}/api/create-checkout-session`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // Send the Supabase user's email to the backend
-        body: JSON.stringify({ email: user.email })
+        // Send the current user's email to the backend to identify them
+        body: JSON.stringify({ email: currentUser.email })
       });
 
       const data = await response.json();
       if (data.url) {
         window.location.href = data.url;
       } else {
-        console.error("Stripe session error:", data.error);
+        alert("Unable to create Stripe session: " + (data.error || "Unknown error"));
         setIsLoading(false);
       }
     } catch (err) {
@@ -99,6 +67,7 @@ function PricingPage() {
           Upgrade to Premium for full access to all our analytical tools and data.
         </p>
 
+        {/* This button now uses the userPlan prop */}
         <button
           onClick={handleSubscribe}
           disabled={isLoading || userPlan === 'premium'}
@@ -110,9 +79,9 @@ function PricingPage() {
           }}
           onMouseLeave={(e) => {
              if (userPlan !== 'premium') {
-                e.currentTarget.style.backgroundColor = "#5A153D";
-                e.currentTarget.style.color = "#fff";
-              }
+               e.currentTarget.style.backgroundColor = "#5A153D";
+               e.currentTarget.style.color = "#fff";
+             }
           }}
           style={{
             backgroundColor: userPlan === 'premium' ? "#ccc" : "#5A153D",

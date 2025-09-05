@@ -1,20 +1,12 @@
 import React from 'react';
-import ReactDOM from 'react-dom/client';
-import { createClient } from '@supabase/supabase-js';
-import { SessionContextProvider } from '@supabase/auth-helpers-react';
+import { createRoot } from 'react-dom/client';
 import App from './App.js';
 
-// Create the Supabase client
-const supabase = createClient(
-  process.env.REACT_APP_SUPABASE_URL,
-  process.env.REACT_APP_SUPABASE_ANON_KEY
-);
+const rootElement = document.getElementById('root');
+const root = createRoot(rootElement);
 
-const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    <SessionContextProvider supabaseClient={supabase}>
-      <App />
-    </SessionContextProvider>
+    <App />
   </React.StrictMode>
 );
