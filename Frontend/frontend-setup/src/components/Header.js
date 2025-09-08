@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { auth } from "../firebase.js";
@@ -6,20 +6,18 @@ import { signOut } from "firebase/auth";
 import { db } from "../firebase.js";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import Sidebar from "./Sidebar.js";
+import { ThemeContext } from '../context/ThemeContext.js';
 
 const API_BASE_URL =
   process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:5000";
 
-// Tweak just this if the auth buttons ever shift left/right
-const AUTH_GROUP_STYLE = { marginRight: "55px" };
-
 const Header = ({ currentUser, userPlan, setUserPlan }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { theme } = useContext(ThemeContext);
 
   /* ─────────────────────────  Firebase / user  ───────────────────────── */
   const [username, setUsername] = useState("");
-  const [loginHovered, setLoginHovered] = useState(false);
 
   useEffect(() => {
     if (!currentUser || !currentUser.emailVerified) {
@@ -116,79 +114,40 @@ const Header = ({ currentUser, userPlan, setUserPlan }) => {
       {isSidebarOpen && (
         <div
           onClick={() => setIsSidebarOpen(false)}
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100vw",
-            height: "100vh",
-            backdropFilter: "blur(6px)",
-            WebkitBackdropFilter: "blur(6px)",
-            backgroundColor: "rgba(0,0,0,0.25)",
-            zIndex: 1200,
-          }}
+          className="page-overlay"
         />
       )}
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
       {/* Header bar */}
-      <nav
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          width: "100%",
-          height: 80,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "0 20px",
-          background: "#fff",
-          color: "#333",
-          boxShadow: "0 4px 6px rgba(0,0,0,.1)",
-          zIndex: 1100,
-        }}
-      >
+      <nav className="header-nav">
         {/* LEFT:  hamburger + logo + search */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div className="header-left-section">
           {/* ☰ hamburger */}
           <div
             onClick={() => setIsSidebarOpen((o) => !o)}
-            style={{
-              marginLeft: 10,
-              fontSize: 26,
-              lineHeight: 0,
-              cursor: "pointer",
-              userSelect: "none",
-              color: "#5A153D",
-            }}
+            className="hamburger-btn"
           >
             &#9776;
           </div>
 
           {/* logo */}
           <img
-            src="/logo-crop.PNG"
+            src={theme === 'dark' ? '/logo-dark-mode.png' : '/logo-crop.PNG'}
             alt="Viserra Logo"
-            style={{ height: 60, cursor: "pointer" }}
+            className="header-logo"
             onClick={() => navigate("/")}
           />
 
           {/* search box */}
-          <div style={{ width: 320, position: "relative" }}>
+          <div className="search-container">
             <input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => setIsFocused(true)}
               onBlur={() => setTimeout(() => setIsFocused(false), 200)}
               placeholder="Search REIT ticker…"
-              style={{
-                width: "100%",
-                padding: "10px 14px",
-                fontSize: "1rem",
-                borderRadius: 4,
-                border: "1px solid #ccc",
-              }}
+              className="search-input"
             />
             {(
               // show API suggestions if typing
@@ -197,35 +156,24 @@ const Header = ({ currentUser, userPlan, setUserPlan }) => {
               (!searchQuery && isFocused && recentSearches.length > 0)
             ) && (
               <div
-                style={{
-                  position: "absolute",
-                  top: 46,
-                  left: 0,
-                  width: "108.5%",
-                  maxHeight: 260,
-                  overflowY: "auto",
-                  background: "#fff",
-                  border: "1px solid #ccc",
-                  borderRadius: 4,
-                  zIndex: 1300,
-                }}
+                className="search-suggestions"
               >
                 {searchQuery && isFetching && (
-                  <p style={{ margin: 8, fontSize: ".9rem", color: "#555" }}>
+                  <p className="suggestion-status">
                     Loading…
                   </p>
                 )}
                 {searchQuery &&
                   !isFetching &&
                   suggestions.length === 0 && (
-                    <p style={{ margin: 8, fontSize: ".9rem" }}>
+                    <p className="suggestion-status">
                       No match for <strong>{searchQuery}</strong>
                     </p>
                   )}
 
                 {/* unified list: either API results or recents (filtered) */}
                 {!searchQuery && isFocused && recentSearches.filter(r => r.Ticker && r.Company_Name).length > 0 && (
-                  <div style={{ padding: "8px 12px", color: "#000", fontWeight: 600 }}>
+                  <div className="suggestion-header">
                     Recent
                   </div>
                 )}
@@ -236,31 +184,14 @@ const Header = ({ currentUser, userPlan, setUserPlan }) => {
                   <div
                     key={r.Ticker}
                     onClick={() => handleSelectTicker(r)}
-                    style={{
-                      padding: "8px 12px",
-                      cursor: "pointer",
-                      borderBottom: "1px solid #eee",
-                      display: "flex",
-                      alignItems: "center",
-                    }}
-                    onMouseEnter={(e) =>
-                      (e.currentTarget.style.background = "#faf0fb")
-                    }
-                    onMouseLeave={(e) =>
-                      (e.currentTarget.style.background = "transparent")
-                    }
+                    className="suggestion-item"
                   >
                     {/* Ticker in purple */}
-                    <span
-                      style={{
-                        color: "#5A153D",
-                        fontWeight: 600,
-                      }}
-                    >
+                    <span className="suggestion-ticker">
                       {r.Ticker}
                     </span>
                     {/* Company name in black, safe-split */}
-                    <span style={{ color: "#000", marginLeft: 8 }}>
+                    <span className="suggestion-name">
                       {(r.Company_Name || "").split(" (")[0]}
                     </span>
                   </div>
@@ -271,40 +202,15 @@ const Header = ({ currentUser, userPlan, setUserPlan }) => {
         </div>
 
         {/* RIGHT:  auth buttons / greeting */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 25,
-            ...AUTH_GROUP_STYLE,
-          }}
-        >
+        <div className="header-right-section">
           {currentUser && currentUser.emailVerified && location.pathname !== '/signup' ? (
             <>
-              {/* greeting dropdown */}
+              {/* User account link */}
               <div
-                className="nav-link dropdown-trigger"
-                onMouseEnter={(e) =>
-                  e.currentTarget
-                    .querySelector(".acct-dd")
-                    .classList.add("show")
-                }
-                onMouseLeave={(e) =>
-                  e.currentTarget
-                    .querySelector(".acct-dd")
-                    .classList.remove("show")
-                }
-                style={{ cursor: "pointer" }}
+                className="btn btn-primary btn-sm"
+                onClick={() => navigate("/user")}
               >
                 Hello, {username || currentUser.email}
-                <div className="acct-dd dropdown-menu">
-                  <div
-                    className="dropdown-item"
-                    onClick={() => navigate("/user")}
-                  >
-                    My Account
-                  </div>
-                </div>
               </div>
               {/* logout */}
               <button
@@ -312,23 +218,7 @@ const Header = ({ currentUser, userPlan, setUserPlan }) => {
                   setUsername("");
                   signOut(auth);
                 }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = "#faf0fb";
-                  e.currentTarget.style.color = "#5A153D";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = "#5A153D";
-                  e.currentTarget.style.color = "#fff";
-                }}
-                style={{
-                  padding: "8px 16px",
-                  fontSize: "1rem",
-                  border: "none",
-                  color: "#fff",
-                  backgroundColor: "#5A153D",
-                  borderRadius: "4px",
-                  cursor: "pointer",
-                }}
+                className="btn btn-primary-outline btn-sm"
               >
                 Logout
               </button>
@@ -336,21 +226,7 @@ const Header = ({ currentUser, userPlan, setUserPlan }) => {
           ) : (
             <button
               onClick={() => navigate("/login")}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = "#faf0fb";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = "#fff";
-              }}
-              style={{
-                padding: "8px 16px",
-                fontSize: "1rem",
-                border: "2px solid #5A153D",
-                borderRadius: "4px",
-                cursor: "pointer",
-                color: "#5A153D",
-                backgroundColor: "transparent",
-              }}
+              className="btn btn-primary btn-sm"
             >
               Sign In
             </button>

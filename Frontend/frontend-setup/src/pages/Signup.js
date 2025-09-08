@@ -207,23 +207,13 @@ function Signup({ currentUser }) {
 
   return (
     <>
-      <div style={{ backgroundColor: "#fff", minHeight: "100vh" }}>
-        <div
-          style={{
-            width: "clamp(320px, 40%, 600px)",
-            margin: "2rem auto",
-            borderRadius: "12px",
-            boxShadow: "0 4px 10px rgba(0, 0, 0, 0.15)",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            padding: "3rem",
-            backgroundColor: "#fff",
-          }}
-        >
-          <h2>Sign Up</h2>
-          {successMessage && <p style={{ color: "green" }}>{successMessage}</p>}
-          {error && <p style={{ color: "red" }}>{error}</p>}
+      <div style={{ backgroundColor: "var(--background-color)", minHeight: "100vh" }}>
+        <div className="card" style={{ width: "clamp(320px, 40%, 600px)" }}>
+          <h2 style={{ marginBottom: "2rem", fontSize: "1.8rem", color: "var(--text-color-dark)" }}>
+            Sign Up
+          </h2>
+          {successMessage && <p className="success-message">{successMessage}</p>}
+          {error && <p className="error-message">{error}</p>}
 
           <input
             type="text"
@@ -234,10 +224,10 @@ function Signup({ currentUser }) {
               setUsernameError("");
             }}
             onBlur={checkUsernameInUse}
-            style={inputStyle}
+            className="input-field"
           />
           {usernameError && (
-            <p style={{ color: "red", marginTop: "-0.5rem" }}>{usernameError}</p>
+            <p className="error-message" style={{ marginTop: "-0.5rem" }}>{usernameError}</p>
           )}
 
           {!isGoogleUser && (
@@ -252,24 +242,24 @@ function Signup({ currentUser }) {
                   setPasswordTouched(true);
                   validatePasswordFormat(newPass);
                 }}
-                style={inputStyle}
+                className="input-field"
               />
               {passwordTouched && (
-                <div style={{ textAlign: "left", marginBottom: "1.3rem" }}>
-                  <p style={{ margin: "0 0 0.25rem", fontWeight: "bold" }}>
+                <div className="password-reqs">
+                  <p className="password-reqs-title">
                     Password Requirements:
                   </p>
-                  <ul style={{ listStyleType: "disc", paddingLeft: "1.25rem", margin: 0 }}>
-                    <li style={{ color: passMinLength ? "green" : "red" }}>
+                  <ul className="password-reqs-list">
+                    <li className={`password-req-item ${passMinLength ? 'valid' : 'invalid'}`}>
                       At least 8 characters
                     </li>
-                    <li style={{ color: passHasLetter ? "green" : "red" }}>
+                    <li className={`password-req-item ${passHasLetter ? 'valid' : 'invalid'}`}>
                       At least one letter
                     </li>
-                    <li style={{ color: passHasNumber ? "green" : "red" }}>
+                    <li className={`password-req-item ${passHasNumber ? 'valid' : 'invalid'}`}>
                       At least one digit
                     </li>
-                    <li style={{ color: passHasSpecial ? "green" : "red" }}>
+                    <li className={`password-req-item ${passHasSpecial ? 'valid' : 'invalid'}`}>
                       At least one special character
                     </li>
                   </ul>
@@ -287,52 +277,27 @@ function Signup({ currentUser }) {
               setEmailError("");
             }}
             onBlur={checkEmailInUse}
-            style={inputStyle}
+            className="input-field"
             disabled={isGoogleUser}
           />
           {emailError && (
-            <p style={{ color: "red", marginTop: "-0.5rem" }}>{emailError}</p>
+            <p className="error-message" style={{ marginTop: "-0.5rem" }}>{emailError}</p>
           )}
 
           {!isGoogleUser && (
             <>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  width: "100%",
-                  margin: "0.5rem 0 0.5rem 0",
-                }}
-              >
-                <div style={{ flex: 1, height: "1px", backgroundColor: "#ccc" }} />
-                <span style={{ margin: "0 10px", color: "#666", fontSize: "0.9rem" }}>
+              <div style={{ display: "flex", alignItems: "center", width: "100%", margin: "0.5rem 0" }}>
+                <div style={{ flex: 1, height: "1px", backgroundColor: "var(--border-color)" }} />
+                <span style={{ margin: "0 10px", color: "var(--text-color-subtle)", fontSize: "0.9rem" }}>
                   Or sign up using
                 </span>
-                <div style={{ flex: 1, height: "1px", backgroundColor: "#ccc" }} />
+                <div style={{ flex: 1, height: "1px", backgroundColor: "var(--border-color)" }} />
               </div>
 
               <button
                 onClick={handleGoogleSignup}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = "#faf0fb";
-                  e.currentTarget.style.color = "#5A153D";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = "#fff";
-                  e.currentTarget.style.color = "#5A153D";
-                }}
-                style={{
-                  margin: "1rem 0",
-                  padding: "0.75rem 1.5rem",
-                  backgroundColor: "#fff",
-                  color: "#5A153D",
-                  border: "2px solid #5A153D",
-                  borderRadius: "6px",
-                  fontSize: "1rem",
-                  width: "105%",
-                  height: "45px",
-                  cursor: "pointer",
-                }}
+                className="btn btn-primary-outline"
+                style={{ margin: "1rem 0" }}
               >
                 Google Account
               </button>
@@ -341,42 +306,16 @@ function Signup({ currentUser }) {
 
           <button
             onClick={handleSignup}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = "#faf0fb";
-              e.currentTarget.style.color = "#5A153D";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "#5A153D";
-              e.currentTarget.style.color = "#fff";
-            }}
-            style={signupBtn}
+            className="btn btn-primary"
           >
             Create Free Account
           </button>
 
-          <div
-            style={{
-              marginTop: "1.5rem",
-              fontSize: "0.9rem",
-              textAlign: "center",
-              color: "#333",
-            }}
-          >
-            Already have an account?
+          <div style={{ marginTop: "1.2rem", fontSize: "0.9rem", textAlign: "center", color: "var(--text-color-dark)" }}>
+            Already have an account?{' '}
             <span
               onClick={() => navigate("/login")}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = "#B12D78";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = "#5A153D";
-              }}
-              style={{
-                color: "#5A153D",
-                cursor: "pointer",
-                fontWeight: "bold",
-                marginLeft: "4px",
-              }}
+              className="text-link"
             >
               Log In
             </span>
@@ -388,28 +327,5 @@ function Signup({ currentUser }) {
     </>
   );
   }
-
-// styling
-const inputStyle = {
-  width: "100%",
-  padding: "0.75rem",
-  marginBottom: "1.3rem",
-  fontSize: "1rem",
-  borderRadius: "6px",
-  border: "1px solid #ccc",
-};
-
-const signupBtn = {
-  marginTop: "1.5rem",
-  padding: "0.75rem 1.5rem",
-  backgroundColor: "#5A153D",
-  color: "#fff",
-  border: "none",
-  width: "105%",
-  height: "45px",
-  borderRadius: "6px",
-  fontSize: "1rem",
-  cursor: "pointer",
-};
 
 export default Signup;

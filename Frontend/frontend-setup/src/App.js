@@ -16,6 +16,10 @@ import Useraccount from "./pages/Useraccount.js";
 import Header from "./components/Header.js";
 import { auth } from "./firebase.js";
 import { onAuthStateChanged } from "firebase/auth";
+import { ThemeProvider } from './context/ThemeContext.js';
+
+// --- CHANGE #1: Import the ThemeSwitcher component ---
+import ThemeSwitcher from "./components/ThemeSwitcher.js";
 
 import "./App.css";
 
@@ -54,30 +58,34 @@ function App() {
   }, []);
 
   return (
-    <div className="App">
-      <Router>
-        <AnalyticsTracker />
+    <ThemeProvider>
+      <div className="App">
+        <Router>
+          <AnalyticsTracker />
 
-        {/* 1) Render Header, passing userPlan & setUserPlan so it can update the plan */}
-        <Header currentUser={currentUser} userPlan={userPlan} setUserPlan={setUserPlan} />
+          <ThemeSwitcher />
 
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/filter" element={<FilterPage />} />
+          {/* 1) Render Header, passing userPlan & setUserPlan so it can update the plan */}
+          <Header currentUser={currentUser} userPlan={userPlan} setUserPlan={setUserPlan} />
 
-          {/* 2) Pass userPlan to DetailPage for content gating */}
-          <Route path="/reits/:ticker" element={<DetailPage userPlan={userPlan} />} />
-          <Route path="/Crowdfunding" element={<CrowdfundingPage />} />
-          <Route path="/Crowdfunding/:vehicle" element={<RecDetailPage userPlan={userPlan} />} />
-          <Route path="/about" element={<AboutUs />} />
-          <Route path="/contact" element={<ContactUs />} />
-          <Route path="/pricing" element={<PricingPage currentUser={currentUser} userPlan={userPlan} />} />
-          <Route path="/user" element={<Useraccount />} />
-          <Route path="/login" element={<Login currentUser={currentUser} setCurrentUser={setCurrentUser} />} />
-          <Route path="/signup" element={<Signup currentUser={currentUser} />} />
-        </Routes>
-      </Router>
-    </div>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/filter" element={<FilterPage />} />
+
+            {/* 2) Pass userPlan to DetailPage for content gating */}
+            <Route path="/reits/:ticker" element={<DetailPage userPlan={userPlan} />} />
+            <Route path="/Crowdfunding" element={<CrowdfundingPage />} />
+            <Route path="/Crowdfunding/:vehicle" element={<RecDetailPage userPlan={userPlan} />} />
+            <Route path="/about" element={<AboutUs />} />
+            <Route path="/contact" element={<ContactUs />} />
+            <Route path="/pricing" element={<PricingPage currentUser={currentUser} userPlan={userPlan} />} />
+            <Route path="/user" element={<Useraccount />} />
+            <Route path="/login" element={<Login currentUser={currentUser} setCurrentUser={setCurrentUser} />} />
+            <Route path="/signup" element={<Signup currentUser={currentUser} />} />
+          </Routes>
+        </Router>
+      </div>
+    </ThemeProvider>
   );
 }
 

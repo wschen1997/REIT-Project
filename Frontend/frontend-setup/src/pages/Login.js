@@ -1,3 +1,4 @@
+// Login.js - REFACTORED FOR THEME
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -6,7 +7,6 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   sendEmailVerification,
-  applyActionCode,
 } from "firebase/auth";
 import { auth } from "../firebase.js";
 import { db } from "../firebase.js";
@@ -24,28 +24,21 @@ const Login = ({ setCurrentUser }) => {
   const [showResendLink, setShowResendLink] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
 
-  const inputStyle = {
-    width: "95%",
-    padding: "0.75rem",
-    fontSize: "1rem",
-    borderRadius: "6px",
-    marginBottom: "1.3rem",
-    border: "1px solid #ccc",
-  };
+  // --- All JavaScript logic functions below are UNCHANGED ---
 
   useEffect(() => {
-      const searchParams = new URLSearchParams(window.location.search);
+    const searchParams = new URLSearchParams(window.location.search);
 
-      if (searchParams.get('status') === 'created') {
-        setSuccessMessage("Account created! We've sent a link to your email. Please verify before logging in.");
-        setShowResendLink(true);
-        setResendCooldown(60); // <-- ADD THIS LINE
-        window.history.replaceState(null, '', window.location.pathname);
-      } else if (searchParams.get('verified') === 'true') {
-        setSuccessMessage('Success! Your email has been verified. You can now log in.');
-        window.history.replaceState(null, '', window.location.pathname);
-      }
-  }, []); 
+    if (searchParams.get('status') === 'created') {
+      setSuccessMessage("Account created! We've sent a link to your email. Please verify before logging in.");
+      setShowResendLink(true);
+      setResendCooldown(60);
+      window.history.replaceState(null, '', window.location.pathname);
+    } else if (searchParams.get('verified') === 'true') {
+      setSuccessMessage('Success! Your email has been verified. You can now log in.');
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  }, []);
 
   useEffect(() => {
     let timer;
@@ -85,92 +78,78 @@ const Login = ({ setCurrentUser }) => {
   };
 
   const handleLogin = async () => {
-      setIsLoading(true); // <-- TURN ON LOADING
-      try {
-        setError("");
-        setSuccessMessage(""); 
-        setShowResendLink(false);
-        const userCred = await signInWithEmailAndPassword(auth, email, password);
+    setIsLoading(true);
+    try {
+      setError("");
+      setSuccessMessage("");
+      setShowResendLink(false);
+      const userCred = await signInWithEmailAndPassword(auth, email, password);
+      await userCred.user.reload();
 
-        await userCred.user.reload();
-
-        if (!userCred.user.emailVerified) {
-          setError("Please verify your email before logging in.");
-          setShowResendLink(true);
-          await signOut(auth);
-          setIsLoading(false); // <-- TURN OFF LOADING
-          return;
-        }
-
-        const q = query(collection(db, "users"), where("email", "==", email));
-        const snapshot = await getDocs(q);
-        if (snapshot.empty) {
-          setError("Your account setup is not complete. Please sign up again.");
-          await signOut(auth);
-          setIsLoading(false); // <-- TURN OFF LOADING
-          return;
-        }
-
-        setCurrentUser(userCred.user);
-        setIsLoading(false); // <-- TURN OFF LOADING
-        navigate("/");
-      } catch (err) {
-        setIsLoading(false); // <-- TURN OFF LOADING ON ERROR
-        setError("Invalid email or password");
-        setShowResendLink(false);
-        console.error("Login error:", err);
+      if (!userCred.user.emailVerified) {
+        setError("Please verify your email before logging in.");
+        setShowResendLink(true);
+        await signOut(auth);
+        setIsLoading(false);
+        return;
       }
+
+      const q = query(collection(db, "users"), where("email", "==", email));
+      const snapshot = await getDocs(q);
+      if (snapshot.empty) {
+        setError("Your account setup is not complete. Please sign up again.");
+        await signOut(auth);
+        setIsLoading(false);
+        return;
+      }
+
+      setCurrentUser(userCred.user);
+      setIsLoading(false);
+      navigate("/");
+    } catch (err) {
+      setIsLoading(false);
+      setError("Invalid email or password");
+      setShowResendLink(false);
+      console.error("Login error:", err);
+    }
   };
 
   const googleProvider = new GoogleAuthProvider();
 
   const handleGoogleLogin = async () => {
-      setIsLoading(true); // <-- TURN ON LOADING
-      try {
-        setError("");
-        const result = await signInWithPopup(auth, googleProvider);
-        const user = result.user;
+    setIsLoading(true);
+    try {
+      setError("");
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
 
-        const q = query(collection(db, "users"), where("email", "==", user.email));
-        const snap = await getDocs(q);
-        if (snap.empty) {
-          setError("Your account is not active yet. Please complete the signup process.");
-          await signOut(auth);
-          setIsLoading(false); // <-- TURN OFF LOADING
-          return;
-        }
-
-        setCurrentUser(user);
-        setIsLoading(false); // <-- TURN OFF LOADING
-        navigate("/");
-      } catch (err) {
-        setIsLoading(false); // <-- TURN OFF LOADING ON ERROR
-        console.error("Google login error:", err);
-        setError("Failed to log in with Google. Please try again or use email/password.");
+      const q = query(collection(db, "users"), where("email", "==", user.email));
+      const snap = await getDocs(q);
+      if (snap.empty) {
+        setError("Your account is not active yet. Please complete the signup process.");
+        await signOut(auth);
+        setIsLoading(false);
+        return;
       }
+
+      setCurrentUser(user);
+      setIsLoading(false);
+      navigate("/");
+    } catch (err) {
+      setIsLoading(false);
+      console.error("Google login error:", err);
+      setError("Failed to log in with Google. Please try again or use email/password.");
+    }
   };
 
   return (
     <>
-      <div style={{ backgroundColor: "#fff", minHeight: "100vh" }}>
-        <div
-          style={{
-            width: "clamp(320px, 40%, 600px)",
-            margin: "2rem auto",
-            borderRadius: "12px",
-            boxShadow: "0 4px 10px rgba(0,0,0,0.15)",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "center",
-            alignItems: "center",
-            padding: "3rem",
-            backgroundColor: "#fff",
-          }}
-        >
-          <h2 style={{ marginBottom: "0.5rem", fontSize: "1.8rem", color: "#333" }}>
+      <div style={{ backgroundColor: "var(--background-color)", minHeight: "100vh" }}>
+        <div className="card" style={{ width: "clamp(320px, 40%, 600px)" }}>
+          <h2 style={{ marginBottom: "0.5rem", fontSize: "1.8rem", color: "var(--text-color-dark)" }}>
             Sign In
           </h2>
-          <p style={{ marginBottom: "1.5rem", color: "#666" }}>
+          <p style={{ marginBottom: "1.5rem", color: "var(--text-color-subtle)" }}>
             Access personalized content and exclusive features
           </p>
 
@@ -179,7 +158,7 @@ const Login = ({ setCurrentUser }) => {
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            style={inputStyle}
+            className="input-field"
           />
 
           <input
@@ -187,15 +166,11 @@ const Login = ({ setCurrentUser }) => {
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            style={inputStyle}
+            className="input-field"
           />
-
-          {successMessage && (
-            <p style={{ color: "green", marginBottom: "1rem" }}>{successMessage}</p>
-          )}
-          {error && (
-            <p style={{ color: "red", marginBottom: "1rem" }}>{error}</p>
-          )}
+          
+          {successMessage && <p className="success-message">{successMessage}</p>}
+          {error && <p className="error-message">{error}</p>}
 
           {showResendLink && (
             <div style={{ marginBottom: "1rem", fontSize: "0.9rem", textAlign: "center" }}>
@@ -203,25 +178,15 @@ const Login = ({ setCurrentUser }) => {
               <button
                 onClick={handleResendVerification}
                 disabled={resendCooldown > 0}
-                onMouseEnter={(e) => {
-                  if (resendCooldown === 0) { 
-                    e.currentTarget.style.color = "#B12D78";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  // Only change color back if the button is active (not counting down)
-                  if (resendCooldown === 0) { 
-                    e.currentTarget.style.color = "#5A153D";
-                  }
-                }}
+                className="text-link"
                 style={{
-                  color: resendCooldown > 0 ? "#999" : "#5A153D",
-                  background: "none",
-                  border: "none",
-                  textDecoration: "underline",
-                  cursor: resendCooldown > 0 ? "default" : "pointer",
-                  padding: 0,
-                  fontSize: "0.9rem",
+                  background: 'none', 
+                  border: 'none', 
+                  textDecoration: 'underline', 
+                  padding: 0, 
+                  fontSize: '0.9rem',
+                  color: resendCooldown > 0 ? 'var(--text-color-subtle)' : 'var(--primary-color)',
+                  cursor: resendCooldown > 0 ? 'default' : 'pointer',
                 }}
               >
                 {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend verification link"}
@@ -229,113 +194,35 @@ const Login = ({ setCurrentUser }) => {
             </div>
           )}
 
-          <button
-            onClick={handleLogin}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = "#faf0fb";
-              e.currentTarget.style.color = "#5A153D";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "#5A153D";
-              e.currentTarget.style.color = "#fff";
-            }}
-            style={{
-              width: "100%",
-              padding: "0.75rem",
-              backgroundColor: "#5A153D",
-              color: "#fff",
-              border: "2px solid #5A153D", // Added for consistency
-              borderRadius: "6px",
-              fontSize: "1rem",
-              cursor: "pointer",
-            }}
-          >
+          <button onClick={handleLogin} className="btn btn-primary">
             Login
           </button>
 
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              width: "100%",
-              margin: "1.5rem 0",
-            }}
-          >
-            <div style={{ flex: 1, height: "1px", backgroundColor: "#ccc" }} />
-            <span style={{ margin: "0 10px", color: "#666", fontSize: "0.9rem" }}>
+          <div style={{ display: "flex", alignItems: "center", width: "100%", margin: "1.5rem 0" }}>
+            <div style={{ flex: 1, height: "1px", backgroundColor: "var(--border-color)" }} />
+            <span style={{ margin: "0 10px", color: "var(--text-color-subtle)", fontSize: "0.9rem" }}>
               Or sign in using
             </span>
-            <div style={{ flex: 1, height: "1px", backgroundColor: "#ccc" }} />
+            <div style={{ flex: 1, height: "1px", backgroundColor: "var(--border-color)" }} />
           </div>
-
-          <button
-            onClick={handleGoogleLogin}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = "#faf0fb";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "#fff";
-            }}
-            style={{
-              width: "100%",
-              padding: "0.75rem",
-              backgroundColor: "#fff",
-              color: "#5A153D",
-              border: "2px solid #5A153D",
-              borderRadius: "6px",
-              fontSize: "1rem",
-              cursor: "pointer",
-              marginBottom: "1rem",
-            }}
-          >
+          
+          <button onClick={handleGoogleLogin} className="btn btn-primary-outline" style={{ marginBottom: "1rem" }}>
             Google Account
           </button>
-
+          
+          {/* --- CHANGE: Replaced inline styles and hover handlers with new classes --- */}
           <button
             onClick={() => navigate("/")}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = "#ccc"; // Darken on hover
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "#ddd"; // Revert on leave
-            }}
-            style={{
-              width: "100%",
-              padding: "0.75rem",
-              backgroundColor: "#ddd",
-              color: "#333",
-              border: "none",
-              borderRadius: "6px",
-              fontSize: "1rem",
-              cursor: "pointer",
-            }}
+            className="btn btn-secondary"
           >
             Return Home
           </button>
 
-          <div
-            style={{
-              marginTop: "1.2rem",
-              fontSize: "0.9rem",
-              textAlign: "center",
-              color: "#333",
-            }}
-          >
-            Don't have an account?
+          <div style={{ marginTop: "1.2rem", fontSize: "0.9rem", textAlign: "center", color: "var(--text-color-dark)" }}>
+            Don't have an account?{' '}
             <span
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = "#B12D78";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = "#5A153D";
-              }}
-              style={{
-                color: "#5A153D",
-                cursor: "pointer",
-                fontWeight: "bold",
-                marginLeft: "4px",
-              }}
               onClick={() => navigate("/signup")}
+              className="text-link"
             >
               Sign Up
             </span>
