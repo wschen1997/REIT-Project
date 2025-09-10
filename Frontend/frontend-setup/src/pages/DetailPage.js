@@ -23,6 +23,7 @@ import {
   TimeScale,
 } from "chart.js";
 import ChartDataLabels from 'chartjs-plugin-datalabels'
+import Loading from "../components/Loading.js";
 
 const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
 
@@ -45,25 +46,31 @@ const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:5000
 const calloutPlugin = {
   id: 'calloutPlugin',
   afterDatasetsDraw(chart) {
-    const { ctx }   = chart;
-    const meta      = chart.getDatasetMeta(0);
-    const data      = chart.data.datasets[0].data;
-    const total     = data.reduce((a, b) => a + b, 0);
-
-    // per‐slice radial spoke lengths (in px)
-    const spokeOptions       = [8, 16, 24, 32];
-    // per‐slice fallback arm lengths (in px) for collided labels
+    const { ctx, options } = chart;
+    const calloutOptions = options.plugins.calloutPlugin || {};
+    const textColor = calloutOptions.color || '#333'; // Default to black
+    const lineColor = calloutOptions.lineColor || '#999'; // Default to grey
+  
+    const meta = chart.getDatasetMeta(0);
+    // Safety check: If there's no data or metadata, do nothing.
+    if (!meta || !chart.data.datasets[0] || !meta.data.length) {
+        return;
+    }
+    const data = chart.data.datasets[0].data;
+    const total = chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+  
+    const spokeOptions = [8, 16, 24, 32];
     const fallbackArmOptions = [20, 60, 100, 140];
-    const armLength          = 80;   // default horizontal arm length
-    const fontSize           = 12;
-    const lineHeight         = fontSize + 2;
-
+    const armLength = 80;
+    const fontSize = 12;
+    const lineHeight = fontSize + 2;
+  
     ctx.save();
-    ctx.font         = `${fontSize}px Arial`;
-    ctx.fillStyle    = '#333';
+    ctx.font = `${fontSize}px Arial`;
     ctx.textBaseline = 'bottom';
-    ctx.strokeStyle  = '#999';
-    ctx.lineWidth    = 1;
+    ctx.fillStyle = textColor;   // Use dynamic color
+    ctx.strokeStyle = lineColor; // Use dynamic color
+    ctx.lineWidth = 1;
 
     const placed = [];  // track label boxes for collision detection
 
@@ -139,17 +146,17 @@ ChartJS.register(calloutPlugin);
 
 /**************************************************
  * 1) SUBCOMPONENT: FinancialsTable
- *    Fetches from /api/reits/<ticker>/statements/quarterly?type=...
- *    Then pivots to wide layout:
- *      Rows = line_item
- *      Columns = each (fiscal_year, fiscal_quarter)
+ * Fetches from /api/reits/<ticker>/statements/quarterly?type=...
+ * Then pivots to wide layout:
+ * Rows = line_item
+ * Columns = each (fiscal_year, fiscal_quarter)
  **************************************************/
 function FinancialsTable({ ticker, subTab }) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   // Regular bold rows with indentation
-  const boldKeywords = ["Total Owned Rooms","Rent/Sq. Meter Leased, Avg. - Total","Rent/Sq. Meter Leased, Avg. - Total	","Rent/Sq. Ft. Leased, Avg. - Total","Sq. Meters Leased, Gross - Total","Sq. Ft. Leased, Gross - Total","Gross Operating Revenue","Total Hotels and Gaming Revenue","Total Tables, Incl. JVs","Total Slot Machines, Incl. JVs","Total Casinos, Incl. JVs","Total Rooms","Total Units","Total Real Estate Asset","Total Dividends Paid","Total Debt Repaid","Total Debt Issued","Total Asset","Total Equity","Property Statistics","Total Properties","Properties Data","Total Operating Expenses","Total Operating Revenue","Total Rental Revenue","Net Change in Cash","Cash from Financing","Depreciation & Amort., Total","Total Operating Exp.","Total Revenue","Total Common Equity","Total Pref. Equity","Total Liabilities","Total Real Estate Assets","Net Property, Plant & Equipment","Operating Income","Net Interest Exp.","EBT Incl. Unusual Items"," Earnings from Cont. Ops.","Net Income to Company","Net Income","NI to Common Incl Extra Items","NI to Common Excl. Extra Items","Cash from Ops.","Net Sale/Acq. of Real Estate Assets","Cash from Investing","EBT Excl. Unusual Items"];
+  const boldKeywords = ["Total Owned Rooms","Rent/Sq. Meter Leased, Avg. - Total","Rent/Sq. Meter Leased, Avg. - Total  ","Rent/Sq. Ft. Leased, Avg. - Total","Sq. Meters Leased, Gross - Total","Sq. Ft. Leased, Gross - Total","Gross Operating Revenue","Total Hotels and Gaming Revenue","Total Tables, Incl. JVs","Total Slot Machines, Incl. JVs","Total Casinos, Incl. JVs","Total Rooms","Total Units","Total Real Estate Asset","Total Dividends Paid","Total Debt Repaid","Total Debt Issued","Total Asset","Total Equity","Property Statistics","Total Properties","Properties Data","Total Operating Expenses","Total Operating Revenue","Total Rental Revenue","Net Change in Cash","Cash from Financing","Depreciation & Amort., Total","Total Operating Exp.","Total Revenue","Total Common Equity","Total Pref. Equity","Total Liabilities","Total Real Estate Assets","Net Property, Plant & Equipment","Operating Income","Net Interest Exp.","EBT Incl. Unusual Items"," Earnings from Cont. Ops.","Net Income to Company","Net Income","NI to Common Incl Extra Items","NI to Common Excl. Extra Items","Cash from Ops.","Net Sale/Acq. of Real Estate Assets","Cash from Investing","EBT Excl. Unusual Items"];
   // Do not bold these rows
   const exceptKeywords = ["Total Rooms ADR","FFO / Total Revenue %","Interest and Invest. Income, Total (Rev)","Interest Expense, Total","Normalized Net Income","As Reported Total Revenue","Total Shares Out. on Filing Date","Total Shares Out. on Balance Sheet Date","Total Minority Interest","Total Asset Writedown"];
   // Bolded but no indentation
@@ -268,77 +275,37 @@ function FinancialsTable({ ticker, subTab }) {
           el.scrollright = el.scrollWidth - el.clientWidth;
         }
       }}
-      style={{ overflowX: 'auto', maxWidth: '100%' }}
+      className="financials-table-container"
     >
-      <table
-        style={{
-          borderCollapse: "collapse",
-          border: "1px solid #ccc",
-          whiteSpace: "nowrap",
-          minWidth: "700px" // ensures table doesn't collapse too narrowly
-        }}
-      >
+      <table className="financials-table">
         <thead>
-          <tr style={{ backgroundColor: "#f2f2f2" }}>
-            <th
-              style={{
-                padding: "8px",
-                position: "sticky",
-                left: 0,
-                zIndex: 2,
-                // Use a solid color (not transparent) for the first column
-                backgroundColor: "#f2f2f2",
-                textAlign: "left"
-              }}
-            >
+          <tr className="financials-table-header-row">
+            <th className="financials-table-sticky-header">
               For the Fiscal Period
             </th>
             {sortedCols.map((colLabel) => (
-              <th
-                key={colLabel}
-                style={{
-                  padding: "8px",
-                  minWidth: "100px",
-                  textAlign: "left",
-                }}
-              >
+              <th key={colLabel} className="financials-table-header-cell">
                 {colLabel}
               </th>
             ))}
           </tr>
           {/*ITALIC SUB-NOTE ROW */}
-            <tr style={{ backgroundColor: "#f2f2f2" }}>
+            <tr className="financials-table-header-row">
               {/* First cell: the italic text, aligned under 'For the Fiscal Period' */}
-              <td
-                style={{
-                  padding: "4px",
-                  position: "sticky",
-                  left: 0,
-                  zIndex: 2,
-                  backgroundColor: "#f2f2f2",
-                  textAlign: "left",
-                  fontStyle: "italic",
-                  fontSize: "0.8rem",
-                  color: "#555",
-                }}
-              >
+              <td className="financials-table-sub-note">
                 In Millions of the reported currency, except per share items.
               </td>
               {/* Render empty cells for the rest of the columns, so everything stays aligned */}
-              {sortedCols.map(() => (
-                <td style={{ backgroundColor: "#f2f2f2" }} />
+              {sortedCols.map((_, index) => (
+                <td key={index} className="financials-table-empty-sub-note" />
               ))}
             </tr>
         </thead>
         <tbody>
           {lineItems.map((li, idx) => {
-            // Alternate row background
-            const firstColBackground = "#fafafa";   // light‑grey for the item‑name column
-            const rowBackground      = "#fff";      // keep all data cells pure white
-
             // Determine regular bold conditions (case sensitive)
             const regularBold = boldKeywords.some(keyword => li.includes(keyword))
-                                && !exceptKeywords.some(keyword => li.includes(keyword));
+                                  && !exceptKeywords.some(keyword => li.includes(keyword));
             const onlyBoldCondition = onlyBoldKeywords.some(keyword => li.includes(keyword));
             // Check if the current line item matches any extra spacing keyword.
             const extraSpaceRow = extraSpaceRowKeyword.some(keyword => li.includes(keyword));
@@ -348,45 +315,27 @@ function FinancialsTable({ ticker, subTab }) {
             // If this row is an extra-space row, force it to be not bold.
             const isBold = extraSpaceRow ? false : (onlyBoldCondition || regularBold);
             const colMap = pivotMap[li].columns;
-            const hasItemName      = li && li.trim() !== "";        // first cell non‑blank?
+            const hasItemName      = li && li.trim() !== "";       // first cell non‑blank?
             const allNullDataCells = sortedCols.every(col => colMap[col] == null);
             const rowIsCompletelyEmpty = !hasItemName && allNullDataCells;
+            const isIndented = regularBold && !specialRow && subTab !== "industry" && !extraSpaceRow;
 
             return (
               <React.Fragment key={li}>
                 {/* If this row is flagged as an extra-space row, insert an extra spacing row above */}
                 {extraSpaceRow && (
-                  <tr>
+                  <tr className="financials-table-spacer-row">
                     {/* grey bar under the first column */}
-                    <td
-                      style={{
-                        backgroundColor: firstColBackground,
-                        padding: "2px",
-                        height: "10px",
-                        position: "sticky",
-                        left: 0,
-                        zIndex: 2,
-                      }}
-                    />
+                    <td className="financials-table-spacer-cell-sticky" />
                     {/* white bar under the data columns */}
                     <td
                       colSpan={sortedCols.length}
-                      style={{ backgroundColor: "#fff", padding: "2px", height: "10px" }}
+                      className="financials-table-spacer-cell"
                     />
                   </tr>
                 )}
-                <tr style={{ backgroundColor: "#fff", fontWeight: isBold ? 'bold' : 'normal' }}>
-                  <td
-                    style={{
-                      padding: "8px",
-                      position: "sticky",
-                      zIndex: 2,
-                      left: 0,
-                      backgroundColor: firstColBackground,
-                      // Add extra left padding only for regular bold rows (and not if extraSpaceRow is true)
-                      ...((regularBold && !specialRow && subTab !== "industry" && !extraSpaceRow) ? { paddingLeft: "16px" } : {})
-                    }}
-                  >
+                <tr style={{ fontWeight: isBold ? 'bold' : 'normal' }}>
+                  <td className={`financials-table-sticky-cell ${isIndented ? 'indented' : ''}`}>
                     {li}
                   </td>
                   {sortedCols.map((colLabel) => {
@@ -399,7 +348,7 @@ function FinancialsTable({ ticker, subTab }) {
 
                     // header rows that should stay blank when value is null
                     const skipDash = rowIsCompletelyEmpty ||
-                                     dashBlankKeywords.some(keyword => li.startsWith(keyword));
+                                       dashBlankKeywords.some(keyword => li.startsWith(keyword));
 
                     let displayVal = "";
 
@@ -444,14 +393,7 @@ function FinancialsTable({ ticker, subTab }) {
                     }
 
                     return (
-                      <td
-                        key={colLabel}
-                        style={{
-                          padding: "8px",
-                          minWidth: "100px",
-                          textAlign: "left",
-                        }}
-                      >
+                      <td key={colLabel} className="financials-table-data-cell">
                         {displayVal}
                       </td>
                     );
@@ -461,20 +403,11 @@ function FinancialsTable({ ticker, subTab }) {
                 {/* Render separator row (after the row) for regular bold, only bold or special rows,
                     but skip it for extraSpace rows (since we already added a spacing row above) */}
                 {(!extraSpaceRow && (regularBold || onlyBoldCondition || specialRow)) && (
-                  <tr>
-                    <td
-                            style={{
-                              backgroundColor: firstColBackground,
-                              padding: "2px",
-                              height: "10px",
-                              position: "sticky",
-                              left: 0,
-                              zIndex: 2,
-                            }}                      
-                    />
+                  <tr className="financials-table-spacer-row">
+                    <td className="financials-table-spacer-cell-sticky" />
                     <td
                       colSpan={sortedCols.length}
-                      style={{ backgroundColor: "#fff", padding: "2px", height: "10px" }}
+                      className="financials-table-spacer-cell"
                     />
                   </tr>
                 )}
@@ -487,12 +420,59 @@ function FinancialsTable({ ticker, subTab }) {
   );
 }
 
+// Determine chart colors based on current theme
+const getChartColors = () => {
+    const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark';
+    const rootStyles = getComputedStyle(document.documentElement);
+
+    return {
+        isDarkMode: isDarkMode, 
+        lineColor: isDarkMode
+            ? rootStyles.getPropertyValue('--text-color-mild-light').trim()
+            : 'rgba(177, 45, 120, 0.8)',
+        volumeColor: isDarkMode
+            ? rootStyles.getPropertyValue('--text-color-muted').trim()
+            : 'rgba(90, 21, 61, 0.8)',
+        textColor: rootStyles.getPropertyValue('--text-color-dark').trim(),
+        barColor: isDarkMode
+            ? rootStyles.getPropertyValue('--text-color-light').trim() 
+            : '#5A153D', // Original light mode purple
+        barColorNegative: isDarkMode
+            ? '#a24c4cff'  // Muted red for dark mode negative values
+            : '#808080',   // Original light mode grey
+        mapBaseColorRgb: isDarkMode ? '255, 255, 255' : '90, 21, 61', // White for dark, purple for light
+        mapEmptyColor: isDarkMode ? '#2a2a2a' : '#e0e0e0', // Dark grey for dark, light grey for light
+    };
+};
+
 /****************************************************
  * 2) MAIN COMPONENT: DetailPage
  ****************************************************/
 function DetailPage({ userPlan }) {
   const { ticker } = useParams();
   const navigate = useNavigate();
+  // Theme detection
+  const [chartColors, setChartColors] = useState(getChartColors());
+
+  useEffect(() => {
+    // This observer listens for changes to the data-theme attribute on the <html> tag
+    const observer = new MutationObserver((mutationsList) => {
+      for (const mutation of mutationsList) {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'data-theme') {
+          setChartColors(getChartColors());
+        }
+      }
+    });
+
+    observer.observe(document.documentElement, { attributes: true });
+
+    // Cleanup the observer when the component is removed
+    return () => observer.disconnect();
+  }, []);
+
+  // Donut chart colors
+  const lightModeDonutColors = [ "#5A153D", "#B12D78", "#FFC857", "#119DA4", "#19647E", "#FF7B24", "#9A031E" ];
+  const darkModeDonutColors = [ "#844ee2", "#A375F5", "#C7A7FF", "#6530B8", "#4C248A", "#757575", "#9e9e9e" ];
 
   // Keep the exact states – no new states, no reordering
   const [activeTab, setActiveTab] = useState("overview");
@@ -677,15 +657,7 @@ function DetailPage({ userPlan }) {
   }, [ticker]);
 
   if (loading) {
-    return (
-      <div className="detail-page" style={{ padding: "20px" }}>
-        <h2>{ticker} - Analytics Dashboard</h2>
-        <p>Loading Analytics Dashboard...</p>
-        <button className="back-button" onClick={() => navigate(-1)}>
-          Back to Results
-        </button>
-      </div>
-    );
+    return <Loading />;
   }
 
   // ------------------------------------
@@ -701,42 +673,11 @@ function DetailPage({ userPlan }) {
       responsive: true,
       plugins: {
         legend: {
-          // --- START: MODIFIED SECTION ---
-          position: 'bottom', // <<< CHANGE #1: Moves the legend to the bottom
-          onClick: null,      // <<< CHANGE #2: Disables the click-to-hide action
-          // --- END: MODIFIED SECTION ---
+          position: 'bottom',
+          onClick: null,
           labels: {
-            // This function generates custom legend items
-            generateLabels: function(chart) {
-              const data = chart.data.datasets[0].data;
-              const hasNegativeValues = data.some(value => value < 0);
-
-              // 1. Always create the primary legend item
-              const primaryLabel = {
-                text: labelText,
-                fillStyle: '#5A153D',
-                strokeStyle: '#5A153D',
-                lineWidth: 1,
-                hidden: false,
-                index: 0
-              };
-
-              const legendItems = [primaryLabel];
-
-              // 2. If negative values exist, add a second item for them
-              if (hasNegativeValues) {
-                legendItems.push({
-                  text: 'Negative Value',
-                  fillStyle: '#808080', // Use the same grey color
-                  strokeStyle: '#808080',
-                  lineWidth: 1,
-                  hidden: false,
-                  index: 1
-                });
-              }
-
-              return legendItems;
-            }
+            // This will now work correctly without the override
+            color: chartColors.textColor, 
           }
         },
         title: { display: false },
@@ -769,6 +710,7 @@ function DetailPage({ userPlan }) {
           beginAtZero: true,
           grid: { display: false },
           ticks: {
+            color: chartColors.textColor,
             callback: function (value) {
               if (dataType === 'number') {
                 return '$' + value.toFixed(0) + 'M';
@@ -783,7 +725,10 @@ function DetailPage({ userPlan }) {
             },
           },
         },
-        x: { grid: { display: false } },
+        x: { 
+            grid: { display: false },
+            ticks: {color: chartColors.textColor } 
+        },
       },
     };
   }
@@ -797,7 +742,7 @@ function DetailPage({ userPlan }) {
         // Conditionally set bar color
         backgroundColor: (context) => {
           const value = context.raw;
-          return value < 0 ? '#808080' : '#5A153D'; // Grey for negative, purple for positive
+          return value < 0 ? chartColors.barColorNegative : chartColors.barColor;
         },
         datalabels: { display: false },
       },
@@ -813,7 +758,7 @@ function DetailPage({ userPlan }) {
         // Conditionally set bar color
         backgroundColor: (context) => {
           const value = context.raw;
-          return value < 0 ? '#808080' : '#5A153D'; // Grey for negative, purple for positive
+          return value < 0 ? chartColors.barColorNegative : chartColors.barColor;
         },
         datalabels: { display: false },
       },
@@ -829,7 +774,7 @@ function DetailPage({ userPlan }) {
         // Conditionally set bar color
         backgroundColor: (context) => {
           const value = context.raw;
-          return value < 0 ? '#808080' : '#5A153D'; // Grey for negative, purple for positive
+          return value < 0 ? chartColors.barColorNegative : chartColors.barColor;
         },
         datalabels: { display: false },
       },
@@ -848,19 +793,20 @@ function DetailPage({ userPlan }) {
         label: "Close Price",
         data: closePrices,
         type: "line",
-        borderColor: "rgba(177, 45, 120, 0.8)",
-        backgroundColor: "rgba(177, 45, 120, 0.1)",
+        borderColor: chartColors.lineColor,        // CHANGED: Uses our new dynamic color
+        backgroundColor: 'transparent',
         yAxisID: "y-axis-price",
         tension: 0.2,
         pointRadius: 0,
         pointHoverRadius: 5,
+        borderWidth: 1.5,                     // ADDED: Makes the line thinner
         datalabels: { display: false },
       },
       {
         label: "Volume",
         data: volumes,
         type: "bar",
-        backgroundColor: "rgba(90, 21, 61, 0.8)",
+        backgroundColor: chartColors.volumeColor,     // CHANGED: Uses our new dynamic color
         yAxisID: "y-axis-volume",
         datalabels: { display: false },
       },
@@ -872,6 +818,7 @@ function DetailPage({ userPlan }) {
     plugins: {
       tooltip: { mode: "index", intersect: false },
       legend: { position: 'bottom' },
+      labels: {color: chartColors.textColor},
       title: { display: false },
     },
     scales: {
@@ -885,7 +832,7 @@ function DetailPage({ userPlan }) {
           unit: "year",
           displayFormats: { year: "yyyy" },
         },
-        ticks: { maxRotation: 60, minRotation: 45 },
+        ticks: { maxRotation: 60, minRotation: 45, color: chartColors.textColor },
         grid: { display: false },
       },
       "y-axis-price": {
@@ -893,7 +840,7 @@ function DetailPage({ userPlan }) {
         position: "left",
         grid: { display: false },
         ticks: {
-          callback: (value) => `$${value}`,
+          callback: (value) => `$${value}`, color: chartColors.textColor
         },
       },
       "y-axis-volume": {
@@ -901,7 +848,7 @@ function DetailPage({ userPlan }) {
         position: "right",
         grid: { display: false },
         ticks: {
-          callback: (value) => Number(value).toLocaleString(),
+          callback: (value) => Number(value).toLocaleString(), color: chartColors.textColor
         },
       },
     },
@@ -979,7 +926,7 @@ function DetailPage({ userPlan }) {
     plugins: {
       // keep everything in donutOptions.plugins _except_ tooltip
       ...donutOptions.plugins,
-      tooltip: {            // override _only_ the tooltip with pie-specific callbacks
+      tooltip: {        // override _only_ the tooltip with pie-specific callbacks
         ...pieTooltipCallbacks
       },
       legend: {
@@ -1010,96 +957,15 @@ function DetailPage({ userPlan }) {
     return `$${numVal.toLocaleString()} Million`;
   };
 
-  // (1) MAKE TABS LOOK LIKE REAL TABS
-  const mainTabBarStyle = {
-    display: "flex",
-    gap: "20px",
-    // We remove "marginBottom: 20px" or reduce it to "10px"
-    marginBottom: "10px",
-    borderBottom: "1px solid #ccc",
-  };
-  // For the main tabs, add bottom border if active
-  const mainTabStyle = (isActive) => ({
-    position: "relative",
-    padding: "10px 20px",
-    cursor: "pointer",
-    backgroundColor: "transparent",
-    border: "none",
-    fontWeight: isActive ? "bold" : "normal",
-    outline: "none",
-    transition: "background-color 0.3s, color 0.3s",
-    color: isActive ? "#5A153D" : "#333",
-    // We keep the underline for the main tab
-    borderBottom: isActive
-      ? "3px solid #5A153D"
-      : "3px solid transparent",
-  });
-
-  // We'll do the same approach for sub-tabs
-  const subTabBarStyle = {
-    display: "flex",
-    gap: "10px",
-    margin: "0 0 15px 0",
-  };
-  // Remove underline for the active sub-tab
-  const subTabStyle = (isActive) => ({
-    position: "relative",
-    padding: "8px 16px",
-    cursor: "pointer",
-    backgroundColor: "transparent",
-    border: "none",
-    fontWeight: isActive ? "bold" : "normal",
-    outline: "none",
-    transition: "background-color 0.3s, color 0.3s",
-    color: isActive ? "#5A153D" : "#333",
-    // No underline at all:
-    borderBottom: "3px solid transparent",
-  });
-
-  const sectionContainer = {
-    backgroundColor: "#f9f9f9",
-    padding: "20px",
-    borderRadius: "8px",
-    marginBottom: "20px",
-  };
-  const financialGridStyle = {
-    display: "flex",
-    flexDirection: "column",
-    gap: "20px",
-    margin: "20px 0",
-  };
-  const gridStyle = {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-    gap: "20px",
-    margin: "20px 0",
-  };
-  const blockStyle = {
-    background: "#fff",
-    border: "1px solid #ddd",
-    borderRadius: "8px",
-    padding: "16px",
-    textAlign: "center",
-    boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "space-around",
-    alignItems: "center",
-    minHeight: "320px",
-    datalabels: { display: false },
-  };
-
   return (
-    <div className="detail-page" style={{ padding: "20px" }}>
-      {/* (2) ALWAYS SHOW COMPANY + TICKER ON TOP */}
-      <div style={{ marginBottom: "10px" }}>
-        <h2 style={{ margin: 0, fontSize: "1.5rem" }}>
+    <div className="detail-page">
+      <div className="detail-header">
+        <h2 className="detail-company-name">
           {companyName}
         </h2>
       </div>
 
-      {/* (1) MAIN TAB BAR with new style */}
-      <div style={mainTabBarStyle}>
+      <div className="detail-main-tabs">
         {[
           { id: "overview", label: "Overview" },
           { id: "financials", label: "Financials" },
@@ -1107,71 +973,34 @@ function DetailPage({ userPlan }) {
           { id: "portfolio", label: "Portfolio Breakdown" },
         ].map((tab) => {
           const isActive = (tab.id === activeTab);
-
           return (
             <button
               key={tab.id}
-              onMouseEnter={(e) => {
-                if (!isActive) {
-                  e.currentTarget.style.backgroundColor = "#faf0fb";
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = "transparent";
-              }}
               onClick={() => setActiveTab(tab.id)}
-              style={mainTabStyle(isActive)}
+              className={`detail-tab-main ${isActive ? 'active' : ''}`}
             >
               {tab.label}
             </button>
           );
         })}
       </div>
-      {/* MODELING TAB (HAULT) */}
+      
       {activeTab === "modeling" && (
         <ModelTab ticker={ticker} />
       )}
-      {/* OVERVIEW TAB */}
+      
       {activeTab === "overview" && (
         <>
-          {/* Only Business Description in the overview now */}
-          <div style={{ marginBottom: "20px" }}>
-            <p style={{ marginTop: "10px" }}>{businessDescription}</p>
+          <div className="detail-description-container">
+            <p className="detail-description-text">{businessDescription}</p>
           </div>
-
           
-
-          <div style={sectionContainer}>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: "30px",
-              }}
-            >
-              <h3 style={{ margin: 0 }}>Daily Price & Volume</h3>
-              {/* New Button, styled like the Peer Comparison one */}
+          <div className="detail-section-container">
+            <div className="detail-section-header">
+              <h3>Daily Price & Volume</h3>
               <button
                 onClick={() => setShowScoringOverlay(true)}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = "#faf0fb";
-                  e.currentTarget.style.color = "#5A153D";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = "#5A153D";
-                  e.currentTarget.style.color = "#fff";
-                }}
-                style={{
-                  padding: "10px 20px",
-                  fontSize: "16px",
-                  borderRadius: "5px",
-                  backgroundColor: "#5A153D",
-                  color: "#fff",
-                  border: "none",
-                  cursor: "pointer",
-                  transition: "background-color 0.3s ease, color 0.3s ease",
-                }}
+                className="btn btn-primary btn-sm"
               >
                 AI-Powered Analysis
               </button>
@@ -1188,12 +1017,10 @@ function DetailPage({ userPlan }) {
             )}
           </div>
 
-
-          {/* Additional Bar Charts (FFO, DVD, NOI) */}
-          <div style={sectionContainer}>
+          <div className="detail-section-container">
             <h3 style={{ marginTop: 0, marginBottom: "10px" }}>Key Financials</h3>
-            <div style={financialGridStyle}>
-              <div style={blockStyle}>
+            <div className="detail-financial-grid">
+              <div className="detail-chart-block">
                 <h4>Dividends History</h4>
                 {isAllNull(dividendsData) ? (
                   <p>No Dividends per Share data available.</p>
@@ -1202,7 +1029,7 @@ function DetailPage({ userPlan }) {
                 )}
               </div>
 
-              <div style={blockStyle}>
+              <div className="detail-chart-block">
                 <h4>FFO History</h4>
                 {isAllNull(ffoData) ? (
                   <p>No FFO data available.</p>
@@ -1211,7 +1038,7 @@ function DetailPage({ userPlan }) {
                 )}
               </div>
 
-              <div style={blockStyle}>
+              <div className="detail-chart-block">
                 <h4>FFO / Total Revenue %</h4>
                 {isAllNull(ffoRevenuePctData) ? (
                   <p>No FFO / Revenue % data available.</p>
@@ -1222,18 +1049,16 @@ function DetailPage({ userPlan }) {
             </div>
           </div>
 
-          {/* --- 4. ADD THE CONDITIONAL RENDER FOR THE NEW OVERLAY --- */}
           {showScoringOverlay && (
-              <ScoringDonutOverlay
-                ticker={ticker} 
-                score={stabilityScore}
-                title="Overall Stability Percentile"
-                tooltipText="Stability Percentile measures price volatility risk. Our algorithm calculates it using average daily return, standard deviation, skewness, kurtosis, and trading volume over the last five years. A higher percentile indicates lower risk."
-                donutOptions={donutOptions} // Pass the existing options from DetailPage
-                onClose={() => setShowScoringOverlay(false)}
-              />
+            <ScoringDonutOverlay
+              ticker={ticker} 
+              score={stabilityScore}
+              title="Overall Stability Percentile"
+              tooltipText="Stability Percentile measures price volatility risk. Our algorithm calculates it using average daily return, standard deviation, skewness, kurtosis, and trading volume over the last five years. A higher percentile indicates lower risk."
+              donutOptions={donutOptions}
+              onClose={() => setShowScoringOverlay(false)}
+            />
           )}
-          {/* --- END NEW OVERLAY LOGIC --- */}
 
           <BottomBanner />
           {showOverlay && (
@@ -1251,11 +1076,9 @@ function DetailPage({ userPlan }) {
         </>
       )}
 
-      {/* FINANCIALS TAB (WITH SUB-TABS) */}
       {activeTab === "financials" && (
         <div>
-          {/* Remove the extra heading; sub-tabs are snug against the bar */}
-          <div style={subTabBarStyle}>
+          <div className="detail-sub-tabs">
             {[
               { id: "is", label: "Income Statement" },
               { id: "bs", label: "Balance Sheet" },
@@ -1265,35 +1088,24 @@ function DetailPage({ userPlan }) {
               return (
                 <button
                   key={sub.id}
-                  onMouseEnter={(e) => {
-                    if (!isActive) {
-                      e.currentTarget.style.backgroundColor = "#faf0fb";
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = "transparent";
-                  }}
                   onClick={() => setFinancialSubTab(sub.id)}
-                  style={subTabStyle(isActive)}
+                  className={`detail-tab-sub ${isActive ? 'active' : ''}`}
                 >
                   {sub.label}
                 </button>
               );
             })}
           </div>
-
           <FinancialsTable ticker={ticker} subTab={financialSubTab} />
         </div>
       )}
 
-      {/* REIT SPECIFIC METRICS */}
       {activeTab === "metrics" && (
         <div>
           <FinancialsTable ticker={ticker} subTab="industry" />
         </div>
       )}
 
-      {/* LEASING TAB (Placeholder, Hault) */}
       {activeTab === "leasing" && (
         <div>
           <h2>Leasing</h2>
@@ -1301,7 +1113,6 @@ function DetailPage({ userPlan }) {
         </div>
       )}
 
-      {/* PORTFOLIO BREAKDOWN */}
       {activeTab === "portfolio" && (
         <>
           {loadingBreakdowns ? (
@@ -1309,14 +1120,7 @@ function DetailPage({ userPlan }) {
           ) : errorBreakdowns || !breakdowns ? (
             <p>Property & portfolio data unavailable.</p>
           ) : (
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "20px",
-              margin: "20px 0"
-            }}>
-
-              
+            <div className="portfolio-grid">
               {[
                 { key: "property_type",   label: "Property Types" },
                 { key: "secondary_type",  label: "Secondary Property Types (If Reported)" },
@@ -1326,14 +1130,9 @@ function DetailPage({ userPlan }) {
                 const labelsArr = arr.map(d => d.category);
                 const total     = values.reduce((sum, v) => sum + v, 0);
 
-                // DEBUG: log donut init
                 console.log("[Portfolio Breakdowns] init donut for:", key, labelsArr, values);
 
-                // generate a palette of diverse colors
-                const colors = [
-                  "#5A153D", "#B12D78", "#FFC857", "#119DA4", "#19647E",
-                  "#FF7B24", "#9A031E", "#FB8B24", "#E36414", "#0F4C5C"
-                ];
+                const colors = chartColors.isDarkMode ? darkModeDonutColors : lightModeDonutColors;
                 const bgColors = labelsArr.map((_, i) => colors[i % colors.length]);
 
                 const chartData = {
@@ -1345,7 +1144,6 @@ function DetailPage({ userPlan }) {
                   }]
                 };
 
-                // donut options (reuse your main donutOptions style)
                 const breakdownDonutOptions = {
                   responsive: true,
                   maintainAspectRatio: false,
@@ -1360,7 +1158,10 @@ function DetailPage({ userPlan }) {
                   },
                   plugins: {
                     title: { display: false },
-                    calloutPlugin: {},
+                    calloutPlugin: {
+                        color: chartColors.textColor,
+                        lineColor: chartColors.volumeColor // Uses the same grey as your volume bars
+                    },
                     legend: { display: false },
                     datalabels: { display: false },
                     tooltip: {
@@ -1382,47 +1183,12 @@ function DetailPage({ userPlan }) {
                 };
 
                 return (
-                  <div
-                    key={key}
-                    style={{
-                      position: 'relative',    // ← new wrapper
-                      overflow: 'visible',     // ← allow callouts to spill out
-                      width: '660px',          // ← keep your fixed width
-                      margin: "0 auto"
-                    }}
-                  >
-                    {/* panel title pulled outside the box */}
-                    <h4
-                      style={{
-                        position: 'absolute',
-                        top: '-1.2em',
-                        left: '0px',
-                        margin: 0,
-                        background: '#fff',
-                        padding: '12px 4px',           // ← add vertical padding
-                        textDecoration: 'underline',  // ← underline the label
-                        fontSize: '16px'
-                      }}
-                    >
+                  <div key={key} className="portfolio-chart-wrapper">
+                    <h4 className="portfolio-chart-title">
                       {label}
                     </h4>
-
-                    {/* inner bordered box */}
-                    <div style={{
-                      border: "1px solid #ccc",
-                      borderRadius: "0px",
-                      padding: '20px',
-                      boxSizing: 'border-box',
-                      background: "#fff",
-                      width: '100%',
-                      height: '400px',
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      overflow: 'visible',     // ← also allow spill-out here
-                      marginTop: '1.5em'  
-                    }}>
-                      <div style={{ width: "600px", height: "600px", position: 'relative', overflow: 'visible' }}>
+                    <div className="portfolio-chart-box">
+                      <div className="portfolio-chart-inner-sizer">
                         <Doughnut
                           data={chartData}
                           options={breakdownDonutOptions}
@@ -1433,111 +1199,27 @@ function DetailPage({ userPlan }) {
                 );
               })}
 
-              {/* ——— Geographical Breakdown panel ——— */}
-              <div
-                style={{
-                  position: 'relative',
-                  overflow: 'visible',
-                  // span exactly the two 660px panels + the 20px gap
-                  gridColumn: '1 / span 2',
-                  width: 'calc(670px * 2 + 20px)',
-                  margin: '0 auto'
-                }}
-              >
-                {/* panel title pulled outside the box */}
-                <h4
-                  style={{
-                    position: 'absolute',
-                    top: '-1.2em',
-                    left: '0px',
-                    margin: 0,
-                    background: '#fff',
-                    padding: '12px 4px',
-                    textDecoration: 'underline',
-                    fontSize: '16px'
-                  }}
-                >
+              <div className="portfolio-geo-panel">
+                <h4 className="portfolio-chart-title">
                   Geographical Breakdown
                 </h4>
-
-                {/* inner bordered box */}
-                <div
-                  style={{
-                    border: '1px solid #ccc',
-                    borderRadius: '0px',
-                    padding: '10px',
-                    boxSizing: 'border-box',
-                    background: '#fff',
-                    width: '100%',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    overflow: 'visible',
-                    marginTop: '1.5em'
-                  }}
-                >
-                  {/* ——— Map toggle row ——— */}
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'flex-end',
-                      marginTop: '5px',
-                      marginBottom: '0px'
-                    }}
-                  >
+                <div className="portfolio-geo-box">
+                  <div className="portfolio-map-toggle-row">
                     <button
-                    onClick={() => setMapView('state')}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.backgroundColor = "#faf0fb";
-                      e.currentTarget.style.color = "#5A153D";
-                    }}
-                    onMouseLeave={e => {
-                      const active = mapView === 'state';
-                      e.currentTarget.style.backgroundColor = active ? "#5A153D" : "#fff";
-                      e.currentTarget.style.color = active ? "#fff"   : "#333";
-                    }}
-                    style={{
-                      padding: '6px 12px',
-                      marginRight: '10px',
-                      background: mapView === 'state' ? '#5A153D' : '#fff',
-                      color:      mapView === 'state' ? '#fff'   : '#333',
-                      border: '1px solid #ccc',
-                      cursor: 'pointer'
-                    }}
+                      onClick={() => setMapView('state')}
+                      className={`portfolio-map-toggle-btn ${mapView === 'state' ? 'active' : ''}`}
                     >
-                    US Allocation
+                      US Allocation
                     </button>
-
                     <button
-                    onClick={() => setMapView('country')}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.backgroundColor = "#faf0fb";
-                      e.currentTarget.style.color = "#5A153D";
-                    }}
-                    onMouseLeave={e => {
-                      const active = mapView === 'country';
-                      e.currentTarget.style.backgroundColor = active ? "#5A153D" : "#fff";
-                      e.currentTarget.style.color = active ? "#fff"   : "#333";
-                    }}
-                    style={{
-                      padding: '6px 12px',
-                      background: mapView === 'country' ? '#5A153D' : '#fff',
-                      color:      mapView === 'country' ? '#fff'   : '#333',
-                      border: '1px solid #ccc',
-                      cursor: 'pointer'
-                    }}
+                      onClick={() => setMapView('country')}
+                      className={`portfolio-map-toggle-btn ${mapView === 'country' ? 'active' : ''}`}
                     >
-                    International Allocation
+                      International Allocation
                     </button>
                   </div>
-
-                  {/* ——— Choropleth map container ——— */}
-                  <div
-                    style={{
-                      position: 'relative',
-                      width: '100%',
-                      margin: '0 auto'
-                    }}
-                  >
+                  
+                  <div className="portfolio-map-container">
                     {mapView === 'state' ? (
                       <ComposableMap
                         projection="geoAlbersUsa"
@@ -1563,15 +1245,15 @@ function DetailPage({ userPlan }) {
                               const rel      = maxPct > 0 ? pct / maxPct : 0;
                               const opacity  = 0.2 + 0.8 * rel;
                               const fill     = pct === 0
-                                ? '#e0e0e0'
-                                : `rgba(90,21,61,${opacity})`;
+                                  ? chartColors.mapEmptyColor
+                                  : `rgba(${chartColors.mapBaseColorRgb},${opacity})`;
 
                               return (
                                 <Geography
                                   key={geo.rsmKey}
                                   geography={geo}
                                   fill={fill}
-                                  stroke="#fff"
+                                  className="map-geography"
                                   onMouseEnter={evt => {
                                     setTooltipPos({ x: evt.clientX, y: evt.clientY });
                                     setHoveredGeo({
@@ -1616,15 +1298,15 @@ function DetailPage({ userPlan }) {
                               const rel     = maxPct > 0 ? pct / maxPct : 0;
                               const opacity = 0.2 + 0.8 * rel;
                               const fill    = pct === 0
-                                ? '#e0e0e0'
-                                : `rgba(90,21,61,${opacity})`;
+                                    ? chartColors.mapEmptyColor
+                                    : `rgba(${chartColors.mapBaseColorRgb},${opacity})`;
 
                               return (
                                 <Geography
                                   key={geo.rsmKey}
                                   geography={geo}
                                   fill={fill}
-                                  stroke="#fff"
+                                  className="map-geography"
                                   onMouseEnter={evt => {
                                     setTooltipPos({ x: evt.clientX, y: evt.clientY });
                                     setHoveredGeo({
@@ -1643,20 +1325,12 @@ function DetailPage({ userPlan }) {
                         </Geographies>
                       </ComposableMap>
                     )}
-                    {/* ——— Hover tooltip ——— */}
                     {hoveredGeo && (
                       <div
+                        className="map-tooltip"
                         style={{
-                          position: 'fixed',
-                          top:    tooltipPos.y + 10,
-                          left:   tooltipPos.x + 10,
-                          background: '#fff',
-                          padding:    '6px 8px',
-                          borderRadius: '4px',
-                          boxShadow:  '0 2px 4px rgba(0,0,0,0.2)',
-                          pointerEvents: 'none',
-                          fontSize: '0.85rem',
-                          zIndex: 1000
+                          top:  tooltipPos.y + 10,
+                          left: tooltipPos.x + 10,
                         }}
                       >
                         <strong>{hoveredGeo.name}</strong><br/>
@@ -1666,15 +1340,7 @@ function DetailPage({ userPlan }) {
                   </div>
                 </div>
               </div>
-              {/* ——— FOOTNOTE ——— */}
-              <div style={{
-                gridColumn: "1 / span 2",
-                marginTop:  "12px",
-                fontSize:   "0.8rem",
-                color:      "#555",
-                fontStyle:  "italic",
-                textAlign:  "left"
-              }}>
+              <div className="portfolio-footnote">
                 As an analytics platform, Viserra strives to present every data point on a consistent basis. Property data and classification are sourced from public records (eg. transaction deeds, county appraisal databases, etc.) to reflect the most up to date transaction information. All percentages here are calculated on a square-foot basis, so figures may differ from those on the company’s website or in investor presentations.
               </div>
             </div>

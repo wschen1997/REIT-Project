@@ -6,7 +6,7 @@ export const ThemeContext = createContext();
 // Create the provider component that will wrap your app
 export const ThemeProvider = ({ children }) => {
   // Set up the state to hold the current theme
-  const [theme, setTheme] = useState('light'); // Default to 'light'
+  const [theme, setTheme] = useState('dark'); // Default to 'dark' now
 
   // This effect runs when the theme changes to update the HTML attribute
   useEffect(() => {

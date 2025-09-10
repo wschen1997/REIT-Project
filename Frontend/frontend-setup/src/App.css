@@ -10,6 +10,7 @@
   --text-color-light: #fff;
   --text-color-subtle: #666;
   --text-color-muted: #555;
+  --text-color-mild-light:#ffffffe9;
 
   /* Background & Surface Palette */
   --background-color: #fff;
@@ -223,6 +224,181 @@
 [data-theme='dark'] .suggestion-item:hover {
   background-color: var(--surface-color-2); /* Grey background on hover */
 }
+
+[data-theme='dark'] .popup-modal-title {
+  color: var(--text-color-dark); /* This is the same color as your dark mode "Loading..." text */
+}
+
+[data-theme='dark'] .powered-by-logos {
+  filter: grayscale(100%) invert(0.928);
+  opacity: 0.7;
+}
+
+[data-theme='dark'] .hero-title-home {
+  color: var(--text-color-light); /* White */
+}
+
+[data-theme='dark'] .hero-title-home .highlight {
+  color: var(--primary-color); /* Dark mode purple */
+  opacity: 0.9;
+}
+
+[data-theme='dark'] .hero-subtitle-home,
+[data-theme='dark'] .powered-by-text,
+[data-theme='dark'] .early-access-subtitle {
+  color: var(--text-color-subtle); /* A softer grey for subtitles */
+}
+
+[data-theme='dark'] .early-access-title {
+  color: var(--text-color-light); /* White */
+}
+
+[data-theme='dark'] .signup-success-message {
+  color: var(--primary-color); /* Dark mode purple */
+}
+
+/* This styles the select dropdown like the search input */
+[data-theme='dark'] .home-select-input {
+  background-color: var(--surface-color-2);
+  color: var(--text-color-dark);
+  border-color: var(--border-color);
+}
+
+[data-theme='dark'] .home-select-input:focus {
+  outline: none;
+  border-color: var(--secondary-glow-color);
+  box-shadow: 0 0 5px 0 var(--secondary-glow-color);
+}
+
+/* --- DARK MODE OVERRIDES FOR DETAIL PAGE --- */
+
+[data-theme='dark'] .detail-tab-main, 
+[data-theme='dark'] .detail-tab-sub {
+  color: var(--text-color-subtle);
+}
+[data-theme='dark'] .detail-tab-main:hover, 
+[data-theme='dark'] .detail-tab-sub:hover {
+  background-color: var(--surface-color-2); 
+  color: var(--text-color-light);
+}
+[data-theme='dark'] .detail-tab-main.active, 
+[data-theme='dark'] .detail-tab-sub.active {
+  color: var(--text-color-light); 
+}
+
+[data-theme='dark'] .detail-tab-main.active {
+  border-bottom-color: var(--text-color-light); /* Makes the underline white */
+}
+[data-theme='dark'] .detail-company-name,
+[data-theme='dark'] .detail-chart-block h4,
+[data-theme='dark'] .detail-section-header h3,
+[data-theme='dark'] .portfolio-chart-title {
+  color: var(--text-color-light);
+}
+[data-theme='dark'] .detail-description-text,
+[data-theme='dark'] .portfolio-footnote {
+  color: var(--text-color-light);
+}
+[data-theme='dark'] .detail-section-container {
+  background-color: var(--surface-color-1);
+}
+[data-theme='dark'] .detail-chart-block {
+  background: var(--surface-color-1);
+  border-color: var(--border-color);
+  box-shadow: none;
+}
+[data-theme='dark'] .portfolio-chart-wrapper,
+[data-theme='dark'] .portfolio-chart-title,
+[data-theme='dark'] .portfolio-chart-box,
+[data-theme='dark'] .portfolio-geo-panel,
+[data-theme='dark'] .portfolio-geo-box,
+[data-theme='dark'] .portfolio-map-toggle-btn {
+  background-color: var(--background-color);
+  border-color: var(--border-color);
+  color: var(--text-color-dark);
+}
+[data-theme='dark'] .portfolio-map-toggle-btn:hover {
+  background-color: var(--surface-color-2);
+  color: var(--text-color-light);
+}
+[data-theme='dark'] .portfolio-map-toggle-btn.active {
+  background: var(--surface-color-2);
+  color: var(--text-color-light);
+  border-color: var(--text-color-subtle);
+}
+[data-theme='dark'] .map-tooltip {
+  background: var(--surface-color-2);
+  color: var(--text-color-dark);
+  box-shadow: var(--box-shadow);
+}
+
+/* Financials Table Dark Mode */
+[data-theme='dark'] .financials-table {
+  border-color: var(--border-color);
+}
+[data-theme='dark'] .financials-table-header-row,
+[data-theme='dark'] .financials-table-sticky-header,
+[data-theme='dark'] .financials-table-sub-note,
+[data-theme='dark'] .financials-table-empty-sub-note {
+  background-color: var(--surface-color-2);
+}
+[data-theme='dark'] .financials-table-sub-note {
+  color: var(--text-color-subtle);
+}
+[data-theme='dark'] .financials-table tbody tr {
+  background-color: var(--surface-color-1);
+}
+[data-theme='dark'] .financials-table-sticky-cell,
+[data-theme='dark'] .financials-table-spacer-cell-sticky {
+  background-color: var(--surface-color-3);
+}
+[data-theme='dark'] .financials-table-spacer-cell {
+  background-color: var(--surface-color-1);
+}
+
+[data-theme='dark'] .about-main-title,
+[data-theme='dark'] .about-sub-title,
+[data-theme='dark'] .about-point-strong {
+  /* This makes the main titles ("About Viserra", "Why Viserra?") and 
+     the bolded points ("Built for Real Estate", etc.) pure white. */
+  color: var(--text-color-light);
+}
+
+[data-theme='dark'] .about-paragraph,
+[data-theme='dark'] .about-point {
+  /* This makes all the main paragraph text the softer, subtle grey color,
+     matching the subtitle on your home page. */
+  color: var(--text-color-subtle);
+}
+
+[data-theme='dark'] .about-highlight-word {
+  /* This specifically targets the words "Vision" and "Terra" and
+     makes them pure white, so they stand out from the grey paragraph. */
+  color: var(--text-color-light);
+}
+
+[data-theme='dark'] .about-separator {
+  /* This ensures the vertical separator bar has the correct
+     border color for dark mode. */
+  background-color: var(--border-color);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -931,4 +1107,497 @@ label {
   padding: 8px 16px !important;
   font-size: 1rem !important;
   width: auto !important; /* Override full width from .btn */
+}
+
+.popup-modal-title {
+  color: var(--primary-color);
+}
+
+
+.home {
+  font-family: Arial, sans-serif;
+}
+
+/* Hero Section */
+.hero-section-home {
+  padding: 60px 40px;
+}
+.hero-content-home {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+.hero-text-home {
+  flex: 1;
+  margin-right: 40px;
+}
+.hero-title-home {
+  font-size: 3rem;
+  font-weight: bold;
+  margin-bottom: 20px;
+  line-height: 1.2;
+  color: #5A153D; /* Your primary purple */
+}
+.hero-title-home .highlight {
+  color: #5A153D; /* Stays the same in light mode */
+}
+.hero-subtitle-home {
+  font-size: 1.2rem;
+  color: #444;
+  margin-bottom: 30px;
+}
+.hero-image-container-home {
+  flex: 1;
+  text-align: right;
+}
+.hero-image-home {
+  width: 100%;
+  max-width: 500px;
+  border-radius: 8px;
+}
+
+/* Powered By Section */
+.powered-by-section {
+  text-align: center;
+  margin: 40px auto 100px;
+  max-width: 1200px;
+  padding: 0 20px;
+}
+.powered-by-text {
+  font-size: 1.2rem;
+  color: #444;
+  margin-top: 30px;
+}
+
+/* Early Access Form Section */
+.early-access-section {
+  text-align: center;
+  margin: 80px auto;
+  max-width: 1200px;
+  padding: 0 20px;
+}
+.early-access-title {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #5A153D;
+  margin-bottom: 20px;
+}
+.early-access-subtitle {
+  max-width: 600px;
+  margin: 0 auto 20px;
+  font-size: 1.2rem;
+  color: #444;
+  line-height: 1.6;
+}
+.early-access-form {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+.home-form-input {
+  width: 600px;
+  max-width: 100%; /* For responsiveness */
+  height: 45px;
+}
+.home-textarea-input {
+  height: 100px;
+  resize: vertical;
+}
+/* This styles the select to look like a text input */
+.home-select-input {
+  text-align-last: left;
+}
+.home-error-message {
+  margin: -5px 0 0 0;
+  text-align: center;
+}
+.home-form-button {
+  width: 600px;
+  max-width: 100%;
+}
+.signup-success-message {
+  color: #5A153D;
+  font-weight: bold;
+  margin-top: 20px;
+  font-size: 1.2rem;
+}
+.early-access-form .input-field {
+  box-sizing: border-box;
+  margin-bottom: 0; /* This removes the unwanted margin, letting 'gap' work again */
+  width: 600px;     /* This ensures the width is always a consistent 600px */
+  height: auto;     /* This allows each element to have its own specific height */
+  font-family: inherit;
+}
+
+/* We just need to specify the height for the textarea separately */
+.early-access-form .home-textarea-input {
+    height: 100px;
+}
+
+/* --- DETAIL PAGE STYLES --- */
+
+/* Tab Navigation */
+.detail-main-tabs, .detail-sub-tabs {
+  display: flex; /* This applies to both, which is fine */
+}
+
+.detail-main-tabs {
+  gap: 20px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--border-color); /* <-- MOVED HERE */
+}
+
+.detail-sub-tabs {
+  gap: 10px;
+  margin: 0 0 15px 0;
+  /* The border is no longer applied here */
+}
+
+.detail-tab-main, .detail-tab-sub {
+  padding: 10px 20px;
+  cursor: pointer;
+  background-color: transparent;
+  border: none;
+  font-weight: normal;
+  outline: none;
+  transition: background-color 0.3s, color 0.3s;
+  color: var(--text-color-dark);
+  border-bottom: 3px solid transparent;
+}
+.detail-tab-sub {
+  padding: 8px 16px;
+}
+
+.detail-tab-main:hover, .detail-tab-sub:hover {
+  background-color: var(--primary-hover-bg);
+}
+.detail-tab-main.active, .detail-tab-sub.active {
+  font-weight: bold;
+  color: var(--primary-color);
+}
+.detail-tab-main.active {
+  border-bottom-color: var(--primary-color);
+}
+
+/* Page Header & Description */
+.detail-header {
+  margin-bottom: 10px;
+}
+.detail-company-name {
+  margin: 0;
+  font-size: 1.5rem;
+  color: var(--text-color-dark);
+}
+.detail-description-container {
+  margin-bottom: 20px;
+}
+.detail-description-text {
+  margin-top: 10px;
+  color: var(--text-color-muted);
+}
+
+/* Section & Chart Blocks */
+.detail-section-container {
+  background-color: var(--surface-color-1);
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+.detail-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+.detail-section-header h3 {
+  margin: 0;
+  color: var(--text-color-dark);
+}
+
+.detail-financial-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin: 20px 0;
+}
+.detail-chart-block {
+  background: var(--background-color);
+  border: 1px solid var(--border-color-light);
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+  box-shadow: var(--box-shadow-light);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  align-items: center;
+  min-height: 320px;
+}
+.detail-chart-block h4 {
+  color: var(--text-color-dark);
+}
+
+/* Portfolio Breakdowns */
+.portfolio-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin: 20px 0;
+}
+.portfolio-chart-wrapper {
+  position: relative;
+  overflow: visible;
+  width: 660px;
+  margin: 0 auto;
+}
+.portfolio-chart-title {
+  position: absolute;
+  top: -1.2em;
+  left: 0px;
+  margin: 0;
+  background: var(--background-color);
+  padding: 12px 4px;
+  text-decoration: underline;
+  font-size: 16px;
+  color: var(--text-color-dark);
+}
+.portfolio-chart-box {
+  border: 1px solid var(--border-color);
+  border-radius: 0px;
+  padding: 20px;
+  box-sizing: border-box;
+  background: var(--background-color);
+  width: 100%;
+  height: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: visible;
+  margin-top: 1.5em;
+}
+.portfolio-chart-inner-sizer {
+  width: 600px; 
+  height: 600px; 
+  position: relative; 
+  overflow: visible;
+}
+
+/* Geographical Map Section */
+.portfolio-geo-panel {
+  position: relative;
+  overflow: visible;
+  grid-column: 1 / span 2;
+  width: calc(670px * 2 + 20px);
+  margin: 0 auto;
+}
+.portfolio-geo-box {
+  border: 1px solid var(--border-color);
+  border-radius: 0px;
+  padding: 10px;
+  box-sizing: border-box;
+  background: var(--background-color);
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+  margin-top: 1.5em;
+}
+.portfolio-map-toggle-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 5px;
+  margin-bottom: 0px;
+}
+.portfolio-map-toggle-btn {
+  padding: 6px 12px;
+  background: var(--background-color);
+  color: var(--text-color-dark);
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+.portfolio-map-toggle-btn:first-child {
+  margin-right: 10px;
+}
+.portfolio-map-toggle-btn:hover {
+  background-color: var(--primary-hover-bg);
+  color: var(--primary-color);
+}
+.portfolio-map-toggle-btn.active {
+  background: var(--primary-color);
+  color: var(--text-color-light);
+  border-color: var(--primary-color);
+}
+.portfolio-map-container {
+  position: relative;
+  width: 100%;
+  margin: 0 auto;
+}
+.map-tooltip {
+  position: fixed;
+  background: var(--background-color);
+  padding: 6px 8px;
+  border-radius: 4px;
+  box-shadow: var(--box-shadow);
+  pointer-events: none;
+  font-size: 0.85rem;
+  z-index: 1000;
+  color: var(--text-color-dark);
+}
+.map-geography {
+  stroke: var(--background-color); /* Country/state borders */
+}
+.portfolio-footnote {
+  grid-column: 1 / span 2;
+  margin-top: 12px;
+  font-size: 0.8rem;
+  color: var(--text-color-muted);
+  font-style: italic;
+  text-align: left;
+}
+
+/* Financials Table */
+.financials-table-container {
+  overflow-x: auto;
+  max-width: 100%;
+}
+.financials-table {
+  border-collapse: collapse;
+  border: 1px solid var(--border-color);
+  white-space: nowrap;
+  min-width: 700px;
+}
+.financials-table-header-row {
+  background-color: var(--surface-color-2);
+}
+.financials-table-sticky-header, .financials-table-sticky-cell, .financials-table-sub-note, .financials-table-spacer-cell-sticky {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+}
+.financials-table-sticky-header {
+  padding: 8px;
+  background-color: var(--surface-color-2);
+  text-align: left;
+}
+.financials-table-header-cell {
+  padding: 8px;
+  min-width: 100px;
+  text-align: left;
+}
+.financials-table-sub-note {
+  padding: 4px;
+  background-color: var(--surface-color-2);
+  text-align: left;
+  font-style: italic;
+  font-size: 0.8rem;
+  color: var(--text-color-muted);
+}
+.financials-table tbody tr {
+  background-color: var(--background-color);
+}
+.financials-table-sticky-cell {
+  padding: 8px;
+  background-color: var(--surface-color-3);
+}
+.financials-table-sticky-cell.indented {
+  padding-left: 16px;
+}
+.financials-table-data-cell {
+  padding: 8px;
+  min-width: 100px;
+  text-align: left;
+}
+.financials-table-spacer-cell-sticky {
+  background-color: var(--surface-color-3);
+  padding: 2px;
+  height: 10px;
+}
+.financials-table-spacer-cell {
+  background-color: var(--background-color);
+  padding: 2px;
+  height: 10px;
+}
+.financials-table-empty-sub-note {
+  background-color: var(--surface-color-2);
+}
+
+
+.about-page {
+  background-color: var(--background-color);
+  color: var(--text-color-dark);
+  min-height: 100vh;
+  padding: 60px 20px;
+  font-family: Arial, sans-serif;
+}
+
+.about-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.about-top-section {
+  display: flex;
+  gap: 30px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.about-heading-column {
+  width: 300px;
+  min-width: 180px;
+}
+
+.about-main-title {
+  font-size: 2.5rem;
+  margin: 0;
+  color: var(--primary-color);
+}
+
+.about-separator {
+  width: 2px;
+  background-color: var(--border-color);
+  height: 320px;
+  align-self: center;
+}
+
+.about-text-column {
+  flex: 1;
+  min-width: 280px;
+}
+
+.about-sub-title {
+  font-size: 1.7rem;
+  margin-bottom: 1rem;
+  color: var(--primary-color);
+  margin-top: 0;
+}
+
+.about-paragraph {
+  line-height: 1.6;
+  font-size: 1rem;
+  margin-bottom: 1.2rem;
+}
+
+.about-why-section {
+  margin-top: 7rem;
+}
+
+.about-points-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.about-point {
+  line-height: 1.6;
+  font-size: 1rem;
+}
+
+.about-point-strong {
+  color: var(--primary-color-light);
 }

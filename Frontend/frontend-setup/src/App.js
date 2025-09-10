@@ -34,6 +34,15 @@ const realGA = ReactGaModule.default.default;
 const TRACKING_ID = "G-HH9G61RW3G"; // Your GA4 measurement ID
 realGA.initialize(TRACKING_ID);
 
+
+const MainLayout = ({ children }) => {
+  return (
+    <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px' }}>
+      {children}
+    </main>
+  );
+};
+
 // Track pageviews on route change
 function AnalyticsTracker() {
   const location = useLocation();
