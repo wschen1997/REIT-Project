@@ -3,23 +3,18 @@ Viserra
 Prep work needed:
 1. Refactor app theme
 2. Sort out auth workflow
-3. Make mobile responsive (if time allows)
+3. Make mobile responsive (low priority)
+4. Connect email/signup DB to zoho mai;
+5. UK stock software market research
 
 Marketing:
 1. regular financial database at baseline, market as open for pre-using
 2. founder let marketing (content creation)
 3. 
 
-
-
-
-
-
-
-
-
-
-
+UI
+1. Add black/white photos to the app
+2.scrolling animation
 
 
 

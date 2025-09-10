@@ -383,7 +383,36 @@
   background-color: var(--border-color);
 }
 
+[data-theme='dark'] .user-account-hr {
+  /* Changed to bright white */
+  border-bottom-color: var(--text-color-light);
+}
 
+[data-theme='dark'] .user-account-section {
+  background-color: var(--surface-color-1);
+  border-color: var(--border-color);
+}
+
+[data-theme='dark'] .user-account-main-title,
+[data-theme='dark'] .user-account-section-title {
+  color: var(--text-color-light);
+  border-bottom-color: var(--border-color);
+}
+
+[data-theme='dark'] .user-account-info-label {
+  /* Changed to bright white */
+  color: var(--text-color-light);
+}
+
+[data-theme='dark'] .user-account-info-value,
+[data-theme='dark'] .user-account-plan-value {
+  /* Both are now the same subtle grey color */
+  color: var(--text-color-subtle);
+}
+
+[data-theme='dark'] .user-account-info-row {
+  border-bottom-color: var(--border-color);
+}
 
 
 
@@ -1600,4 +1629,71 @@ label {
 
 .about-point-strong {
   color: var(--primary-color-light);
+}
+
+
+
+.user-account-page {
+  padding-top: 1rem;
+}
+
+.user-account-container {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 0 20px;
+  text-align: left;
+}
+
+.user-account-main-title {
+  margin-bottom: 1rem;
+  font-size: 1.75rem;
+}
+
+.user-account-hr {
+  border: none;
+  border-bottom: 1px solid var(--border-color-light);
+  margin-bottom: 2rem;
+}
+
+.user-account-section {
+  border: 1px solid var(--border-color-light);
+  border-radius: 0px;
+  padding: 24px;
+  margin-bottom: 20px;
+}
+
+.user-account-section-title {
+  margin-top: 0;
+  border-bottom: 1px solid var(--border-color-extra-light);
+  padding-bottom: 15px;
+  font-size: 1.5rem;
+}
+
+.user-account-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-color-extra-light);
+  font-size: 1rem;
+}
+
+.user-account-info-row.no-border {
+  border-bottom: none;
+}
+
+.user-account-info-label {
+  color: var(--text-color-muted);
+}
+
+.user-account-plan-value {
+  text-transform: capitalize;
+  font-weight: bold;
+}
+
+.user-account-buttons {
+  display: flex;
+  justify-content: flex-start;
+  gap: 15px;
+  margin-top: 30px;
 }
