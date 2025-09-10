@@ -414,10 +414,98 @@
   border-bottom-color: var(--border-color);
 }
 
+[data-theme='dark'] .pricing-page-title {
+  color: var(--text-color-light);
+}
 
+[data-theme='dark'] .pricing-page-subtitle {
+  color: var(--text-color-subtle);
+}
 
+[data-theme='dark'] .btn-disabled {
+  background-color: var(--text-color-muted);
+  color: var(--text-color-subtle);
+  border-color: var(--text-color-muted);
+}
 
+[data-theme='dark'] .btn-disabled:hover {
+  background-color: var(--text-color-muted) !important;
+  color: var(--text-color-subtle) !important;
+  border-color: var(--text-color-muted) !important;
+}
 
+.pricing-page-container .btn {
+  width: auto; /* This overrides the global width: 100% from the .btn class */
+}
+
+[data-theme='dark'] .contact-page-title {
+  color: var(--text-color-light);
+}
+
+[data-theme='dark'] .contact-page-subtitle {
+  color: var(--text-color-subtle);
+}
+
+[data-theme='dark'] .contact-form-label {
+  color: var(--text-color-dark);
+}
+
+[data-theme='dark'] .contact-success-message {
+  color: var(--primary-color);
+}
+
+[data-theme='dark'] .filter-page-title,
+[data-theme='dark'] .filter-results-title {
+  color: var(--text-color-light);
+}
+
+[data-theme='dark'] .filter-explanation {
+  color: var(--text-color-subtle);
+}
+
+[data-theme='dark'] label {
+  color: var(--text-color-dark);
+}
+
+/* Tooltip */
+[data-theme='dark'] .tooltip-icon {
+  background-color: var(--primary-color);
+  color: var(--text-color-dark);
+  opacity: 0.9;
+}
+
+[data-theme='dark'] .tooltip-text {
+  background: var(--surface-color-1);
+  border: 1px solid var(--border-color);
+  color: var(--text-color-dark);
+}
+
+/* Table */
+[data-theme='dark'] .reits-table th {
+  background-color: var(--surface-color-2);
+}
+
+[data-theme='dark'] .reits-table td {
+  color: var(--text-color-dark);
+}
+
+[data-theme='dark'] .reit-company-name-clickable {
+  /* This more specific rule will override the 'td' rule above */
+  color: var(--primary-color-light);
+}
+
+[data-theme='dark'] .reit-company-name-clickable {
+  color: var(--text-color-dark);
+}
+
+[data-theme='dark'] .reit-company-name-clickable:hover {
+  color: var(--text-color-light);
+}
+
+[data-theme='dark'] .reit-link {
+  color: var(--primary-color);
+  opacity: 1;
+}
 
 
 
@@ -1639,14 +1727,14 @@ label {
 
 .user-account-container {
   max-width: 700px;
-  margin: 0 auto;
+  margin: 0 30px;
   padding: 0 20px;
   text-align: left;
 }
 
 .user-account-main-title {
   margin-bottom: 1rem;
-  font-size: 1.75rem;
+  font-size: 1.5rem;
 }
 
 .user-account-hr {
@@ -1666,7 +1754,7 @@ label {
   margin-top: 0;
   border-bottom: 1px solid var(--border-color-extra-light);
   padding-bottom: 15px;
-  font-size: 1.5rem;
+  font-size: 1.4rem;
 }
 
 .user-account-info-row {
@@ -1696,4 +1784,164 @@ label {
   justify-content: flex-start;
   gap: 15px;
   margin-top: 30px;
+}
+
+.pricing-page-container {
+  padding: 80px 20px;
+  text-align: center;
+}
+
+.pricing-page-title {
+  color: var(--primary-color);
+  font-size: 2.2rem; /* Made slightly smaller as requested */
+}
+
+.pricing-page-subtitle {
+  font-size: 1.2rem;
+  color: var(--text-color-dark);
+}
+
+.pricing-subscribe-btn {
+  padding: 12px 28px;
+  font-size: 1.1rem;
+  border-radius: 8px;
+  margin-top: 30px;
+}
+
+/* New generic class for disabled buttons */
+.btn-disabled {
+  background-color: #ccc;
+  color: #666;
+  cursor: not-allowed;
+  border-color: #ccc;
+}
+
+.btn-disabled:hover {
+  background-color: #ccc !important;
+  color: #666 !important;
+  border-color: #ccc !important;
+  box-shadow: none !important;
+}
+
+.contact-page {
+  padding: 35px 20px;
+}
+
+.contact-page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.contact-page-title {
+  font-size: 2.5rem;
+  color: var(--primary-color);
+  margin-bottom: 10px;
+  text-align: left;
+}
+
+.contact-page-subtitle {
+  font-size: 1rem;
+  color: #444;
+  line-height: 1.6;
+  max-width: 600px;
+  margin-bottom: 30px;
+  text-align: left;
+}
+
+.contact-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  max-width: 800px;
+}
+
+.contact-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  column-gap: 50px;
+  row-gap: 0px;
+  align-items: start;
+}
+
+.contact-form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.contact-form-label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.contact-form-input, .contact-form-textarea {
+  /* Most styling is inherited from the .input-field class now */
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.contact-form-textarea {
+  resize: vertical;
+}
+
+.contact-error-message {
+  margin: -10px 0;
+  text-align: left;
+}
+
+.contact-submit-btn {
+  /* Make the button only as wide as its content */
+  align-self: flex-start;
+  width: auto;
+}
+
+.contact-success-message {
+  color: var(--primary-color);
+  font-weight: bold;
+  margin-top: 20px;
+  font-size: 1.2rem;
+  text-align: left;
+}
+
+.filter-page {
+  padding: 20px;
+}
+
+.filter-page-title, .filter-results-title {
+  color: var(--primary-color);
+}
+
+.filter-controls {
+  display: flex;
+  gap: 30px;
+  align-items: flex-end;
+  margin: 20px 0 40px;
+}
+
+.filter-control-group {
+  display: flex;
+  flex-direction: column;
+  min-width: 250px;
+}
+
+.filter-explanation {
+  color: var(--text-color-muted);
+  font-style: italic;
+}
+
+.reits-table-container {
+  overflow-x: auto;
+}
+
+.reit-company-name-clickable {
+  cursor: pointer;
+  font-weight: bold;
+  color: var(--primary-color);
+  transition: color 0.2s;
+}
+
+.reit-company-name-clickable:hover {
+  color: var(--primary-color-light);
 }

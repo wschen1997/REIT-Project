@@ -2,40 +2,27 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import BottomBanner from "../components/BottomBanner.js";
+import Loading from "../components/Loading.js"; // --- IMPORT Loading component
 
-// Load backend URL from environment variable
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:5000";
 
 function FilterPage() {
+  // --- All this state and logic is UNCHANGED ---
   const [reits, setReits] = useState([]);
   const [explanation, setExplanation] = useState("");
   const [selectedPropertyType, setSelectedPropertyType] = useState("");
-  const [minAvgReturn, setMinAvgReturn] = useState(""); // User enters a percentage (e.g., "10")
-
-  // Track if the request is in progress
+  const [minAvgReturn, setMinAvgReturn] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const propertyTypeOptions = [
-    "Apartments",
-    "Industrial Assets",
-    "Office Buildings",
-    "Data Centers",
-    "Single Family Houses",
-    "Hotels/Resorts",
-    "Retail Centers",
-    "Health Care Communities",
-    "Self Storage",
-    "Infrastructure",
-    "Manufactured Homes",
-    "Specialty",
-    "Timber",
-    "Medical Facilities",
-    "Life Science Laboratories"
+    "Apartments", "Industrial Assets", "Office Buildings", "Data Centers",
+    "Single Family Houses", "Hotels/Resorts", "Retail Centers", "Health Care Communities",
+    "Self Storage", "Infrastructure", "Manufactured Homes", "Specialty",
+    "Timber", "Medical Facilities", "Life Science Laboratories"
   ];
 
   const navigate = useNavigate();
 
-  // Whenever minAvgReturn or selectedPropertyType changes, we fetch
   useEffect(() => {
     if (minAvgReturn || selectedPropertyType) {
       fetchREITs();
@@ -43,43 +30,18 @@ function FilterPage() {
   }, [minAvgReturn, selectedPropertyType]);
 
   const fetchREITs = () => {
-    console.log("fetchREITs called with:", { minAvgReturn, selectedPropertyType });
-
-    // Start loading
     setIsLoading(true);
-
     const url = `${API_BASE_URL}/api/reits`;
-
-    // Convert the entered percentage to a decimal (e.g., "10" => 0.10)
     const convertedMinAvgReturn = minAvgReturn ? parseFloat(minAvgReturn) / 100 : "";
-
     axios
       .get(url, {
         params: {
           min_avg_return: convertedMinAvgReturn,
-          property_type: selectedPropertyType
-        }
+          property_type: selectedPropertyType,
+        },
       })
       .then((response) => {
-        console.log("Request made to:", url, {
-          min_avg_return: convertedMinAvgReturn,
-          property_type: selectedPropertyType
-        });
-
-        let responseData;
-        if (typeof response.data === "string") {
-          console.warn("Response data is a string, attempting to parse...");
-          try {
-            responseData = JSON.parse(response.data);
-          } catch (err) {
-            console.error("JSON parsing failed!", err);
-            return;
-          }
-        } else {
-          responseData = response.data;
-        }
-
-        console.log("Fetched Data:", responseData);
+        let responseData = typeof response.data === "string" ? JSON.parse(response.data) : response.data;
         setReits(responseData.reits || []);
         setExplanation(
           `Filtered REITs: Minimum Annualized Return - ${minAvgReturn}%, Property Type - ${selectedPropertyType}`
@@ -90,7 +52,6 @@ function FilterPage() {
         setReits([]);
       })
       .finally(() => {
-        // End loading
         setIsLoading(false);
       });
   };
@@ -102,83 +63,74 @@ function FilterPage() {
 
   return (
     <div className="filter-page">
-      <h2>REIT Screener</h2>
+      <h2 className="filter-page-title">REIT Screener</h2>
 
-      {/* Minimum Annualized Return with Tooltip */}
-      <label>
-        Minimum Annualized Return (%):
-        <span
-          className="tooltip-icon"
-          style={{
-            marginLeft: "6px",
-            cursor: "pointer",
-            fontSize: "0.8rem",
-            width: "14px",
-            height: "14px",
-            display: "inline-block",
-            textAlign: "center",
-            lineHeight: "16px"
-          }}
-        >
-          i
-          <span className="tooltip-text">
-            Annualized return is calculated by 
-            multiplying the average daily return (over the last five years) by 252
-            —the approximate number of trading days in a year.
-          </span>
-        </span>
-      </label>
-      <input
-        type="number"
-        step="0.1"
-        value={minAvgReturn}
-        onChange={(e) => setMinAvgReturn(e.target.value)}
-        placeholder="Enter minimum return (%)"
-      />
+      {/* --- NEW: Wrapper for filter controls --- */}
+      <div className="filter-controls">
+        <div className="filter-control-group">
+          <label style={{ marginBottom: '8px' }}>
+            Minimum Annualized Return (%):
+            <span className="tooltip-icon">
+              i
+              <span className="tooltip-text">
+                Annualized return is calculated by multiplying the average daily return (over the last five years) by 252—the approximate number of trading days in a year.
+              </span>
+            </span>
+          </label>
+          <input
+            type="number"
+            step="0.1"
+            value={minAvgReturn}
+            onChange={(e) => setMinAvgReturn(e.target.value)}
+            placeholder="Enter minimum return (%)"
+            className="input-field" // Use reusable class
+          />
+        </div>
 
-      <br />
+        <div className="filter-control-group">
+          <label style={{ marginBottom: '8px' }}>Select Property Type:</label>
+          <select
+            value={selectedPropertyType}
+            onChange={(e) => setSelectedPropertyType(e.target.value)}
+            className="input-field home-select-input" // Use reusable classes
+          >
+            <option value="">-- Select Property Type --</option>
+            {propertyTypeOptions.map((type) => (
+              <option key={type} value={type}>
+                {type}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
 
-      {/* Property Type Selection */}
-      <label>Select Property Type:</label>
-      <select
-        value={selectedPropertyType}
-        onChange={(e) => setSelectedPropertyType(e.target.value)}
-      >
-        <option value="">-- Select Property Type --</option>
-        {propertyTypeOptions.map((type) => (
-          <option key={type} value={type}>
-            {type}
-          </option>
-        ))}
-      </select>
+      <h2 className="filter-results-title">Filtered REITs</h2>
+      <p className="filter-explanation">{explanation}</p>
 
-      <h2>Filtered REITs</h2>
-      <p>{explanation}</p>
-
-      {/* If loading, show a message; otherwise, show table */}
       {isLoading ? (
-        <p>Loading REITs...</p>
+        <Loading /> // --- USE Loading component
       ) : (
-        <table border="1" cellPadding="6" className="reits-table">
-          <thead>
-            <tr>
-              <th>Ticker</th>
-              <th>Company Name</th>
-              <th>Description</th>
-              <th>Website</th>
-            </tr>
-          </thead>
-          <tbody>
-            {reits.length > 0 ? (
-              reits.map((reit, index) => {
-                return (
+        <div className="reits-table-container">
+          <table className="reits-table">
+            <thead>
+              <tr>
+                {/* <th>Ticker</th> REMOVED */}
+                <th>Company Name</th>
+                <th>Description</th>
+                <th>Website</th>
+              </tr>
+            </thead>
+            <tbody>
+              {reits.length > 0 ? (
+                reits.map((reit, index) => (
                   <tr key={index}>
-                    <td>
-                      <button onClick={() => navigate(`/reits/${reit.Ticker}`)}>
-                        {reit.Ticker}
-                      </button>
+                    {/* <td> REMOVED </td> */}
+                    <td 
+                      className="reit-company-name-clickable"
+                      onClick={() => navigate(`/reits/${reit.Ticker}`)}
+                    >
+                      {reit.Company_Name}
                     </td>
-                    <td>{reit.Company_Name}</td>
                     <td>{reit.Business_Description || "No description available."}</td>
                     <td>
                       {reit.Website ? (
@@ -186,6 +138,7 @@ function FilterPage() {
                           href={formatWebsiteUrl(reit.Website)}
                           target="_blank"
                           rel="noopener noreferrer"
+                          className="reit-link"
                         >
                           Visit
                         </a>
@@ -194,17 +147,16 @@ function FilterPage() {
                       )}
                     </td>
                   </tr>
-                );
-              })
-            ) : (
-              <tr>
-                <td colSpan="4">No REITs available for the selected criteria.</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="3">No REITs available for the selected criteria.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       )}
-      {/* Bottom banner*/}
       <BottomBanner /> 
     </div>
   );

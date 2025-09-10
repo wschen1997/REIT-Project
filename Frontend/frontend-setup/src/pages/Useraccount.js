@@ -4,6 +4,7 @@ import { auth, db } from "../firebase.js";
 import { onAuthStateChanged } from "firebase/auth";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import BottomBanner from "../components/BottomBanner.js";
+import Loading from "../components/Loading.js";
 
 const Useraccount = () => {
   const navigate = useNavigate();
@@ -33,8 +34,7 @@ const Useraccount = () => {
   }, [navigate]);
 
   if (loading) {
-    // Adjusted loading state to be left-aligned
-    return <div className="user-account-page loading-box">Loading Account...</div>;
+    return <Loading />;
   }
 
   if (!userData) {
