@@ -13,6 +13,7 @@ import { db } from "../firebase.js";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import BottomBanner from "../components/BottomBanner.js";
 import Loading from "../components/Loading.js";
+import { FcGoogle } from "react-icons/fc";
 
 const Login = ({ setCurrentUser }) => {
   const navigate = useNavigate();
@@ -138,7 +139,7 @@ const Login = ({ setCurrentUser }) => {
     } catch (err) {
       setIsLoading(false);
       console.error("Google login error:", err);
-      setError("Failed to log in with Google. Please try again or use email/password.");
+      setError("Failed to sign in with Google. Please try again or use email/password.");
     }
   };
 
@@ -206,8 +207,19 @@ const Login = ({ setCurrentUser }) => {
             <div style={{ flex: 1, height: "1px", backgroundColor: "var(--border-color)" }} />
           </div>
           
-          <button onClick={handleGoogleLogin} className="btn btn-primary-outline" style={{ marginBottom: "1rem" }}>
-            Google Account
+          <button
+            onClick={handleGoogleLogin}
+            className="btn btn-primary-outline"
+            style={{ 
+              marginBottom: "1rem",
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              gap: '10px' 
+            }}
+          >
+            <FcGoogle size={20} /> {/* <-- This is the icon */}
+            <span>Google Account</span>
           </button>
           
           {/* --- CHANGE: Replaced inline styles and hover handlers with new classes --- */}

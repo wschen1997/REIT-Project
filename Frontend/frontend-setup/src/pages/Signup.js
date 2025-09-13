@@ -17,6 +17,7 @@ import {
 import { auth, db } from "../firebase.js";
 import BottomBanner from "../components/BottomBanner.js";
 import Loading from "../components/Loading.js";
+import { FcGoogle } from "react-icons/fc";
 
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:5000";
 
@@ -284,9 +285,16 @@ function Signup({ currentUser }) {
             <p className="error-message" style={{ marginTop: "-0.5rem" }}>{emailError}</p>
           )}
 
+          <button
+            onClick={handleSignup}
+            className="btn btn-primary"
+          >
+            Create Free Account
+          </button>
+
           {!isGoogleUser && (
             <>
-              <div style={{ display: "flex", alignItems: "center", width: "100%", margin: "0.5rem 0" }}>
+              <div style={{ display: "flex", alignItems: "center", width: "100%", margin: "1.5rem 0" }}>
                 <div style={{ flex: 1, height: "1px", backgroundColor: "var(--border-color)" }} />
                 <span style={{ margin: "0 10px", color: "var(--text-color-subtle)", fontSize: "0.9rem" }}>
                   Or sign up using
@@ -297,19 +305,18 @@ function Signup({ currentUser }) {
               <button
                 onClick={handleGoogleSignup}
                 className="btn btn-primary-outline"
-                style={{ margin: "1rem 0" }}
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  gap: '10px' 
+                }}
               >
-                Google Account
+                <FcGoogle size={20} /> {/* <-- This is the icon */}
+                <span>Google Account</span>
               </button>
             </>
           )}
-
-          <button
-            onClick={handleSignup}
-            className="btn btn-primary"
-          >
-            Create Free Account
-          </button>
 
           <div style={{ marginTop: "1.2rem", fontSize: "0.9rem", textAlign: "center", color: "var(--text-color-dark)" }}>
             Already have an account?{' '}
@@ -317,7 +324,7 @@ function Signup({ currentUser }) {
               onClick={() => navigate("/login")}
               className="text-link"
             >
-              Log In
+              Sign In
             </span>
           </div>
         </div>

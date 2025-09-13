@@ -6,6 +6,7 @@ Prep work needed:
 3. Make mobile responsive (low priority)
 4. Connect email/signup DB to zoho mai;
 5. UK stock software market research
+ - API for basic fundemental quene, cap IQ for more distinct dataset
 6. Back up code with 2nd computer
 
 Marketing:
