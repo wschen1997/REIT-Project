@@ -35,7 +35,7 @@ const Login = ({ setCurrentUser }) => {
       setResendCooldown(60);
       window.history.replaceState(null, '', window.location.pathname);
     } else if (searchParams.get('verified') === 'true') {
-      setSuccessMessage('Success! Your email has been verified. You can now log in.');
+      setSuccessMessage('Email verification successful! Please log in with the credentials you set up earlier.');
       window.history.replaceState(null, '', window.location.pathname);
     }
   }, []);
