@@ -1,30 +1,22 @@
-// src/components/ScoringDonutOverlay.js
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import { Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip } from "chart.js";
+import { ThemeContext } from '../context/ThemeContext.js'; // Import ThemeContext
 
 ChartJS.register(ArcElement, Tooltip);
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:5000";
 
 const LoadingIndicator = ({ text }) => {
-  const loadingStyle = {
-    textAlign: 'center',
-    color: '#666',
-    fontSize: '0.9rem',
-    animation: 'pulse 1.5s infinite ease-in-out'
-  };
-  return <p style={loadingStyle}>{text}</p>;
+  return <p className="donut-overlay-loading-indicator">{text}</p>;
 };
 
 const ScoreBar = ({ label, percentile, tier }) => {
-  // Map text-based tiers to a percentage for the bar width
+  const { theme } = useContext(ThemeContext); // Access the current theme
+
   const tierToPercentage = { "Excellent": 100, "Good": 75, "Moderate": 50, "Low": 25, "Very Low": 10 };
-  
   const isTier = tier !== undefined;
-  
-  // Determine the bar's width and the text to display
   const barPercentage = isTier ? (tierToPercentage[tier] || 0) : Math.max(0, Math.min(100, percentile || 0));
-  
+
   const getSuffix = (p) => {
     if (p === null || p === undefined) return '';
     if (p % 100 >= 11 && p % 100 <= 13) return 'th';
@@ -37,22 +29,33 @@ const ScoreBar = ({ label, percentile, tier }) => {
   };
 
   const displayValue = isTier ? tier : `${barPercentage}${getSuffix(barPercentage)} Percentile`;
-  const barColor = barPercentage >= 50 ? '#5A153D' : '#d9534f';
+
+  // THIS IS THE ONLY CHANGE:
+  // Updated logic to make all bars "white-ish" in dark mode.
+  const getBarColor = () => {
+    // If the theme is dark, always use the same light grey color.
+    if (theme === 'dark') {
+      return '#e0e0e0'; // This is the --text-color-dark from your theme
+    }
+
+    // Otherwise, use the original light mode logic with distinct colors.
+    if (barPercentage >= 50) {
+      return '#5A153D'; // Light mode purple for good scores
+    }
+    return '#d9534f';   // Light mode red for low scores
+  };
 
   return (
-    <div style={{ marginBottom: '20px' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: '20px', marginBottom: '5px', fontSize: '1rem', color: '#333' }}>
-        <span style={{ textAlign: 'left', whiteSpace: 'nowrap' }}>{label}</span>
-        <span style={{ fontWeight: 'bold', textAlign: 'right', whiteSpace: 'nowrap' }}>{displayValue}</span>
+    <div className="score-bar">
+      <div className="score-bar-header">
+        <span className="score-bar-label">{label}</span>
+        <span className="score-bar-value">{displayValue}</span>
       </div>
-      <div style={{ background: '#e9ecef', borderRadius: '5px', height: '10px', width: '100%' }}>
-        <div style={{
-          background: barColor,
-          width: `${barPercentage}%`,
-          height: '100%',
-          borderRadius: '5px',
-          transition: 'width 0.5s ease-in-out'
-        }} />
+      <div className="score-bar-track">
+        <div
+          className="score-bar-fill"
+          style={{ width: `${barPercentage}%`, backgroundColor: getBarColor() }}
+        />
       </div>
     </div>
   );
@@ -65,6 +68,7 @@ const ScoringDonutOverlay = ({ ticker, score, title, tooltipText, donutOptions, 
   const [error, setError] = useState('');
   const [jobId, setJobId] = useState(null);
   const pollingRef = useRef(null);
+  const { theme } = useContext(ThemeContext); // Access the current theme
 
   useEffect(() => {
     const startAnalysis = async () => {
@@ -117,10 +121,16 @@ const ScoringDonutOverlay = ({ ticker, score, title, tooltipText, donutOptions, 
   }, [jobId]);
 
   if (score === null || score === undefined) return null;
+
   const scoreVal = Math.round(score);
+  
+  // Define colors based on theme
+  const donutColor = theme === 'dark' ? '#844ee2' : '#5A153D';
+  const donutTrackColor = theme === 'dark' ? '#2a2a2a' : '#e0e0e0';
+
   const donutChartData = {
     labels: ["Score", "Remaining"],
-    datasets: [{ data: [scoreVal, 100 - scoreVal], backgroundColor: ["#5A153D", "#e0e0e0"], borderWidth: 0, datalabels: { display: false } }],
+    datasets: [{ data: [scoreVal, 100 - scoreVal], backgroundColor: [donutColor, donutTrackColor], borderWidth: 0, datalabels: { display: false } }],
   };
   
   const scoreComponents = analysisData ? [
@@ -130,38 +140,37 @@ const ScoringDonutOverlay = ({ ticker, score, title, tooltipText, donutOptions, 
     { label: "Extreme Event Risk (Kurtosis)", percentile: analysisData.percentile_ranks?.TailRisk },
   ] : [];
 
-  const columnStyle = { flex: 1, display: 'flex', flexDirection: 'column', textAlign: 'center' };
-  const columnContentStyle = { flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '20px 0' };
-
   return (
-    <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.6)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 2000 }}>
-      <style>{`@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }`}</style>
-      <div style={{ background: "#fff", padding: "20px 40px", borderRadius: "8px", width: "90%", maxWidth: "1200px", minHeight: "400px", display: "flex", gap: "40px", position: "relative" }}>
-        <button onClick={onClose} onMouseEnter={(e) => { e.currentTarget.style.color = "#B12D78"; }} onMouseLeave={(e) => { e.currentTarget.style.color = "#5A153D"; }} style={{ position: "absolute", top: "10px", right: "15px", background: "transparent", border: "none", fontSize: "2rem", cursor: "pointer", color: "#5A153D", lineHeight: 1, transition: "color 0.2s ease" }}>&times;</button>
+    <div className="donut-overlay-backdrop">
+      <div className="donut-overlay-container">
+        <button onClick={onClose} className="donut-overlay-close-btn">&times;</button>
         
-        <div style={{ ...columnStyle, paddingRight: '40px', borderRight: '1px solid #eee' }}>
-          <h4 style={{ minHeight: '3rem' }}>{title}<span className="tooltip-icon" style={{ marginLeft: "6px", cursor: "pointer" }}>i<span className="tooltip-text">{tooltipText}</span></span></h4>
-          <div style={columnContentStyle}>
-            <div style={{ width: "200px", margin: "0 auto" }}><Doughnut data={donutChartData} options={donutOptions} /></div>
-            <p style={{ marginTop: "20px", fontSize: '1.2rem', fontWeight: 'bold' }}>{`${scoreVal}/100`}</p>
+        <div className="donut-overlay-column">
+          <h4 className="donut-overlay-title">
+            {title}
+            <span className="tooltip-icon">i<span className="tooltip-text">{tooltipText}</span></span>
+          </h4>
+          <div className="donut-overlay-column-content">
+            <div className="donut-chart-wrapper"><Doughnut data={donutChartData} options={donutOptions} /></div>
+            <p className="donut-score-text">{`${scoreVal}/100`}</p>
           </div>
         </div>
         
-        <div style={{ ...columnStyle, paddingRight: '40px', borderRight: '1px solid #eee' }}>
-          <h4 style={{ marginBottom: 0, minHeight: '3rem' }}>Score Components</h4>
-          <div style={columnContentStyle}>
+        <div className="donut-overlay-column">
+          <h4 className="donut-overlay-title">Score Components</h4>
+          <div className="donut-overlay-column-content">
             {isLoading && !analysisData && <LoadingIndicator text="Analyzing component scores..." />}
-            {error && <p style={{ color: 'red', fontSize: '0.9rem' }}>{error}</p>}
+            {error && <p className="error-message">{error}</p>}
             {analysisData && scoreComponents.map(comp => <ScoreBar key={comp.label} {...comp} />)}
           </div>
         </div>
 
-        <div style={columnStyle}>
-          <h4 style={{ marginBottom: 0, minHeight: '3rem' }}>AI-Powered Analysis</h4>
-          <div style={columnContentStyle}>
+        <div className="donut-overlay-column no-border">
+          <h4 className="donut-overlay-title">AI-Powered Analysis</h4>
+          <div className="donut-overlay-column-content">
             {isLoading && !analysisData && <LoadingIndicator text="Crafting insights with Gemini..." />}
-            {error && <p style={{ color: 'red', fontSize: '0.9rem' }}>{error}</p>}
-            {analysisData && <p style={{ textAlign: 'justify', color: '#333', fontSize: '1rem', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>{analysisData.explanation}</p>}
+            {error && <p className="error-message">{error}</p>}
+            {analysisData && <p className="donut-ai-text">{analysisData.explanation}</p>}
           </div>
         </div>
       </div>
