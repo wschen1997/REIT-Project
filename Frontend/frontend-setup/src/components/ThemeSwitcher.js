@@ -1,24 +1,24 @@
-// src/components/ThemeSwitcher.js
 import React, { useContext } from 'react';
-import { ThemeContext } from '../context/ThemeContext.js'; // Use the new context
+import { ThemeContext } from '../context/ThemeContext.js';
+import { FaSun, FaMoon } from 'react-icons/fa';
 
 const ThemeSwitcher = () => {
-  // Get the global theme and toggle function from the context
   const { theme, toggleTheme } = useContext(ThemeContext);
 
-  const buttonStyle = {
-    position: 'fixed',
-    bottom: '20px',
-    right: '20px',
-    zIndex: 9999,
-    padding: '10px',
-    cursor: 'pointer'
+  const switcherStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '15px',
   };
 
   return (
-    <button onClick={toggleTheme} style={buttonStyle}>
-      Switch to {theme === 'light' ? 'Dark' : 'Light'} Mode
-    </button>
+    // Add the new 'theme-switcher-link' class here
+    <div onClick={toggleTheme} className="sidebar-link theme-switcher-link" style={switcherStyle}>
+      {theme === 'light' ? <FaMoon /> : <FaSun />}
+      <span>
+        Switch to {theme === 'light' ? 'Dark' : 'Light'} Mode
+      </span>
+    </div>
   );
 };
 

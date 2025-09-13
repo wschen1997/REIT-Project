@@ -18,9 +18,6 @@ import { auth } from "./firebase.js";
 import { onAuthStateChanged } from "firebase/auth";
 import { ThemeProvider } from './context/ThemeContext.js';
 
-// --- CHANGE #1: Import the ThemeSwitcher component ---
-import ThemeSwitcher from "./components/ThemeSwitcher.js";
-
 import "./App.css";
 
 // Log to see exactly what's in ReactGaModule
@@ -71,8 +68,6 @@ function App() {
       <div className="App">
         <Router>
           <AnalyticsTracker />
-
-          <ThemeSwitcher />
 
           {/* 1) Render Header, passing userPlan & setUserPlan so it can update the plan */}
           <Header currentUser={currentUser} userPlan={userPlan} setUserPlan={setUserPlan} />

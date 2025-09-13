@@ -6,11 +6,12 @@ Prep work needed:
 3. Make mobile responsive (low priority)
 4. Connect email/signup DB to zoho mai;
 5. UK stock software market research
+6. Back up code with 2nd computer
 
 Marketing:
 1. regular financial database at baseline, market as open for pre-using
 2. founder let marketing (content creation)
-3. 
+3. Marketing content targeting UK audience, seperate from saturated US market
 
 UI
 1. Add black/white photos to the app

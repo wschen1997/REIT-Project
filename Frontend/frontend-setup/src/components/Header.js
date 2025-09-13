@@ -117,7 +117,7 @@ const Header = ({ currentUser, userPlan, setUserPlan }) => {
           className="page-overlay"
         />
       )}
-      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} currentUser={currentUser} />
 
       {/* Header bar */}
       <nav className="header-nav">

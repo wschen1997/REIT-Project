@@ -507,7 +507,9 @@
   opacity: 1;
 }
 
-
+[data-theme='dark'] .sidebar-link.theme-switcher-link:hover {
+  color: var(--text-color-light);           /* This makes it "light up" to white in dark mode */
+}
 
 
 
@@ -1944,4 +1946,9 @@ label {
 
 .reit-company-name-clickable:hover {
   color: var(--primary-color-light);
+}
+
+.sidebar-link.theme-switcher-link:hover {
+  background-color: transparent !important; /* This REMOVES the hover box */
+  color: var(--primary-color-light);        /* This makes it "light up" in light mode */
 }

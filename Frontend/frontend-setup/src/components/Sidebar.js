@@ -1,58 +1,88 @@
 import React, { useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { ThemeContext } from '../context/ThemeContext.js';
+import ThemeSwitcher from './ThemeSwitcher.js';
 
-const Sidebar = ({ isOpen, onClose }) => {
+const Sidebar = ({ isOpen, onClose, currentUser }) => {
   const navigate = useNavigate();
   const { theme } = useContext(ThemeContext);
 
   const menu = [
-    { label: "REITs Screener", path: "/filter" },
+    // { label: "REITs Screener", path: "/filter" },
     { label: "About Us", path: "/about" },
     { label: "Contact Us", path: "/contact" },
-    { label: "Valuation Model", path: "/model" },
+    // { label: "Valuation Model", path: "/model" },
     { label: "Pricing", path: "/pricing" },
   ];
 
+  const handleAccountClick = () => {
+    if (currentUser) {
+      navigate('/user');
+    } else {
+      navigate('/login');
+    }
+    onClose();
+  };
+
   return (
-    // The 'left' style remains inline as it's controlled by component state.
     <aside
       className="sidebar"
       style={{
         left: isOpen ? 0 : "-260px",
       }}
     >
-      {/* Replaced inline styles and hover handlers with a clean className */}
-      <button className="sidebar-close-btn" onClick={onClose}>
-        ×
-      </button>
+      {/* This div no longer needs any special flex styles */}
+      <div>
+        <button className="sidebar-close-btn" onClick={onClose}>
+          ×
+        </button>
 
-      {/* This logo section's styles were fine and remain unchanged */}
-      <div
-        onClick={() => { navigate("/"); onClose(); }}
-        style={{
-          padding: "10px 24px 20px",
-          cursor: "pointer",
-          userSelect: "none",
-        }}
-      >
-        <img
-          src={theme === 'dark' ? '/logo-dark-mode.png' : '/logo-crop.PNG'}
-          alt="Viserra Logo"
-          style={{ maxWidth: "100%", maxHeight: 60 }}
-        />
+        <div
+          onClick={() => { navigate("/"); onClose(); }}
+          style={{
+            padding: "10px 24px 20px",
+            cursor: "pointer",
+            userSelect: "none",
+          }}
+        >
+          <img
+            src={theme === 'dark' ? '/logo-dark-mode.png' : '/logo-crop.PNG'}
+            alt="Viserra Logo"
+            style={{ maxWidth: "100%", maxHeight: 60 }}
+          />
+        </div>
+
+        <div
+          className="sidebar-link"
+          onClick={handleAccountClick}
+        >
+          My Account
+        </div>
+
+        {menu.map(({ label, path }) => (
+          <div
+            key={label}
+            className="sidebar-link"
+            onClick={() => { navigate(path); onClose(); }}
+          >
+            {label}
+          </div>
+        ))}
       </div>
 
-      {/* Replaced inline styles and hover handlers with a clean className */}
-      {menu.map(({ label, path }) => (
-        <div
-          key={label}
-          className="sidebar-link"
-          onClick={() => { navigate(path); onClose(); }}
-        >
-          {label}
-        </div>
-      ))}
+      {/* THIS IS THE FIX:
+        We wrap the ThemeSwitcher in a div and use absolute positioning
+        to lock it to the bottom of the sidebar.
+      */}
+      <div style={{
+        position: 'absolute',
+        bottom: '20px', // <-- THIS is the space from the bottom. Change this value to adjust the height.
+        left: '0',
+        width: '100%'
+      }}>
+        <ThemeSwitcher />
+      </div>
+
     </aside>
   );
 };
