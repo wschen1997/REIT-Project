@@ -1,4 +1,3 @@
-// Login.js - REFACTORED FOR THEME
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -6,7 +5,6 @@ import {
   signOut,
   GoogleAuthProvider,
   signInWithPopup,
-  sendEmailVerification,
 } from "firebase/auth";
 import { auth } from "../firebase.js";
 import { db } from "../firebase.js";
@@ -21,75 +19,30 @@ const Login = ({ setCurrentUser }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  // SUCCESS MESSAGE STATE FOR WHEN USER IS REDIRECTED FROM VERIFICATION LINK
   const [successMessage, setSuccessMessage] = useState("");
-  const [showResendLink, setShowResendLink] = useState(false);
-  const [resendCooldown, setResendCooldown] = useState(0);
-
-  // --- All JavaScript logic functions below are UNCHANGED ---
 
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
 
-    if (searchParams.get('status') === 'created') {
-      setSuccessMessage("Account created! We've sent a link to your email. Please verify before logging in.");
-      setShowResendLink(true);
-      setResendCooldown(60);
-      window.history.replaceState(null, '', window.location.pathname);
-    } else if (searchParams.get('verified') === 'true') {
+    // This part STAYS to show a success message after the user clicks the email link
+    if (searchParams.get('verified') === 'true') {
       setSuccessMessage('Email verification successful! Please log in with the credentials you set up earlier.');
       window.history.replaceState(null, '', window.location.pathname);
     }
   }, []);
 
-  useEffect(() => {
-    let timer;
-    if (resendCooldown > 0) {
-      timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
-    }
-    return () => clearTimeout(timer);
-  }, [resendCooldown]);
-
-  const handleResendVerification = async () => {
-    if (!email || !password) {
-      setError("For security purpose, please enter your email and password to resend the link.");
-      return;
-    }
-    try {
-      setError("");
-      setSuccessMessage("");
-      const userCred = await signInWithEmailAndPassword(auth, email, password);
-      if (userCred.user && !userCred.user.emailVerified) {
-        const actionCodeSettings = {
-          url: `${window.location.origin}/login?verified=true`,
-        };
-        await sendEmailVerification(userCred.user, actionCodeSettings);
-        setSuccessMessage("A new verification link has been sent to your email.");
-        setResendCooldown(60);
-      }
-      await signOut(auth);
-    } catch (err) {
-      if (err.code === 'auth/too-many-requests') {
-        setError("Too many requests. Please wait a moment before trying again.");
-        setResendCooldown(60);
-      } else {
-        setError("Failed to resend email. Please check your credentials.");
-      }
-      console.error("Resend error:", err);
-    }
-  };
-
   const handleLogin = async () => {
     setIsLoading(true);
     try {
       setError("");
-      setSuccessMessage("");
-      setShowResendLink(false);
+      setSuccessMessage(""); // Clear success message on new login attempt
       const userCred = await signInWithEmailAndPassword(auth, email, password);
       await userCred.user.reload();
 
       if (!userCred.user.emailVerified) {
-        setError("Please verify your email before logging in.");
-        setShowResendLink(true);
+        // This error message now guides the user correctly
+        setError("Your email is not verified yet. Please check your inbox for the verification link.");
         await signOut(auth);
         setIsLoading(false);
         return;
@@ -110,7 +63,6 @@ const Login = ({ setCurrentUser }) => {
     } catch (err) {
       setIsLoading(false);
       setError("Invalid email or password");
-      setShowResendLink(false);
       console.error("Login error:", err);
     }
   };
@@ -173,28 +125,6 @@ const Login = ({ setCurrentUser }) => {
           {successMessage && <p className="success-message">{successMessage}</p>}
           {error && <p className="error-message">{error}</p>}
 
-          {showResendLink && (
-            <div style={{ marginBottom: "1rem", fontSize: "0.9rem", textAlign: "center" }}>
-              <span>Didn't receive an email? </span>
-              <button
-                onClick={handleResendVerification}
-                disabled={resendCooldown > 0}
-                className="text-link"
-                style={{
-                  background: 'none', 
-                  border: 'none', 
-                  textDecoration: 'underline', 
-                  padding: 0, 
-                  fontSize: '0.9rem',
-                  color: resendCooldown > 0 ? 'var(--text-color-subtle)' : 'var(--primary-color)',
-                  cursor: resendCooldown > 0 ? 'default' : 'pointer',
-                }}
-              >
-                {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend verification link"}
-              </button>
-            </div>
-          )}
-
           <button onClick={handleLogin} className="btn btn-primary">
             Login
           </button>
@@ -218,11 +148,10 @@ const Login = ({ setCurrentUser }) => {
               gap: '10px' 
             }}
           >
-            <FcGoogle size={20} /> {/* <-- This is the icon */}
+            <FcGoogle size={20} />
             <span>Google Account</span>
           </button>
           
-          {/* --- CHANGE: Replaced inline styles and hover handlers with new classes --- */}
           <button
             onClick={() => navigate("/")}
             className="btn btn-secondary"

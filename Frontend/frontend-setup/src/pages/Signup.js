@@ -192,7 +192,7 @@ function Signup({ currentUser }) {
         if (isGoogleUser) {
           navigate("/");
         } else {
-          navigate("/login?status=created");
+          navigate("/verify-email", { state: { email: email, password: password } });
         }
 
       } catch (err) {
