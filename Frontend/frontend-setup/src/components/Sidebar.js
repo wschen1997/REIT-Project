@@ -12,7 +12,7 @@ const Sidebar = ({ isOpen, onClose, currentUser }) => {
     { label: "About Us", path: "/about" },
     { label: "Contact Us", path: "/contact" },
     // { label: "Valuation Model", path: "/model" },
-    { label: "Pricing", path: "/pricing" },
+    { label: "Subscription", path: "/pricing" },
   ];
 
   const handleAccountClick = () => {
