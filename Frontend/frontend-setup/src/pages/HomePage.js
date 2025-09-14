@@ -123,7 +123,17 @@ function HomePage() {
           <h2 className="early-access-title">
             Join Our Early Access List!
           </h2>
-          <p className="early-access-subtitle"></p>
+
+          <p 
+            className="early-access-subtitle"
+            style={{ 
+              textAlign: 'center', 
+              maxWidth: 'none', 
+              margin: '0 0 30px 0' 
+            }}
+          >
+            Viserra is an early-stage fintech startup with a goal to provide top-tier, AI-driven investment analytics backed by proprietary financial data. While we're still in the development stage, we would love to hear your feedback on what features would be most valuable to you.
+          </p>
           {!submitted ? (
             <form onSubmit={handleSubmit} className="early-access-form">
               <input type="email" placeholder="Enter your email" value={email} onChange={(e) => setEmail(e.target.value)} required className="input-field home-form-input" />
@@ -132,7 +142,8 @@ function HomePage() {
                 <option value="">What are you interested in?</option>
                 <option value="REITs">REITs</option>
                 <option value="Crowdfunding">Real Estate Crowdfunding</option>
-                <option value="Both">Both</option>
+                <option value="Equities">General Equities</option>
+                <option value="Others">Other Financial Products</option>
               </select>
 
               <textarea placeholder="Any feedback or features you'd love to see?" value={feedback} onChange={(e) => setFeedback(e.target.value)} className="input-field home-form-input home-textarea-input" />

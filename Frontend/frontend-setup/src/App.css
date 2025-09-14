@@ -1323,7 +1323,7 @@ label {
 /* Powered By Section */
 .powered-by-section {
   text-align: center;
-  margin: 40px auto 100px;
+  margin: 90px auto 170px;
   max-width: 1200px;
   padding: 0 20px;
 }
@@ -1789,7 +1789,7 @@ label {
 .user-account-section {
   border: 1px solid var(--border-color-light);
   border-radius: 0px;
-  padding: 24px;
+  padding: 15px;
   margin-bottom: 20px;
 }
 
@@ -1797,7 +1797,7 @@ label {
   margin-top: 0;
   border-bottom: 1px solid var(--border-color-extra-light);
   padding-bottom: 15px;
-  font-size: 1.4rem;
+  font-size: 1.3rem;
 }
 
 .user-account-info-row {
@@ -2160,4 +2160,32 @@ transition: width 0.5s ease-in-out;
 .text-link-subtle:hover {
   color: var(--text-color-dark); /* Hover color is a darker grey in light mode */
   text-decoration: underline;
+}
+
+@keyframes fadeInOverlay {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* 2. Defines the zoom-in and fade-in for the modal box itself */
+@keyframes zoomInModal {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px); /* Starts slightly smaller and lower */
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0); /* Ends at full size and original position */
+  }
+}
+
+/* 3. Applies the animations to your existing classes */
+.modal-overlay {
+  /* This tells the dark backdrop to run the 0.2-second fade-in animation */
+  animation: fadeInOverlay 0.2s ease-out forwards;
+}
+
+.modal-box {
+  /* This tells the modal box to run the 0.3-second zoom/fade animation */
+  animation: zoomInModal 0.3s ease-out forwards;
 }

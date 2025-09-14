@@ -1,20 +1,30 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { auth, db } from "../firebase.js";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, sendPasswordResetEmail } from "firebase/auth";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import BottomBanner from "../components/BottomBanner.js";
 import Loading from "../components/Loading.js";
+import PopupModal from "../components/PopupModal.js";
 
 const Useraccount = () => {
   const navigate = useNavigate();
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
+  
+  const [showPopup, setShowPopup] = useState(false);
+  const [popupTitle, setPopupTitle] = useState("");
+  const [popupMessage, setPopupMessage] = useState("");
+  const [isGoogleUser, setIsGoogleUser] = useState(false);
 
-  // --- This logic remains completely unchanged ---
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
+        const isGoogle = user.providerData.some(
+          (provider) => provider.providerId === 'google.com'
+        );
+        setIsGoogleUser(isGoogle);
+
         const usersRef = collection(db, "users");
         const q = query(usersRef, where("email", "==", user.email));
         const snapshot = await getDocs(q);
@@ -32,6 +42,26 @@ const Useraccount = () => {
     });
     return () => unsubscribe();
   }, [navigate]);
+
+  const handleChangePassword = async () => {
+    const user = auth.currentUser;
+    if (user) {
+      try {
+        const actionCodeSettings = {
+          url: `${window.location.origin}/login?passwordReset=true`,
+        };
+        await sendPasswordResetEmail(auth, user.email, actionCodeSettings);
+        setPopupTitle("Check Your Email");
+        setPopupMessage("A password reset link has been sent to your inbox. Please follow the instructions to update your password.");
+        setShowPopup(true);
+      } catch (error) {
+        console.error("Error sending password reset email:", error);
+        setPopupTitle("Error");
+        setPopupMessage("Could not send password reset email. Please try again later.");
+        setShowPopup(true);
+      }
+    }
+  };
 
   if (loading) {
     return <Loading />;
@@ -51,31 +81,51 @@ const Useraccount = () => {
         <h2 className="user-account-main-title">My Account</h2>
         <hr className="user-account-hr" />
 
+        {/* --- MODIFIED: Section now uses flexbox for balanced spacing --- */}
         <div className="user-account-section">
           <h2 className="user-account-section-title">User Information</h2>
-          <div className="user-account-info-row">
-            <strong className="user-account-info-label">Username:</strong>
-            <span className="user-account-info-value">{userData.username}</span>
-          </div>
-          <div className="user-account-info-row">
-            <strong className="user-account-info-label">Email:</strong>
-            <span className="user-account-info-value">{userData.email}</span>
-          </div>
-          <div className="user-account-info-row no-border">
-            <strong className="user-account-info-label">Registered Date:</strong>
-            <span className="user-account-info-value">
-              {userData.createdAt
-                ? new Date(userData.createdAt).toLocaleDateString()
-                : "N/A"}
-            </span>
+          {/* This new div controls the spacing of the rows below */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', marginTop: '0.3rem' }}>
+            <div className="user-account-info-row">
+              <strong className="user-account-info-label">Username:</strong>
+              <span className="user-account-info-value">{userData.username}</span>
+            </div>
+            <div className="user-account-info-row">
+              <strong className="user-account-info-label">Email:</strong>
+              <span className="user-account-info-value">{userData.email}</span>
+            </div>
+            <div className="user-account-info-row no-border">
+              <strong className="user-account-info-label">Registered Date:</strong>
+              <span className="user-account-info-value">
+                {userData.createdAt
+                  ? new Date(userData.createdAt).toLocaleDateString()
+                  : "N/A"}
+              </span>
+            </div>
+
+            {/* --- MODIFIED: This entire block is now conditional and restyled --- */}
+            {!isGoogleUser && (
+              <div className="user-account-info-row no-border" style={{ justifyContent: 'flex-start', paddingTop: '1rem' }}>
+                <button
+                  onClick={handleChangePassword}
+                  className="btn btn-primary-outline btn-sm"
+                >
+                  Change Password
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
+        {/* --- MODIFIED: Section now uses flexbox for balanced spacing --- */}
         <div className="user-account-section">
           <h2 className="user-account-section-title">Subscription</h2>
-          <div className="user-account-info-row no-border">
-            <strong className="user-account-info-label">Current Plan:</strong>
-            <span className="user-account-plan-value">{userData.plan}</span>
+          {/* This new div controls the spacing of the row below */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', marginTop: '0.3rem' }}>
+            <div className="user-account-info-row no-border">
+              <strong className="user-account-info-label">Current Plan:</strong>
+              <span className="user-account-plan-value">{userData.plan}</span>
+            </div>
           </div>
         </div>
 
@@ -97,6 +147,15 @@ const Useraccount = () => {
           )}
         </div>
       </div>
+      
+      <PopupModal 
+        show={showPopup} 
+        onClose={() => setShowPopup(false)} 
+        title={popupTitle}
+      >
+        <p>{popupMessage}</p>
+      </PopupModal>
+
       <BottomBanner />
     </div>
   );

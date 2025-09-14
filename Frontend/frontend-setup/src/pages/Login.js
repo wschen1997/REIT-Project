@@ -25,11 +25,16 @@ const Login = ({ setCurrentUser }) => {
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
 
-    // This part STAYS to show a success message after the user clicks the email link
     if (searchParams.get('verified') === 'true') {
       setSuccessMessage('Email verification successful! Please log in with the credentials you set up earlier.');
       window.history.replaceState(null, '', window.location.pathname);
+    } 
+    // --- ADD THIS ENTIRE 'ELSE IF' BLOCK ---
+    else if (searchParams.get('passwordReset') === 'true') {
+      setSuccessMessage('Password successfully updated! Please log in with your new password.');
+      window.history.replaceState(null, '', window.location.pathname);
     }
+    // --- END OF BLOCK TO ADD ---
   }, []);
 
   const handleLogin = async () => {
