@@ -159,14 +159,28 @@ const Login = ({ setCurrentUser }) => {
             Return Home
           </button>
 
-          <div style={{ marginTop: "1.2rem", fontSize: "0.9rem", textAlign: "center", color: "var(--text-color-dark)" }}>
-            Don't have an account?{' '}
-            <span
-              onClick={() => navigate("/signup")}
-              className="text-link"
-            >
-              Sign Up
-            </span>
+          {/* This new container manages the spacing and alignment for both links */}
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            alignItems: 'center', 
+            gap: '1rem', // This sets the space between "Sign Up" and "Forgot Password?"
+            marginTop: '1.5rem', // This sets the space from the "Return Home" button
+            fontSize: '0.9rem', 
+            color: "var(--text-color-dark)" 
+          }}>
+            <div> {/* Wrapper for the first line */}
+              Don't have an account?{' '}
+              <span onClick={() => navigate("/signup")} className="text-link">
+                Sign Up
+              </span>
+            </div>
+
+            <div> {/* Wrapper for the second line (PASTED HERE) */}
+              <span onClick={() => navigate("/reset-password")} className="text-link-subtle">
+                Forgot Password?
+              </span>
+            </div>
           </div>
         </div>
       </div>

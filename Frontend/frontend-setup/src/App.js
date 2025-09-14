@@ -18,6 +18,7 @@ import { auth } from "./firebase.js";
 import { onAuthStateChanged } from "firebase/auth";
 import { ThemeProvider } from './context/ThemeContext.js';
 import VerifyEmail from "./pages/VerifyEmail.js";
+import ResetPassword from "./pages/ResetPassword.js";
 
 import "./App.css";
 
@@ -88,6 +89,7 @@ function App() {
             <Route path="/login" element={<Login currentUser={currentUser} setCurrentUser={setCurrentUser} />} />
             <Route path="/signup" element={<Signup currentUser={currentUser} />} />
             <Route path="/verify-email" element={<VerifyEmail />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
           </Routes>
         </Router>
       </div>
