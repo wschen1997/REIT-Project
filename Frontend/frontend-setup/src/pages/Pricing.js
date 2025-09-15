@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import BottomBanner from "../components/BottomBanner.js";
-import Loading from "../components/Loading.js";
+import { useLoading } from "../context/LoadingContext.js";
 import PopupModal from "../components/PopupModal.js";
 
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:5000";
@@ -10,7 +9,7 @@ function PricingPage({ currentUser, userPlan }) {
   const navigate = useNavigate();
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [showCancelPopup, setShowCancelPopup] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const { isLoading, setLoading: setIsLoading } = useLoading();
   const [errorMessage, setErrorMessage] = useState("");
 
   // --- This logic remains completely unchanged ---
@@ -100,8 +99,6 @@ function PricingPage({ currentUser, userPlan }) {
         <p>Your subscription was not completed.</p>
       </PopupModal>
 
-      {isLoading && <Loading />}
-      <BottomBanner />
     </div>
   );
 }

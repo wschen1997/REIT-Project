@@ -19,7 +19,9 @@ import { onAuthStateChanged } from "firebase/auth";
 import { ThemeProvider } from './context/ThemeContext.js';
 import VerifyEmail from "./pages/VerifyEmail.js";
 import ResetPassword from "./pages/ResetPassword.js";
-
+import BottomBanner from "./components/BottomBanner.js";
+import { LoadingProvider, useLoading } from './context/LoadingContext.js';
+import Loading from "./components/Loading.js";
 import "./App.css";
 
 // Log to see exactly what's in ReactGaModule
@@ -51,48 +53,55 @@ function AnalyticsTracker() {
   return null;
 }
 
-function App() {
-  // Track the user's plan here in App, so Header can fill it, and DetailPage can use it
+// This new component contains your original app logic.
+// It's needed so we can call the `useLoading` hook inside the LoadingProvider.
+const AppContent = () => {
+  const { isLoading } = useLoading(); // Get global loading state
   const [userPlan, setUserPlan] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
-  // Listen for auth changes at the top level of the app
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       console.log("%cAuth state changed in App.js!", "color: blue; font-weight: bold;", user); //
       setCurrentUser(user); // Set the user object when auth state changes
     });
-    // Cleanup subscription on unmount
     return () => unsubscribe();
   }, []);
 
   return (
+    <div className="App">
+      {isLoading && <Loading />} {/* Conditionally render the Loading component */}
+      <Router>
+        <AnalyticsTracker />
+        <Header currentUser={currentUser} userPlan={userPlan} setUserPlan={setUserPlan} />
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/filter" element={<FilterPage />} />
+          <Route path="/reits/:ticker" element={<DetailPage userPlan={userPlan} />} />
+          <Route path="/Crowdfunding" element={<CrowdfundingPage />} />
+          <Route path="/Crowdfunding/:vehicle" element={<RecDetailPage userPlan={userPlan} />} />
+          <Route path="/about" element={<AboutUs />} />
+          <Route path="/contact" element={<ContactUs />} />
+          <Route path="/pricing" element={<PricingPage currentUser={currentUser} userPlan={userPlan} />} />
+          <Route path="/user" element={<Useraccount />} />
+          <Route path="/login" element={<Login currentUser={currentUser} setCurrentUser={setCurrentUser} />} />
+          <Route path="/signup" element={<Signup currentUser={currentUser} />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+        </Routes>
+        <BottomBanner />
+      </Router>
+    </div>
+  );
+};
+
+// The main App component now simply wraps everything with the necessary providers.
+function App() {
+  return (
     <ThemeProvider>
-      <div className="App">
-        <Router>
-          <AnalyticsTracker />
-
-          {/* 1) Render Header, passing userPlan & setUserPlan so it can update the plan */}
-          <Header currentUser={currentUser} userPlan={userPlan} setUserPlan={setUserPlan} />
-
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/filter" element={<FilterPage />} />
-
-            {/* 2) Pass userPlan to DetailPage for content gating */}
-            <Route path="/reits/:ticker" element={<DetailPage userPlan={userPlan} />} />
-            <Route path="/Crowdfunding" element={<CrowdfundingPage />} />
-            <Route path="/Crowdfunding/:vehicle" element={<RecDetailPage userPlan={userPlan} />} />
-            <Route path="/about" element={<AboutUs />} />
-            <Route path="/contact" element={<ContactUs />} />
-            <Route path="/pricing" element={<PricingPage currentUser={currentUser} userPlan={userPlan} />} />
-            <Route path="/user" element={<Useraccount />} />
-            <Route path="/login" element={<Login currentUser={currentUser} setCurrentUser={setCurrentUser} />} />
-            <Route path="/signup" element={<Signup currentUser={currentUser} />} />
-            <Route path="/verify-email" element={<VerifyEmail />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-          </Routes>
-        </Router>
-      </div>
+      <LoadingProvider>
+        <AppContent />
+      </LoadingProvider>
     </ThemeProvider>
   );
 }

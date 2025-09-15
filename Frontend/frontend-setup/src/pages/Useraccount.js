@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { auth, db } from "../firebase.js";
 import { onAuthStateChanged, sendPasswordResetEmail } from "firebase/auth";
 import { collection, query, where, getDocs } from "firebase/firestore";
-import BottomBanner from "../components/BottomBanner.js";
 import Loading from "../components/Loading.js";
 import PopupModal from "../components/PopupModal.js";
 
@@ -156,7 +155,6 @@ const Useraccount = () => {
         <p>{popupMessage}</p>
       </PopupModal>
 
-      <BottomBanner />
     </div>
   );
 };

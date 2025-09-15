@@ -556,7 +556,10 @@ background: var(--surface-color-2);
 [data-theme='dark'] .text-link-subtle:hover {
   color: var(--text-color-light); /* Hover color is bright white in dark mode */
 }
-
+[data-theme='dark'] .loading-spinner {
+  border-color: rgba(255, 255, 255, 0.2); /* Sets the faint track color for ALL 4 sides */
+  border-top-color: var(--text-color-dark);    /* CORRECT: Overrides ONLY the top color to be bright */
+}
 
 
 
@@ -963,22 +966,14 @@ label {
 /* --- STYLES FOR BOTTOM BANNER & MODALS --- */
 
 .bottom-banner {
-  position: fixed;
-  left: 0;
-  bottom: 0;
-  width: 100%;
+  /* This margin pushes it away from the content above it */
+  margin-top: 80px; 
+
+  /* These are your original styles for color, padding, etc. */
   padding: 20px 20px 5px 20px;
   background-color: var(--background-color);
   color: var(--text-color-dark);
-  box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.1); /* Specific shadow for top edge */
-  z-index: 1000;
-  transition: transform 0.4s ease-in-out;
-  transform: translateY(100%); /* Default is hidden */
-}
-
-/* This class is added via JS to make the banner slide up */
-.bottom-banner.visible {
-  transform: translateY(0%);
+  border-top: 1px solid var(--border-color-extra-light); /* Added a simple top border */
 }
 
 .banner-link-row {
@@ -1128,13 +1123,17 @@ label {
 
 .loading-box {
   background-color: var(--background-color);
-  padding: 2rem 2.5rem;
+  padding: 1.5rem 2rem; /* <-- Slightly reduce padding */
   border-radius: 8px;
   box-shadow: var(--box-shadow);
   font-size: 1.2rem;
   font-weight: bold;
   color: var(--primary-color);
   text-align: center;
+  display: flex;
+  flex-direction: row; /* <-- Place items side-by-side */
+  align-items: center;
+  justify-content: center;
 }
 
 /* --- STYLES FOR HEADER COMPONENT --- */
@@ -2188,4 +2187,28 @@ transition: width 0.5s ease-in-out;
 .modal-box {
   /* This tells the modal box to run the 0.3-second zoom/fade animation */
   animation: zoomInModal 0.3s ease-out forwards;
+}
+
+.loading-local {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px; /* Give it some space */
+  width: 100%;
+  min-height: 200px; /* Ensure it has some height */
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-spinner {
+  width: 24px; /* <-- Make spinner smaller */
+  height: 24px;
+  border: 3px solid var(--surface-color-2); /* <-- Make border thinner */
+  border-top: 3px solid var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-left: 15px; /* <-- Add space to the left of the spinner */
 }

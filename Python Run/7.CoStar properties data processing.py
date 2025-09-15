@@ -80,7 +80,7 @@ def parse_currency_to_float(val):
 # ------------------------------------------------------------------
 if __name__ == "__main__":
     # Enter REIT ticker to process
-    ticker = "EGP"  # update as needed
+    ticker = "BXP"  # update as needed
     print(f"Processing property data for Ticker={ticker}...")
 
     # Locate Excel file (.xlsx or .xls) in "Properties" folder

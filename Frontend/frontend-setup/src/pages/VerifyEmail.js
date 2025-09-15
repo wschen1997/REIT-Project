@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { signInWithEmailAndPassword, sendEmailVerification, signOut } from "firebase/auth";
 import { auth } from "../firebase.js";
-import BottomBanner from "../components/BottomBanner.js";
 
 function VerifyEmail() {
   const navigate = useNavigate();
@@ -103,7 +102,6 @@ function VerifyEmail() {
             {/* 5. The "Go to Login Page" button has been completely removed. */}
         </div>
         </div>
-        <BottomBanner />
     </>
     );
 }

@@ -1,29 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 function BottomBanner() {
-  const [isVisible, setIsVisible] = useState(false);
   const [showTnC, setShowTnC] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    // Add bottom padding so main content doesn't get covered by the banner
-    document.body.style.paddingBottom = "180px";
-
-    const handleScroll = () => {
-      // Show the banner if user is near the bottom
-      const scrolledToBottom =
-        window.innerHeight + window.scrollY >= document.body.offsetHeight - 50;
-      setIsVisible(scrolledToBottom);
-    };
-
-    window.addEventListener("scroll", handleScroll);
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-      document.body.style.paddingBottom = "0";
-    };
-  }, []);
 
   // The nav link array
   const links = ["About Us", "Terms", "Privacy", "Contact Us"];
@@ -219,7 +200,7 @@ function BottomBanner() {
       )}
 
       {/* Bottom banner */}
-      <div className={`bottom-banner ${isVisible ? 'visible' : ''}`}>
+      <div className="bottom-banner">
         {/* Link row */}
         <div className="banner-link-row">
           {links.map((text) => (

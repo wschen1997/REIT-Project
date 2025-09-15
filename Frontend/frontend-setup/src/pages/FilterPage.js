@@ -1,18 +1,16 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import BottomBanner from "../components/BottomBanner.js";
-import Loading from "../components/Loading.js"; // --- IMPORT Loading component
+import { useLoading } from "../context/LoadingContext.js";
 
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:5000";
 
 function FilterPage() {
-  // --- All this state and logic is UNCHANGED ---
   const [reits, setReits] = useState([]);
   const [explanation, setExplanation] = useState("");
   const [selectedPropertyType, setSelectedPropertyType] = useState("");
   const [minAvgReturn, setMinAvgReturn] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const { setLoading: setIsLoading } = useLoading();
 
   const propertyTypeOptions = [
     "Apartments", "Industrial Assets", "Office Buildings", "Data Centers",
@@ -65,7 +63,6 @@ function FilterPage() {
     <div className="filter-page">
       <h2 className="filter-page-title">REIT Screener</h2>
 
-      {/* --- NEW: Wrapper for filter controls --- */}
       <div className="filter-controls">
         <div className="filter-control-group">
           <label style={{ marginBottom: '8px' }}>
@@ -83,7 +80,7 @@ function FilterPage() {
             value={minAvgReturn}
             onChange={(e) => setMinAvgReturn(e.target.value)}
             placeholder="Enter minimum return (%)"
-            className="input-field" // Use reusable class
+            className="input-field"
           />
         </div>
 
@@ -92,7 +89,7 @@ function FilterPage() {
           <select
             value={selectedPropertyType}
             onChange={(e) => setSelectedPropertyType(e.target.value)}
-            className="input-field home-select-input" // Use reusable classes
+            className="input-field home-select-input"
           >
             <option value="">-- Select Property Type --</option>
             {propertyTypeOptions.map((type) => (
@@ -107,57 +104,51 @@ function FilterPage() {
       <h2 className="filter-results-title">Filtered REITs</h2>
       <p className="filter-explanation">{explanation}</p>
 
-      {isLoading ? (
-        <Loading /> // --- USE Loading component
-      ) : (
-        <div className="reits-table-container">
-          <table className="reits-table">
-            <thead>
-              <tr>
-                {/* <th>Ticker</th> REMOVED */}
-                <th>Company Name</th>
-                <th>Description</th>
-                <th>Website</th>
-              </tr>
-            </thead>
-            <tbody>
-              {reits.length > 0 ? (
-                reits.map((reit, index) => (
-                  <tr key={index}>
-                    {/* <td> REMOVED </td> */}
-                    <td 
-                      className="reit-company-name-clickable"
-                      onClick={() => navigate(`/reits/${reit.Ticker}`)}
-                    >
-                      {reit.Company_Name}
-                    </td>
-                    <td>{reit.Business_Description || "No description available."}</td>
-                    <td>
-                      {reit.Website ? (
-                        <a
-                          href={formatWebsiteUrl(reit.Website)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="reit-link"
-                        >
-                          Visit
-                        </a>
-                      ) : (
-                        "No website available"
-                      )}
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="3">No REITs available for the selected criteria.</td>
+      {/* --- THIS IS THE ONLY CHANGE --- */}
+      <div className="reits-table-container">
+        <table className="reits-table">
+          <thead>
+            <tr>
+              <th>Company Name</th>
+              <th>Description</th>
+              <th>Website</th>
+            </tr>
+          </thead>
+          <tbody>
+            {reits.length > 0 ? (
+              reits.map((reit, index) => (
+                <tr key={index}>
+                  <td
+                    className="reit-company-name-clickable"
+                    onClick={() => navigate(`/reits/${reit.Ticker}`)}
+                  >
+                    {reit.Company_Name}
+                  </td>
+                  <td>{reit.Business_Description || "No description available."}</td>
+                  <td>
+                    {reit.Website ? (
+                      <a
+                        href={formatWebsiteUrl(reit.Website)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="reit-link"
+                      >
+                        Visit
+                      </a>
+                    ) : (
+                      "No website available"
+                    )}
+                  </td>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
-      <BottomBanner /> 
+              ))
+            ) : (
+              <tr>
+                <td colSpan="3">No REITs available for the selected criteria.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

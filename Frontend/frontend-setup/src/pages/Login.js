@@ -9,13 +9,12 @@ import {
 import { auth } from "../firebase.js";
 import { db } from "../firebase.js";
 import { collection, query, where, getDocs } from "firebase/firestore";
-import BottomBanner from "../components/BottomBanner.js";
-import Loading from "../components/Loading.js";
+import { useLoading } from "../context/LoadingContext.js";
 import { FcGoogle } from "react-icons/fc";
 
 const Login = ({ setCurrentUser }) => {
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
+  const { setLoading: setIsLoading } = useLoading();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -189,8 +188,6 @@ const Login = ({ setCurrentUser }) => {
           </div>
         </div>
       </div>
-      {isLoading && <Loading />}
-      <BottomBanner />
     </>
   );
 };

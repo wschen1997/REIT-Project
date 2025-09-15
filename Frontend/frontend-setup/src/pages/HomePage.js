@@ -1,8 +1,7 @@
 import React, { useState, useContext } from "react"; // 1. Import useContext
 import { useNavigate } from "react-router-dom";
 import { ThemeContext } from "../context/ThemeContext.js"; // 2. Import your ThemeContext
-import BottomBanner from "../components/BottomBanner.js";
-import Loading from "../components/Loading.js";
+import { useLoading } from "../context/LoadingContext.js"; 
 import PopupModal from "../components/PopupModal.js";
 
 const API_BASE_URL =
@@ -17,7 +16,7 @@ function HomePage() {
   const [interest, setInterest] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const { setLoading: setIsLoading } = useLoading();
   const [errorMessage, setErrorMessage] = useState("");
 
   const handleSubmit = async (e) => {
@@ -165,8 +164,7 @@ function HomePage() {
           <p>You’ve successfully joined our early access list. We’ll keep you up to date on our progress.</p>
         </PopupModal>
 
-        {isLoading && <Loading />}
-        <BottomBanner />
+
       </div>
     </>
   );

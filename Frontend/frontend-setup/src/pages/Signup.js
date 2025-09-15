@@ -15,8 +15,7 @@ import {
   where,
 } from "firebase/firestore";
 import { auth, db } from "../firebase.js";
-import BottomBanner from "../components/BottomBanner.js";
-import Loading from "../components/Loading.js";
+import { useLoading } from "../context/LoadingContext.js";
 import { FcGoogle } from "react-icons/fc";
 
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:5000";
@@ -25,7 +24,7 @@ const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
 function Signup({ currentUser }) {
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false); 
+  const { setLoading: setIsLoading } = useLoading();
 
   // -------------- Form Fields --------------
   const [username, setUsername] = useState("");
@@ -329,8 +328,6 @@ function Signup({ currentUser }) {
           </div>
         </div>
       </div>
-      {isLoading && <Loading />}
-      <BottomBanner />
     </>
   );
   }

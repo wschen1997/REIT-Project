@@ -1,12 +1,29 @@
+// src/components/Loading.js
+
 import React from "react";
 
-const Loading = () => {
-  return (
-    // We can reuse the .modal-overlay class for the background
-    <div className="modal-overlay">
-      <div className="loading-box">
-        Loading, please wait...
+const Loading = ({ isOverlay = true }) => {
+  // Reorder the elements here: Text first, then the spinner
+  const loadingContent = (
+    <div className="loading-box">
+      Loading, please wait...
+      <div className="loading-spinner"></div>
+    </div>
+  );
+
+  // The full-screen overlay version
+  if (isOverlay) {
+    return (
+      <div className="modal-overlay">
+        {loadingContent}
       </div>
+    );
+  }
+
+  // The local version
+  return (
+    <div className="loading-local">
+      {loadingContent}
     </div>
   );
 };

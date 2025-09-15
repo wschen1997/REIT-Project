@@ -1,8 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import BottomBanner from "../components/BottomBanner.js";
 import PopupModal from "../components/PopupModal.js";
-import Loading from "../components/Loading.js";
+import { useLoading } from "../context/LoadingContext.js";
 
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:5000";
 
@@ -17,7 +16,7 @@ function ContactUs() {
   const [submitted, setSubmitted] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const { setLoading: setIsLoading } = useLoading();
 
   // --- This logic remains completely unchanged ---
   const handleSubmit = async (e) => {
@@ -114,7 +113,7 @@ function ContactUs() {
                 </button>
               </form>
             ) : (
-              <p className="contact-success-message">
+              <p className="text-color-light">
                 Thank you for contacting us! We’ll be in touch soon.
               </p>
             )}
@@ -131,9 +130,6 @@ function ContactUs() {
           Your message has been received. We’ll respond as soon as possible.
         </p>
       </PopupModal>
-      
-      {isLoading && <Loading />} 
-      <BottomBanner />
     </>
   );
 }

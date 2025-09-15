@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef} from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Bar, Doughnut, Pie } from "react-chartjs-2";
-import BottomBanner from "../components/BottomBanner.js";
 import ScoringDonutOverlay from '../components/ScoringDonutOverlay.js';
 import ModelTab from '../components/ModelTab.js';
 import ScatterPlotOverlay from "../components/ScatterPlotOverlay.js";
@@ -24,6 +23,7 @@ import {
 } from "chart.js";
 import ChartDataLabels from 'chartjs-plugin-datalabels'
 import Loading from "../components/Loading.js";
+import { useLoading } from "../context/LoadingContext.js";
 
 const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
 
@@ -209,7 +209,7 @@ function FinancialsTable({ ticker, subTab }) {
     fetchData();
   }, [ticker, subTab]);
 
-  if (loading) return <p>Loading {subTab.toUpperCase()}...</p>;
+  if (loading) return <Loading isOverlay={false} />;
   if (error) return <p style={{ color: 'red' }}>{error}</p>;
   if (rows.length === 0) return <p>No data available for {subTab.toUpperCase()}.</p>;
 
@@ -505,7 +505,7 @@ function DetailPage({ userPlan }) {
   const [financialData, setFinancialData] = useState([]);
   const [stabilityScore, setStabilityScore] = useState(null);
   const [fundamentalScore, setFundamentalScore] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { setLoading } = useLoading();
   const [error, setError] = useState("");
 
   // Portfolio breakdowns
@@ -552,113 +552,78 @@ function DetailPage({ userPlan }) {
   };
 
   useEffect(() => {
-    if (!ticker) {
-      setError("Ticker is undefined.");
-      setLoading(false);
-      return;
-    }
-
-    // 1) Fetch single REIT’s data
-    fetch(`${API_BASE_URL}/api/reits?ticker=${ticker}`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.reits && data.reits.length > 0) {
-          const reit = data.reits.find((r) => r.Ticker === ticker);
-          if (!reit) {
-            console.error("No matching Ticker found in returned data:", ticker);
-            return;
-          }
-          setCompanyName(reit.Company_Name || "");
-          setBusinessDescription(reit.Business_Description || "");
-          setPropertyType(reit.Property_Type ?? null);
-          setYearFounded(parseIntOrNull(reit.Year_Founded));
-          setNumbersEmployee(parseIntOrNull(reit.Numbers_Employee));
-          setWebsite(reit.Website ?? null);
-          setTotalAssetsM(reit.Total_Real_Estate_Assets_M_ ?? null);
-          setTargetPrice(reit["Target_Price"] ?? null);
-          setFiveYrFFOGrowth(reit["5yr_FFO_Growth"] ?? null);
-
-          // Convert US states
-          if (reit.US_Investment_Regions) {
-            const statesList = reit.US_Investment_Regions.split(", ")
-              .map((st) => st.trim())
-              .filter(Boolean);
-            // Map to full names
-            const fullStates = statesList
-              .map((st) => US_STATE_MAP[st] || st)
-              .filter(Boolean);
-            setUSInvestmentRegions(fullStates);
-          }
-          // Convert overseas
-          if (reit.Overseas_Investment) {
-            setOverseasInvestment(
-              reit.Overseas_Investment.split(", ").map((c) => c.trim())
-            );
-          }
-        }
-      })
-      .catch((err) => {
-        console.error("Error fetching REIT info:", err);
-      });
-
-    // 2) Fetch daily price & volume
-    fetch(`${API_BASE_URL}/api/reits/${ticker}/price`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.price_data && data.price_data.length > 0) {
-          setPriceData(data.price_data);
-        } else if (data.message) {
-          console.warn(data.message);
-        }
-      })
-      .catch((err) => {
-        console.error("Error fetching price data:", err);
-      });
-
-    // 3) Fetch financials + scores
-    fetch(`${API_BASE_URL}/api/reits/${ticker}/financials?include_scores=true`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.quarterly_data) {
-          setFinancialData(data.quarterly_data);
-          setStabilityScore(data.stability_percentile);
-          setFundamentalScore(data.fundamental_percentile);
-        } else if (data.message) {
-          setError(data.message);
-          setFinancialData([]);
-        } else {
-          setError("Unexpected response format.");
-        }
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error("Error fetching financial data:", err);
-        setError("Error fetching financial data.");
-        setLoading(false);
-      });
-
-    // 4) Fetch portfolio breakdowns
-    fetch(`${API_BASE_URL}/api/reits/${ticker}/breakdowns`)
-    .then((res) => res.json())
-    .then((data) => {
-      if (data.breakdowns) {
-        setBreakdowns(data.breakdowns);
-      } else if (data.error) {
-        setErrorBreakdowns(data.error);
+      if (!ticker) {
+        setError("Ticker is undefined.");
+        return;
       }
-    })
-    .catch((err) => {
-      console.error("Error fetching breakdowns:", err);
-      setErrorBreakdowns("Network error loading breakdowns.");
-    })
-    .finally(() => {
-      setLoadingBreakdowns(false);
-    });
-  }, [ticker]);
 
-  if (loading) {
-    return <Loading />;
-  }
+      setLoading(true); // Turn the GLOBAL loader ON
+
+      const reitInfoPromise = fetch(`${API_BASE_URL}/api/reits?ticker=${ticker}`).then(res => res.json());
+      const pricePromise = fetch(`${API_BASE_URL}/api/reits/${ticker}/price`).then(res => res.json());
+      const financialsPromise = fetch(`${API_BASE_URL}/api/reits/${ticker}/financials?include_scores=true`).then(res => res.json());
+      const breakdownsPromise = fetch(`${API_BASE_URL}/api/reits/${ticker}/breakdowns`).then(res => res.json());
+
+      Promise.all([reitInfoPromise, pricePromise, financialsPromise, breakdownsPromise])
+        .then(([reitData, priceData, financialData, breakdownData]) => {
+          // --- Process REIT Info ---
+          if (reitData.reits && reitData.reits.length > 0) {
+            const reit = reitData.reits.find((r) => r.Ticker === ticker);
+            if (reit) {
+              setCompanyName(reit.Company_Name || "");
+              setBusinessDescription(reit.Business_Description || "");
+              setPropertyType(reit.Property_Type ?? null);
+              setYearFounded(parseIntOrNull(reit.Year_Founded));
+              setNumbersEmployee(parseIntOrNull(reit.Numbers_Employee));
+              setWebsite(reit.Website ?? null);
+              setTotalAssetsM(reit.Total_Real_Estate_Assets_M_ ?? null);
+              setTargetPrice(reit["Target_Price"] ?? null);
+              setFiveYrFFOGrowth(reit["5yr_FFO_Growth"] ?? null);
+              if (reit.US_Investment_Regions) {
+                  const statesList = reit.US_Investment_Regions.split(", ").map((st) => st.trim()).filter(Boolean);
+                  const fullStates = statesList.map((st) => US_STATE_MAP[st] || st).filter(Boolean);
+                  setUSInvestmentRegions(fullStates);
+              }
+              if (reit.Overseas_Investment) {
+                  setOverseasInvestment(reit.Overseas_Investment.split(", ").map((c) => c.trim()));
+              }
+            }
+          }
+
+          // --- Process Price Data ---
+          if (priceData.price_data && priceData.price_data.length > 0) {
+            setPriceData(priceData.price_data);
+          } else if (priceData.message) {
+            console.warn(priceData.message);
+          }
+
+          // --- Process Financials + Scores ---
+          if (financialData.quarterly_data) {
+            setFinancialData(financialData.quarterly_data);
+            setStabilityScore(financialData.stability_percentile);
+            setFundamentalScore(financialData.fundamental_percentile);
+          } else if (financialData.message) {
+            setError(financialData.message);
+            setFinancialData([]);
+          }
+
+          // --- Process Breakdowns ---
+          if (breakdownData.breakdowns) {
+            setBreakdowns(breakdownData.breakdowns);
+          } else if (breakdownData.error) {
+            setErrorBreakdowns(breakdownData.error);
+          }
+        })
+        .catch((err) => {
+          console.error("Error fetching page data:", err);
+          setError("A network error occurred while fetching data.");
+        })
+        .finally(() => {
+          setLoading(false); // Turn the GLOBAL loader OFF
+          setLoadingBreakdowns(false); // Also update individual state if needed
+        });
+    }, [ticker, setLoading]); // Add setLoading to the dependency array
+
 
   // ------------------------------------
   // Chart logic (Overview)
@@ -1060,7 +1025,7 @@ function DetailPage({ userPlan }) {
             />
           )}
 
-          <BottomBanner />
+          
           {showOverlay && (
             <ScatterPlotOverlay
               propertyTypes={propertyTypeArray}
@@ -1339,9 +1304,6 @@ function DetailPage({ userPlan }) {
                     )}
                   </div>
                 </div>
-              </div>
-              <div className="portfolio-footnote">
-                As an analytics platform, Viserra strives to present every data point on a consistent basis. Property data and classification are sourced from public records (eg. transaction deeds, county appraisal databases, etc.) to reflect the most up to date transaction information. All percentages here are calculated on a square-foot basis, so figures may differ from those on the company’s website or in investor presentations.
               </div>
             </div>
           )}

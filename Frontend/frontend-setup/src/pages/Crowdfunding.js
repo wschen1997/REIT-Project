@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import BottomBanner from "../components/BottomBanner.js";
 
 // Load backend URL from environment variable
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:5000";
@@ -111,8 +110,6 @@ function CrowdfundingPage() {
           Back to Home
         </button>
       </div>
-      {/* The new bottom banner that slides up at scroll-bottom */}
-      <BottomBanner /> 
     </div>
   );
 }

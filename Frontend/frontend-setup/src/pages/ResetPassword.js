@@ -2,15 +2,14 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { sendPasswordResetEmail } from "firebase/auth";
 import { auth } from "../firebase.js";
-import BottomBanner from "../components/BottomBanner.js";
-import Loading from "../components/Loading.js";
+import { useLoading } from "../context/LoadingContext.js";
 
 function ResetPassword() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const { setLoading: setIsLoading } = useLoading();
 
   const handleResetPassword = async (e) => {
     e.preventDefault();
@@ -83,8 +82,6 @@ function ResetPassword() {
           </button>
         </div>
       </div>
-      {isLoading && <Loading />}
-      <BottomBanner />
     </>
   );
 }

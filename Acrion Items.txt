@@ -18,7 +18,8 @@ UI
 1. Add black/white photos to the app
 2.scrolling animation
 
-
+Misc
+1. Wrap all loading state, pop up modal into appjs
 
 
 

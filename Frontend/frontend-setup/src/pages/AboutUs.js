@@ -1,5 +1,4 @@
 import React from "react";
-import BottomBanner from "../components/BottomBanner.js";
 
 function AboutUs() {
   return (
@@ -77,7 +76,6 @@ function AboutUs() {
           </div>
         </div>
       </div>
-      <BottomBanner />
     </>
   );
 }
