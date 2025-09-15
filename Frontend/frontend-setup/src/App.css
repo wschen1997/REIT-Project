@@ -583,14 +583,20 @@ body {
     color: var(--text-color-dark);
 }
 
-/* Main Container */
 .App {
-    width: 100%;
-    margin: 0;
-    background: var(--background-color);
-    padding: 0;
-    border: none;
-    box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh; /* Make the app fill at least the full screen height */
+  width: 100%;
+  margin: 0;
+  background: var(--background-color);
+  padding: 0;
+  border: none;
+  box-shadow: none;
+}
+
+.main-content {
+  flex-grow: 1; /* This is the magic part! It makes the content area expand */
 }
 
 /* Navigation Bar */

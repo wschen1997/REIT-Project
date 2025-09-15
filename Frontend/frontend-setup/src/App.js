@@ -74,6 +74,7 @@ const AppContent = () => {
       <Router>
         <AnalyticsTracker />
         <Header currentUser={currentUser} userPlan={userPlan} setUserPlan={setUserPlan} />
+        <main className="main-content">
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/filter" element={<FilterPage />} />
@@ -89,6 +90,7 @@ const AppContent = () => {
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/reset-password" element={<ResetPassword />} />
         </Routes>
+        </main>
         <BottomBanner />
       </Router>
     </div>
