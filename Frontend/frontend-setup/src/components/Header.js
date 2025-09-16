@@ -169,7 +169,6 @@ const Header = ({ currentUser, userPlan, setUserPlan }) => {
           <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onFocus={() => setIsFocused(true)} onBlur={() => setTimeout(() => setIsFocused(false), 200)} placeholder="Search REIT ticker…" className="search-input" />
           {(searchQuery || (!searchQuery && isFocused && recentSearches.length > 0)) && (
             <div className="search-suggestions">
-              {/* All your existing suggestions logic... */}
               {searchQuery && isFetching && <p className="suggestion-status">Loading…</p>}
               {searchQuery && !isFetching && suggestions.length === 0 && <p className="suggestion-status">No match for <strong>{searchQuery}</strong></p>}
               {!searchQuery && isFocused && recentSearches.filter(r => r.Ticker && r.Company_Name).length > 0 && <div className="suggestion-header">Recent</div>}
@@ -184,14 +183,14 @@ const Header = ({ currentUser, userPlan, setUserPlan }) => {
         </div>
       </div>
 
-      {/* ==================== NEW MOBILE SEARCH ICON ==================== */}
-      <button className="search-icon-btn" onClick={() => setIsSearchModalOpen(true)}>
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-      </button>
-      {/* ============================================================== */}
-
-      {/* RIGHT: auth buttons / greeting */}
+      {/* RIGHT: mobile icons + desktop auth buttons / greeting */}
       <div className="header-right-section">
+        {/* ==================== MOBILE SEARCH ICON (MOVED HERE) ==================== */}
+        <button className="search-icon-btn" onClick={() => setIsSearchModalOpen(true)}>
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        </button>
+        {/* ======================================================================= */}
+
         {currentUser && currentUser.emailVerified && location.pathname !== '/signup' ? (
           <>
             {/* This is for desktop, it will be hidden by CSS on mobile */}

@@ -566,10 +566,12 @@ background: var(--surface-color-2);
   border-color: var(--border-color);
 }
 
-[data-theme='dark'] .search-icon-btn:hover {
+[data-theme='dark'] .search-icon-btn:hover,
+[data-theme='dark'] .user-icon-btn:hover {
   background-color: var(--surface-hover-color);
   border-color: var(--secondary-glow-color);
   box-shadow: 0 0 5px 0 var(--secondary-glow-color);
+  color: var(--text-color-light); /* This makes the icon turn white */
 }
 
 [data-theme='dark'] .user-icon-btn {
@@ -2267,9 +2269,9 @@ transition: width 0.5s ease-in-out;
   transition: all 0.2s ease;
 }
 
-.search-icon-btn:hover {
-  background: var(--surface-hover-color);
-  color: var(--primary-color);
+.search-icon-btn:hover,
+.user-icon-btn:hover {
+  background-color: var(--surface-hover-color);
 }
 
 .search-modal-overlay {
@@ -2426,6 +2428,11 @@ transition: width 0.5s ease-in-out;
     margin: 0 25px;   /* Add some horizontal space so logos aren't crammed together */
   }
 
+  /* Speed up the logo marquee on mobile */
+  .marquee-content {
+    animation-duration: 7s; /* Default was 30s. A smaller number is faster. */
+  }
+
   /* --- Header Responsive Styles --- */
   .header-nav {
     height: 70px;
@@ -2439,7 +2446,7 @@ transition: width 0.5s ease-in-out;
   }
 
   .header-right-section {
-    gap:2px;        /* Adjust this for space between the SEARCH and USER icons */
+    gap:10px;        /* Adjust this for space between the SEARCH and USER icons */
   }
 
   /* Hide desktop-only elements */
