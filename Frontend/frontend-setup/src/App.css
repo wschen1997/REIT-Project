@@ -561,9 +561,21 @@ background: var(--surface-color-2);
   border-top-color: var(--text-color-dark);    /* CORRECT: Overrides ONLY the top color to be bright */
 }
 
+[data-theme='dark'] .search-icon-btn {
+  color: var(--text-color-subtle);
+  border-color: var(--border-color);
+}
 
+[data-theme='dark'] .search-icon-btn:hover {
+  background-color: var(--surface-hover-color);
+  border-color: var(--secondary-glow-color);
+  box-shadow: 0 0 5px 0 var(--secondary-glow-color);
+}
 
-
+[data-theme='dark'] .user-icon-btn {
+  color: var(--text-color-subtle);
+  border-color: var(--border-color);
+}
 
 
 
@@ -1352,11 +1364,12 @@ label {
   margin-bottom: 20px;
 }
 .early-access-subtitle {
-  max-width: 600px;
+  max-width: 1200px;
   margin: 0 auto 20px;
   font-size: 1.2rem;
-  color: #444;
+  color: var(--text-color-subtle);
   line-height: 1.6;
+  text-align: center;
 }
 .early-access-form {
   margin-top: 20px;
@@ -2217,4 +2230,232 @@ transition: width 0.5s ease-in-out;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-left: 15px; /* <-- Add space to the left of the spinner */
+}
+
+/* --- Marquee Styles --- */
+.marquee-container {
+  width: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.marquee-content {
+  display: flex;
+  width: 200%;
+  animation: scroll 30s linear infinite;
+}
+
+.marquee-content img {
+  width: 50%;
+  flex-shrink: 0;
+}
+
+@keyframes scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.search-icon-btn {
+  display: none; /* Hidden by default on desktop */
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 6px;
+  cursor: pointer;
+  line-height: 0; /* Helps align the SVG icon */
+  color: var(--text-color-subtle);
+  transition: all 0.2s ease;
+}
+
+.search-icon-btn:hover {
+  background: var(--surface-hover-color);
+  color: var(--primary-color);
+}
+
+.search-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  z-index: 1500;
+  display: flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+  padding-top: 15vh;
+}
+
+.search-modal-content {
+  width: 90%;
+  max-width: 500px;
+  margin: 0 auto;
+  position: relative;
+  /* We don't need a background here, the children have it */
+}
+
+.search-modal-close-btn {
+    position: absolute;
+    top: -45px;
+    right: 0;
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 2rem;
+    cursor: pointer;
+}
+
+.search-container-modal .search-input {
+  width: 100%;
+  box-sizing: border-box; /* This is the key to making the input fit perfectly */
+}
+
+.search-container-modal .search-suggestions {
+  /* Make suggestions list relative to the input inside the modal */
+  position: relative; 
+  top: 0;
+  width: 100%;
+  margin-top: 8px;
+}
+.user-actions-loggedIn {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+.user-icon-btn {
+  display: none; /* Hidden on desktop by default */
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 6px;
+  cursor: pointer;
+  line-height: 0;
+  color: var(--text-color-subtle);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+========================================
+  MOBILE RESPONSIVE STYLES
+========================================
+*/
+
+/* This media query targets screens 768px wide or smaller, like tablets and phones. */
+@media (max-width: 768px) {
+
+  /* --- General Adjustments --- */
+  body {
+    padding-top: 70px; /* Reduce top padding for a potentially smaller mobile header */
+  }
+
+  /* --- Homepage Responsive Styles --- */
+
+  .hero-section-home {
+    padding: 40px 20px; /* Reduce vertical and horizontal padding */
+  }
+
+  .hero-content-home {
+    flex-direction: column; /* This is key: stacks the text and image vertically */
+    text-align: center;
+    gap: 30px;
+  }
+
+  .hero-text-home {
+    margin-right: 0; /* Remove the margin that separated text and image on desktop */
+  }
+
+  .hero-title-home {
+    font-size: 2.2rem; /* Make the title smaller and more readable on mobile */
+  }
+
+  .hero-subtitle-home,
+  .powered-by-text,
+  .early-access-subtitle {
+    font-size: 1rem;
+  }
+
+  .powered-by-section {
+    /* Drastically reduce the large top and bottom margins for mobile */
+    margin: 40px auto;
+  }
+  
+  .powered-by-text {
+    padding: 0 15px; /* Add padding so text doesn't touch screen edges */
+  }
+
+  .early-access-section {
+    margin: 40px 15px; /* Add horizontal margin to prevent it from touching screen edges */
+    padding: 25px;     /* Reduce padding inside the section */
+  }
+
+  /*
+   * This is the most important fix for your form.
+   * It overrides the fixed 600px width and makes the elements fluid.
+  */
+  .early-access-form .input-field,
+  .home-form-button {
+    width: 100%;
+  }
+
+  .marquee-content img {
+    width: auto;      /* THIS IS THE KEY: Stop forcing the width */
+    height: 90px;     /* Set a fixed, reasonable height */
+    margin: 0 25px;   /* Add some horizontal space so logos aren't crammed together */
+  }
+
+  /* --- Header Responsive Styles --- */
+  .header-nav {
+    height: 70px;
+    justify-content: space-between;
+    align-items: center; /* Ensures everything is vertically centered */
+    padding: 0 20px;     /* Adjust this to control space on the screen EDGES */
+  }
+
+  .header-left-section {
+    gap: 3px; /* Adjust this for space between the HAMBURGER and LOGO */
+  }
+
+  .header-right-section {
+    gap:2px;        /* Adjust this for space between the SEARCH and USER icons */
+  }
+
+  /* Hide desktop-only elements */
+  .search-container,
+  .user-actions-loggedIn {
+    display: none;
+  }
+
+  /* Show mobile-only elements */
+  .search-icon-btn,
+  .user-icon-btn {
+    display: block;
+  }
+  
+  .header-logo {
+    height: 50px;
+  }
+
 }

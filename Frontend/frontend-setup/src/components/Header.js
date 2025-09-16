@@ -15,6 +15,7 @@ const Header = ({ currentUser, userPlan, setUserPlan }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { theme } = useContext(ThemeContext);
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
 
   /* ─────────────────────────  Firebase / user  ───────────────────────── */
   const [username, setUsername] = useState("");
@@ -109,38 +110,24 @@ const Header = ({ currentUser, userPlan, setUserPlan }) => {
 
   /* ─────────────────────────  render  ───────────────────────── */
   return (
-    <>
-      {/* Sidebar overlay */}
-      {isSidebarOpen && (
-        <div
-          onClick={() => setIsSidebarOpen(false)}
-          className="page-overlay"
-        />
-      )}
-      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} currentUser={currentUser} />
+  <>
+    {/* Sidebar overlay (existing code) */}
+    {isSidebarOpen && (
+      <div
+        onClick={() => setIsSidebarOpen(false)}
+        className="page-overlay"
+      />
+    )}
+    <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} currentUser={currentUser} />
 
-      {/* Header bar */}
-      <nav className="header-nav">
-        {/* LEFT:  hamburger + logo + search */}
-        <div className="header-left-section">
-          {/* ☰ hamburger */}
-          <div
-            onClick={() => setIsSidebarOpen((o) => !o)}
-            className="hamburger-btn"
-          >
-            &#9776;
-          </div>
+    {/* ==================== NEW SEARCH MODAL ==================== */}
+    {isSearchModalOpen && (
+      <div className="search-modal-overlay" onClick={() => setIsSearchModalOpen(false)}>
+        <div className="search-modal-content" onClick={(e) => e.stopPropagation()}>
+          <button className="search-modal-close-btn" onClick={() => setIsSearchModalOpen(false)}>×</button>
 
-          {/* logo */}
-          <img
-            src={theme === 'dark' ? '/logo-dark-mode.png' : '/logo-crop.PNG'}
-            alt="Viserra Logo"
-            className="header-logo"
-            onClick={() => navigate("/")}
-          />
-
-          {/* search box */}
-          <div className="search-container">
+          {/* This is a copy of your search logic, styled for the modal */}
+          <div className="search-container-modal">
             <input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -148,93 +135,84 @@ const Header = ({ currentUser, userPlan, setUserPlan }) => {
               onBlur={() => setTimeout(() => setIsFocused(false), 200)}
               placeholder="Search REIT ticker…"
               className="search-input"
+              autoFocus
             />
-            {(
-              // show API suggestions if typing
-              searchQuery ||
-              // otherwise, if focused and have recents, show them
-              (!searchQuery && isFocused && recentSearches.length > 0)
-            ) && (
-              <div
-                className="search-suggestions"
-              >
-                {searchQuery && isFetching && (
-                  <p className="suggestion-status">
-                    Loading…
-                  </p>
-                )}
-                {searchQuery &&
-                  !isFetching &&
-                  suggestions.length === 0 && (
-                    <p className="suggestion-status">
-                      No match for <strong>{searchQuery}</strong>
-                    </p>
-                  )}
-
-                {/* unified list: either API results or recents (filtered) */}
-                {!searchQuery && isFocused && recentSearches.filter(r => r.Ticker && r.Company_Name).length > 0 && (
-                  <div className="suggestion-header">
-                    Recent
-                  </div>
-                )}
-                {(searchQuery
-                  ? suggestions
-                  : recentSearches.filter((r) => r.Ticker && r.Company_Name)
-                ).map((r) => (
-                  <div
-                    key={r.Ticker}
-                    onClick={() => handleSelectTicker(r)}
-                    className="suggestion-item"
-                  >
-                    {/* Ticker in purple */}
-                    <span className="suggestion-ticker">
-                      {r.Ticker}
-                    </span>
-                    {/* Company name in black, safe-split */}
-                    <span className="suggestion-name">
-                      {(r.Company_Name || "").split(" (")[0]}
-                    </span>
+            {(searchQuery || (isFocused && recentSearches.length > 0)) && (
+              <div className="search-suggestions">
+                {/* All your existing suggestions and recent searches logic goes here, unchanged */}
+                {searchQuery && isFetching && <p className="suggestion-status">Loading…</p>}
+                {searchQuery && !isFetching && suggestions.length === 0 && <p className="suggestion-status">No match for <strong>{searchQuery}</strong></p>}
+                {!searchQuery && isFocused && recentSearches.filter(r => r.Ticker && r.Company_Name).length > 0 && <div className="suggestion-header">Recent</div>}
+                {(searchQuery ? suggestions : recentSearches.filter(r => r.Ticker && r.Company_Name)).map((r) => (
+                  <div key={r.Ticker} onClick={() => { handleSelectTicker(r); setIsSearchModalOpen(false); }} className="suggestion-item">
+                    <span className="suggestion-ticker">{r.Ticker}</span>
+                    <span className="suggestion-name">{(r.Company_Name || "").split(" (")[0]}</span>
                   </div>
                 ))}
               </div>
             )}
           </div>
         </div>
+      </div>
+    )}
+    {/* ========================================================== */}
 
-        {/* RIGHT:  auth buttons / greeting */}
-        <div className="header-right-section">
-          {currentUser && currentUser.emailVerified && location.pathname !== '/signup' ? (
-            <>
-              {/* User account link */}
-              <div
-                className="btn btn-primary btn-sm"
-                onClick={() => navigate("/user")}
-              >
-                Hello, {username || currentUser.email}
-              </div>
-              {/* logout */}
-              <button
-                onClick={() => {
-                  setUsername("");
-                  signOut(auth);
-                }}
-                className="btn btn-primary-outline btn-sm"
-              >
-                Logout
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={() => navigate("/login")}
-              className="btn btn-primary btn-sm"
-            >
-              Sign In
-            </button>
+    {/* Header bar */}
+    <nav className="header-nav">
+      {/* LEFT: hamburger + logo + DESKTOP search */}
+      <div className="header-left-section">
+        <div onClick={() => setIsSidebarOpen(o => !o)} className="hamburger-btn">&#9776;</div>
+        <img src={theme === 'dark' ? '/logo-dark-mode.png' : '/logo-crop.PNG'} alt="Viserra Logo" className="header-logo" onClick={() => navigate("/")} />
+
+        {/* This is the ORIGINAL search bar for DESKTOP VIEW ONLY */}
+        <div className="search-container">
+          <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onFocus={() => setIsFocused(true)} onBlur={() => setTimeout(() => setIsFocused(false), 200)} placeholder="Search REIT ticker…" className="search-input" />
+          {(searchQuery || (!searchQuery && isFocused && recentSearches.length > 0)) && (
+            <div className="search-suggestions">
+              {/* All your existing suggestions logic... */}
+              {searchQuery && isFetching && <p className="suggestion-status">Loading…</p>}
+              {searchQuery && !isFetching && suggestions.length === 0 && <p className="suggestion-status">No match for <strong>{searchQuery}</strong></p>}
+              {!searchQuery && isFocused && recentSearches.filter(r => r.Ticker && r.Company_Name).length > 0 && <div className="suggestion-header">Recent</div>}
+              {(searchQuery ? suggestions : recentSearches.filter(r => r.Ticker && r.Company_Name)).map((r) => (
+                <div key={r.Ticker} onClick={() => handleSelectTicker(r)} className="suggestion-item">
+                  <span className="suggestion-ticker">{r.Ticker}</span>
+                  <span className="suggestion-name">{(r.Company_Name || "").split(" (")[0]}</span>
+                </div>
+              ))}
+            </div>
           )}
         </div>
-      </nav>
-    </>
-  );
+      </div>
+
+      {/* ==================== NEW MOBILE SEARCH ICON ==================== */}
+      <button className="search-icon-btn" onClick={() => setIsSearchModalOpen(true)}>
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      </button>
+      {/* ============================================================== */}
+
+      {/* RIGHT: auth buttons / greeting */}
+      <div className="header-right-section">
+        {currentUser && currentUser.emailVerified && location.pathname !== '/signup' ? (
+          <>
+            {/* This is for desktop, it will be hidden by CSS on mobile */}
+            <div className="user-actions-loggedIn">
+              <div className="btn btn-primary btn-sm" onClick={() => navigate("/user")}>Hello, {username || currentUser.email}</div>
+              <button onClick={() => { setUsername(""); signOut(auth); }} className="btn btn-primary-outline btn-sm">Logout</button>
+            </div>
+
+            {/* This is the new icon for mobile, it will be hidden by CSS on desktop */}
+            <button className="user-icon-btn" onClick={() => navigate('/user')}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            </button>
+          </>
+        ) : (
+          // This is for logged-out users, it remains unchanged
+          <button onClick={() => navigate("/login")} className="btn btn-primary btn-sm">Sign In</button>
+        )}
+      </div>
+    </nav>
+  </>
+);
 };
 
 export default Header;

@@ -58,28 +58,7 @@ function HomePage() {
 
   return (
     <>
-      <style>
-        {`
-          .marquee-container {
-            width: 100%;
-            overflow: hidden;
-            box-sizing: border-box;
-          }
-          .marquee-content {
-            display: flex;
-            width: 200%;
-            animation: scroll 30s linear infinite;
-          }
-          .marquee-content img {
-            width: 50%;
-            flex-shrink: 0;
-          }
-          @keyframes scroll {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(-50%); }
-          }
-        `}
-      </style>
+      
 
       <div className="home">
         {/* --- HERO SECTION --- */}
@@ -125,13 +104,8 @@ function HomePage() {
 
           <p 
             className="early-access-subtitle"
-            style={{ 
-              textAlign: 'center', 
-              maxWidth: 'none', 
-              margin: '0 0 30px 0' 
-            }}
           >
-            Viserra is an early-stage fintech startup with a goal to provide top-tier, AI-driven investment analytics backed by proprietary financial data. While we're still in the development stage, we would love to hear your feedback on what features would be most valuable to you.
+            Viserra is an early-stage fintech startup with a goal to provide AI-driven investment analytics backed by proprietary financial data. While we're still in the development stage, we would love to hear your feedback on what features would be most valuable to you.
           </p>
           {!submitted ? (
             <form onSubmit={handleSubmit} className="early-access-form">
