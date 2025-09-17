@@ -48,7 +48,7 @@ const Sidebar = ({ isOpen, onClose, currentUser }) => {
           <img
             src={theme === 'dark' ? '/logo-dark-mode.png' : '/logo-crop.PNG'}
             alt="Viserra Logo"
-            style={{ maxWidth: "100%", maxHeight: 60 }}
+            className="header-logo"
           />
         </div>
 

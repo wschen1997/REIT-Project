@@ -10,7 +10,7 @@ function PopupModal({ show, onClose, title, children }) {
       <div
         className="modal-box"
         onClick={(e) => e.stopPropagation()}
-        style={{ textAlign: 'center', width: '400px' }}
+        style={{ textAlign: 'center'}}
       >
         <button className="sidebar-close-btn" onClick={onClose}>
           ×
