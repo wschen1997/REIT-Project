@@ -25,6 +25,23 @@ import ChartDataLabels from 'chartjs-plugin-datalabels'
 import Loading from "../components/Loading.js";
 import { useLoading } from "../context/LoadingContext.js";
 
+
+const useMediaQuery = (query) => {
+  const [matches, setMatches] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia(query);
+    if (media.matches !== matches) {
+      setMatches(media.matches);
+    }
+    const listener = () => setMatches(media.matches);
+    window.addEventListener("resize", listener);
+    return () => window.removeEventListener("resize", listener);
+  }, [matches, query]);
+
+  return matches;
+};
+
 const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
 
 ChartJS.register(
@@ -451,7 +468,7 @@ const getChartColors = () => {
 function DetailPage({ userPlan }) {
   const { ticker } = useParams();
   const navigate = useNavigate();
-  // Theme detection
+  const isMobile = useMediaQuery('(max-width: 768px)'); 
   const [chartColors, setChartColors] = useState(getChartColors());
 
   useEffect(() => {
@@ -1103,80 +1120,94 @@ function DetailPage({ userPlan }) {
             <p>Property & portfolio data unavailable.</p>
           ) : (
             <div className="portfolio-grid">
+              {/* Replace your existing .map loop with this one */}
               {[
-                { key: "property_type",   label: "Property Types" },
-                { key: "secondary_type",  label: "Secondary Property Types (If Reported)" },
+                { key: "property_type", label: "Property Types" },
+                { key: "secondary_type", label: "Secondary Property Types (If Reported)" },
               ].map(({ key, label }) => {
-                const arr       = breakdowns[key] || [];
-                const values    = arr.map(d => d.rba_gla);
+                const arr = breakdowns[key] || [];
+                const values = arr.map(d => d.rba_gla);
                 const labelsArr = arr.map(d => d.category);
-                const total     = values.reduce((sum, v) => sum + v, 0);
-
-                console.log("[Portfolio Breakdowns] init donut for:", key, labelsArr, values);
+                const total = values.reduce((sum, v) => sum + v, 0);
 
                 const colors = chartColors.isDarkMode ? darkModeDonutColors : lightModeDonutColors;
                 const bgColors = labelsArr.map((_, i) => colors[i % colors.length]);
 
                 const chartData = {
                   labels: labelsArr,
-                  datasets: [{
-                    data: values,
-                    backgroundColor: bgColors,
-                    borderWidth: 0
-                  }]
+                  datasets: [{ data: values, backgroundColor: bgColors, borderWidth: 0 }]
                 };
 
-                const breakdownDonutOptions = {
+                // ==================== THIS IS THE NEW LOGIC ====================
+                // Define different options for desktop and mobile
+                const desktopDonutOptions = {
                   responsive: true,
                   maintainAspectRatio: false,
                   cutout: "70%",
-                  layout: {
-                    padding: {
-                      top:    65,
-                      right:  40,
-                      bottom: 40,
-                      left:   40
-                    }
-                  },
+                  layout: { padding: { top: 65, right: 40, bottom: 40, left: 40 } },
                   plugins: {
                     title: { display: false },
-                    calloutPlugin: {
-                        color: chartColors.textColor,
-                        lineColor: chartColors.volumeColor // Uses the same grey as your volume bars
-                    },
+                    calloutPlugin: { color: chartColors.textColor, lineColor: chartColors.volumeColor },
                     legend: { display: false },
                     datalabels: { display: false },
-                    tooltip: {
-                      enabled: true,
-                      mode: 'nearest',
-                      intersect: false,
-                      callbacks: {
-                        title: items => items[0].label,
-                        label: ({ parsed: raw }) => {
-                          const pct = total
-                            ? ((raw / total) * 100).toFixed(2) + "%"
-                            : "0%";
-                          const mSF = (raw / 1e6).toFixed(1) + " M SF";
-                          return `${pct}`;
-                        }
-                      }
-                    }
+                    tooltip: { enabled: true, /* ... rest of your tooltip config ... */ }
                   }
                 };
 
+                // AFTER
+                // REPLACE WITH THIS
+                const mobileDonutOptions = {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  cutout: "70%",
+                  plugins: {
+                    title: { display: false },
+                    calloutPlugin: false,
+                    tooltip: { enabled: true },
+                    
+                    // --- Disables all built-in labels/legends ---
+                    legend: { display: false },
+                    datalabels: { display: false },
+                  }
+                };
+
+                // Use the isMobile variable to choose which options to use
+                const chartOptions = isMobile ? mobileDonutOptions : desktopDonutOptions;
+                // ================================================================
+
                 return (
                   <div key={key} className="portfolio-chart-wrapper">
-                    <h4 className="portfolio-chart-title">
-                      {label}
-                    </h4>
+                    <h4 className="portfolio-chart-title">{label}</h4>
                     <div className="portfolio-chart-box">
                       <div className="portfolio-chart-inner-sizer">
-                        <Doughnut
-                          data={chartData}
-                          options={breakdownDonutOptions}
-                        />
+                        <Doughnut data={chartData} options={chartOptions} />
                       </div>
                     </div>
+
+                    
+                    <div className="custom-legend-container">
+                      {chartData.labels.map((legendLabel, index) => {
+                        const value = chartData.datasets[0].data[index];
+                        const backgroundColor = chartData.datasets[0].backgroundColor[index];
+                        const total = chartData.datasets[0].data.reduce((a, b) => a + b, 0);
+                        const percentage = ((value / total) * 100);
+
+                        if (percentage < 1) return null;
+
+                        return (
+                          <div key={index} className="custom-legend-item">
+                            <span 
+                              className="custom-legend-swatch" 
+                              style={{ backgroundColor: backgroundColor }}
+                            ></span>
+                            <span className="custom-legend-label">
+                              {`${legendLabel} ${percentage.toFixed(0)}%`}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+
                   </div>
                 );
               })}

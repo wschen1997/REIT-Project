@@ -2411,7 +2411,37 @@ transition: width 0.5s ease-in-out;
   width: 100%;
 }
 
+.custom-legend-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 16px;
+  padding: 16px 8px 0;
+  width: 100%;
+}
 
+.custom-legend-item {
+  display: flex;
+  align-items: center;
+  font-size: 0.8rem;
+}
+
+.custom-legend-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  margin-right: 6px;
+  flex-shrink: 0;
+}
+
+.custom-legend-label {
+  color: var(--text-color-dark);
+  white-space: nowrap;
+}
+.portfolio-chart-wrapper {
+  overflow: visible; /* <-- Now it applies to all screen sizes */
+}
 
 
 
@@ -2672,17 +2702,44 @@ transition: width 0.5s ease-in-out;
     flex-direction: column;
   }
 
-  /* Stack the portfolio donut charts */
+  /* --- Portfolio Tab Responsive Styles (Definitive Version) --- */
+
+  /* 1. Force the grid to be a single column */
   .portfolio-grid {
-    grid-template-columns: 1fr; /* Change from 2 columns to 1 */
+    grid-template-columns: 1fr;
+    gap: 30px;
   }
 
-  /* Make the portfolio map smaller so it doesn't dominate the screen */
-  .portfolio-map-container svg {
-    height: 450px !important; /* We use !important to override the inline style from the map library */
+  /* 2. Reset the chart and map boxes to prevent overflow */
+  .portfolio-geo-box {
+    padding: 1rem;
+    border-width: 1px;
+    height: auto;
   }
 
-  /* Stack the map's toggle buttons */
+  .portfolio-chart-box {
+    min-height: 350px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0; /* Remove the padding from the box itself */
+    overflow: visible; /* Force it to allow children to overflow */
+  }
+
+  /* 2. This rule now controls the size of the DONUT */
+  .portfolio-chart-inner-sizer {
+    position: relative;
+    /* Make the container larger than the old 200px to create space for labels */
+    width: 300px; 
+    height: 300px;
+  }
+
+  /* 4. Ensure the map panel conforms to the single column */
+  .portfolio-geo-panel {
+    grid-column: 1 / -1; /* This forces it to span only one column */
+  }
+
+  /* 5. Keep the rules to stack the map's buttons */
   .portfolio-map-toggle-row {
     flex-direction: column;
     align-items: stretch;
@@ -2692,9 +2749,13 @@ transition: width 0.5s ease-in-out;
   }
   .portfolio-map-toggle-btn:first-child {
     margin-bottom: 10px;
-    margin-right: 0 !important; /* Override desktop margin */
+    margin-right: 0 !important;
   }
 
+  /* 6. Keep the rule to resize the map */
+  .portfolio-map-container svg {
+    height: 400px !important;
+  }
   /* Make the big financial data table more compact */
   .financials-table-sticky-header,
   .financials-table-sticky-cell,
@@ -2723,6 +2784,4 @@ transition: width 0.5s ease-in-out;
     width: 520px;       /* A fixed width wider than a phone screen */
     height: 230px;      /* A fixed height for the chart canvas */
   }
-  
-
 }

@@ -13,6 +13,7 @@ Marketing:
 1. regular financial database at baseline, market as open for pre-using
 2. founder let marketing (content creation)
 3. Marketing content targeting UK audience, seperate from saturated US market
+4. MVP - can still prioritize functions/display, but narror to fewer Stocks
 
 UI
 1. Add black/white photos to the app
@@ -20,6 +21,7 @@ UI
 
 Misc
 1. Wrap all loading state, pop up modal into appjs
+2. Learn sales
 
 
 
