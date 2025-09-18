@@ -1528,7 +1528,7 @@ label {
   box-shadow: var(--box-shadow-light);
   display: flex;
   flex-direction: column;
-  justify-content: space-around;
+  justify-content: flex-start;
   align-items: center;
   min-height: 320px;
 }
@@ -2400,7 +2400,16 @@ transition: width 0.5s ease-in-out;
   color: var(--text-color-subtle);
 }
 
+.chart-scroll-wrapper {
+  position: relative;
+  width: 100%;
+}
 
+.chart-inner-container {
+  position: relative; /* Required by Chart.js */
+  height: 330px;      /* This gives the chart a fixed height on desktop */
+  width: 100%;
+}
 
 
 
@@ -2629,5 +2638,91 @@ transition: width 0.5s ease-in-out;
     width: 80%;      /* Make modals take up 90% of the screen width */
     padding: 1rem; /* Reduce padding on mobile */
   }
+  .detail-main-tabs {
+    gap: 8px; /* A slightly larger gap often looks better with this technique */
+    flex-wrap: nowrap; 
+    overflow-x: auto;  
+    -webkit-overflow-scrolling: touch;
+    
+    /* --- The New Fix --- */
+    width: calc(100% + 30px); /* Make the container wider than the parent */
+    margin: 0 -30px;          /* Use negative margin to pull it into the padding area */
+    padding: 0 15px;          /* Add padding back inside to align the tabs */
+    /* --- End of Fix --- */
+
+    scrollbar-width: none; /* For Firefox */
+  }
+  .detail-main-tabs::-webkit-scrollbar {
+    display: none; /* For Chrome, Safari, and Opera */
+  }
+
+  .detail-tab-main {
+    padding: 8px 10px; /* <-- This controls the size/width of each tab */
+    font-size: 0.9rem;
+  }
+  /* Stack the section header content (e.g., "Daily Price & Volume" and its button) */
+  .detail-section-header {
+    flex-direction: column;
+    align-items: stretch; /* Make children full-width */
+    gap: 15px;
+  }
+
+  /* Stack the 3 financial summary bar charts on the Overview tab */
+  .detail-financial-grid {
+    flex-direction: column;
+  }
+
+  /* Stack the portfolio donut charts */
+  .portfolio-grid {
+    grid-template-columns: 1fr; /* Change from 2 columns to 1 */
+  }
+
+  /* Make the portfolio map smaller so it doesn't dominate the screen */
+  .portfolio-map-container svg {
+    height: 450px !important; /* We use !important to override the inline style from the map library */
+  }
+
+  /* Stack the map's toggle buttons */
+  .portfolio-map-toggle-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .portfolio-map-toggle-btn {
+    width: 100%;
+  }
+  .portfolio-map-toggle-btn:first-child {
+    margin-bottom: 10px;
+    margin-right: 0 !important; /* Override desktop margin */
+  }
+
+  /* Make the big financial data table more compact */
+  .financials-table-sticky-header,
+  .financials-table-sticky-cell,
+  .financials-table-header-cell,
+  .financials-table-data-cell {
+    font-size: 0.85rem; /* Smaller font */
+    padding: 6px;        /* Tighter padding */
+    min-width: 85px;     /* Allow columns to be narrower */
+  }
+  .financials-table-sub-note {
+    font-size: 0.75rem; /* Make sub-note text even smaller */
+  }
+  .detail-chart-block {
+    min-height: auto;
+  }
+
+  /* This is the new outer container that enables scrolling */
+  .chart-scroll-wrapper {
+    overflow-x: auto; /* This enables horizontal scrolling */
+    -webkit-overflow-scrolling: touch; /* Makes scrolling smooth on iOS */
+  }
+
+  /* This inner container forces the chart to be wide, making it scrollable */
+  .chart-inner-container {
+    position: relative; /* Required by Chart.js for positioning */
+    width: 520px;       /* A fixed width wider than a phone screen */
+    height: 230px;      /* A fixed height for the chart canvas */
+  }
+  
 
 }

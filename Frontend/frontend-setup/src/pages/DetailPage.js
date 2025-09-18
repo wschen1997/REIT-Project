@@ -636,6 +636,7 @@ function DetailPage({ userPlan }) {
   function makeBarOptions(labelText, dataType = 'number') {
     return {
       responsive: true,
+      maintainAspectRatio: false,
       plugins: {
         legend: {
           position: 'bottom',
@@ -780,6 +781,7 @@ function DetailPage({ userPlan }) {
 
   const priceVolumeChartOptions = {
     responsive: true,
+    maintainAspectRatio: false,
     plugins: {
       tooltip: { mode: "index", intersect: false },
       legend: { position: 'bottom' },
@@ -972,11 +974,14 @@ function DetailPage({ userPlan }) {
             </div>
             
             {priceData.length > 0 ? (
-              <Line
-                data={priceVolumeChartData}
-                options={priceVolumeChartOptions}
-                height={80}
-              />
+              <div className="chart-scroll-wrapper">
+                <div className="chart-inner-container">
+                  <Line
+                    data={priceVolumeChartData}
+                    options={priceVolumeChartOptions}
+                  />
+                </div>
+              </div>
             ) : (
               <p>No price data available.</p>
             )}
@@ -990,7 +995,11 @@ function DetailPage({ userPlan }) {
                 {isAllNull(dividendsData) ? (
                   <p>No Dividends per Share data available.</p>
                 ) : (
-                  <Bar data={dividendsChartData} options={makeBarOptions("Dividends per Share", "currency")} height={70} />
+                  <div className="chart-scroll-wrapper"> {/* Add this wrapper */}
+                    <div className="chart-inner-container"> {/* Add this wrapper */}
+                      <Bar data={dividendsChartData} options={makeBarOptions("Dividends per Share", "currency")} />
+                    </div>
+                  </div>
                 )}
               </div>
 
@@ -999,7 +1008,11 @@ function DetailPage({ userPlan }) {
                 {isAllNull(ffoData) ? (
                   <p>No FFO data available.</p>
                 ) : (
-                  <Bar data={ffoChartData} options={makeBarOptions("FFO", "number")} height={70} />
+                  <div className="chart-scroll-wrapper"> {/* Add this wrapper */}
+                    <div className="chart-inner-container"> {/* Add this wrapper */}
+                      <Bar data={ffoChartData} options={makeBarOptions("FFO", "number")} />
+                    </div>
+                  </div>
                 )}
               </div>
 
@@ -1008,7 +1021,11 @@ function DetailPage({ userPlan }) {
                 {isAllNull(ffoRevenuePctData) ? (
                   <p>No FFO / Revenue % data available.</p>
                 ) : (
-                  <Bar data={ffoRevenuePctChartData} options={makeBarOptions("FFO / Revenue %", "percent")} height={70} />
+                  <div className="chart-scroll-wrapper"> {/* Add this wrapper */}
+                    <div className="chart-inner-container"> {/* Add this wrapper */}
+                      <Bar data={ffoRevenuePctChartData} options={makeBarOptions("FFO / Revenue %", "percent")} />
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
