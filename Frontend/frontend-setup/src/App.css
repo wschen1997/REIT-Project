@@ -2756,18 +2756,7 @@ transition: width 0.5s ease-in-out;
   .portfolio-map-container svg {
     height: 400px !important;
   }
-  /* Make the big financial data table more compact */
-  .financials-table-sticky-header,
-  .financials-table-sticky-cell,
-  .financials-table-header-cell,
-  .financials-table-data-cell {
-    font-size: 0.85rem; /* Smaller font */
-    padding: 6px;        /* Tighter padding */
-    min-width: 85px;     /* Allow columns to be narrower */
-  }
-  .financials-table-sub-note {
-    font-size: 0.75rem; /* Make sub-note text even smaller */
-  }
+  
   .detail-chart-block {
     min-height: auto;
   }
@@ -2783,5 +2772,56 @@ transition: width 0.5s ease-in-out;
     position: relative; /* Required by Chart.js for positioning */
     width: 520px;       /* A fixed width wider than a phone screen */
     height: 230px;      /* A fixed height for the chart canvas */
+  }
+  .financials-table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-left: 1px solid var(--border-color-light);
+    border-right: 1px solid var(--border-color-light);
+  }
+
+  /* This handles the core "sticky" functionality and appearance */
+  .financials-table-sticky-header,
+  .financials-table-sticky-cell {
+    position: -webkit-sticky;
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background-color: var(--background-color);
+    box-shadow: 4px 0 8px -4px rgba(0, 0, 0, 0.1);
+  }
+
+  /* --- Consolidated Cell Sizing & Styling --- */
+
+  /* A. General styles for ALL table cells */
+  .financials-table-sticky-header,
+  .financials-table-sticky-cell,
+  .financials-table-header-cell,
+  .financials-table-data-cell {
+    font-size: 0.85rem;
+    padding: 8px 10px;
+    vertical-align: middle;
+  }
+
+  /* B. Specific styles for the FIRST (sticky) column */
+  .financials-table-sticky-header,
+  .financials-table-sticky-cell {
+    white-space: normal;  /* Allow wrapping */
+    min-width: 120px;
+    max-width: 140px;     /* Set max width */
+  }
+
+  /* C. Specific styles for the DATA columns */
+  .financials-table-header-cell,
+  .financials-table-data-cell {
+    white-space: nowrap;  /* Prevent wrapping */
+    min-width: 90px;
+  }
+
+  .financials-table-sub-note {
+    font-size: 0.75rem;
+  }
+  .financials-table {
+    white-space: normal; /* This tells the entire table to allow text wrapping on mobile */
   }
 }
