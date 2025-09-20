@@ -18,6 +18,7 @@ from celery.result import AsyncResult
 from google.cloud import firestore
 import firebase_admin
 from firebase_admin import credentials, firestore as admin_firestore
+import logging
 
 # Explicitly load environment variables from the Credentials.env file
 dotenv_path = os.path.abspath(
@@ -26,6 +27,7 @@ dotenv_path = os.path.abspath(
 load_dotenv(dotenv_path)
 
 app = Flask(__name__)
+app.logger.setLevel(logging.INFO)
 CORS(app, resources={r"/api/*": {"origins": ["http://localhost:3000", "https://www.viserra-group.com"]}})
 
 # get the stripe secret key from the environment variables
