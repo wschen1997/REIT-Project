@@ -12,8 +12,8 @@ function FilterPage() {
   // New consolidated state for all filters
   const [filters, setFilters] = useState({
       selectedPropertyType: "",
-      minRevenueCagr: "",
-      minFfoCagr: "",
+      minRevenueGrowth: "", // Renamed from Cagr
+      minFfoGrowth: "",     // Renamed from Cagr
       minOperatingMargin: "",
   });
   const { setLoading: setIsLoading } = useLoading();
@@ -34,8 +34,8 @@ function FilterPage() {
 
       const requestParams = {
           property_type: filters.selectedPropertyType,
-          min_revenue_cagr: filters.minRevenueCagr ? parseFloat(filters.minRevenueCagr) / 100 : null,
-          min_ffo_cagr: filters.minFfoCagr ? parseFloat(filters.minFfoCagr) / 100 : null,
+          min_revenue_growth: filters.minRevenueGrowth ? parseFloat(filters.minRevenueGrowth) / 100 : null,
+          min_ffo_growth: filters.minFfoGrowth ? parseFloat(filters.minFfoGrowth) / 100 : null,
           min_operating_margin: filters.minOperatingMargin ? parseFloat(filters.minOperatingMargin) / 100 : null,
       };
 
@@ -45,6 +45,8 @@ function FilterPage() {
               delete requestParams[key];
           }
       });
+
+      console.log("Sending to backend:", requestParams);
 
       axios.get(url, { params: requestParams })
           .then((response) => {
@@ -93,22 +95,31 @@ function FilterPage() {
       <h2 className="filter-page-title">REIT Screener</h2>
 
       <div className="filter-controls">
-        <div className="filter-control-group">
-          <label style={{ marginBottom: '8px' }}>Select Property Type:</label>
-          <select
-            name="selectedPropertyType"
-            value={filters.selectedPropertyType}
-            onChange={handleFilterChange}
-            className="input-field home-select-input"
-          >
-            <option value="">-- All Property Types --</option>
-            {propertyTypeOptions.map((type) => (
-              <option key={type} value={type}>{type}</option>
-            ))}
-          </select>
-        </div>
+        <div className="filter-control-group">
+          <label style={{ marginBottom: '8px' }}>Select Property Type:</label>
+          <select
+            name="selectedPropertyType"
+            value={filters.selectedPropertyType}
+            onChange={handleFilterChange}
+            className="input-field home-select-input"
+          >
+            <option value="">-- All Property Types --</option>
+            {propertyTypeOptions.map((type) => (
+              <option key={type} value={type}>{type}</option>
+            ))}
+          </select>
+        </div>
 
-        <div className="filter-control-group">
+        <div className="filter-control-group">
+          <label>Min. Avg. Revenue Growth (YoY %):</label>
+          <input
+            type="number" step="0.5" name="minRevenueGrowth"
+            value={filters.minRevenueGrowth} onChange={handleFilterChange}
+            placeholder="e.g., 3.5" className="input-field"
+          />
+        </div>
+
+        <div className="filter-control-group">
           <label>Min. Avg. FFO Growth (YoY %):</label>
           <input
             type="number" step="0.5" name="minFfoGrowth"
@@ -116,23 +127,16 @@ function FilterPage() {
             placeholder="e.g., 4" className="input-field"
           />
         </div>
-        <div className="filter-control-group">
-          <label>Min. Avg. FFO Growth (YoY %):</label>
-          <input
-            type="number" step="0.5" name="minFfoCagr"
-            value={filters.minFfoCagr} onChange={handleFilterChange}
-            placeholder="e.g., 4" className="input-field"
-          />
-        </div>
-        <div className="filter-control-group">
-          <label>Min. Operating Margin (TTM %):</label>
-          <input
-            type="number" step="1" name="minOperatingMargin"
-            value={filters.minOperatingMargin} onChange={handleFilterChange}
-            placeholder="e.g., 15" className="input-field"
-          />
-        </div>
-      </div>
+        
+        <div className="filter-control-group">
+          <label>Min. Operating Margin (TTM %):</label>
+          <input
+            type="number" step="1" name="minOperatingMargin"
+            value={filters.minOperatingMargin} onChange={handleFilterChange}
+            placeholder="e.g., 15" className="input-field"
+          />
+        </div>
+      </div>
 
       <h2 className="filter-results-title">Filtered REITs</h2>
       <p className="filter-explanation">{explanation}</p>

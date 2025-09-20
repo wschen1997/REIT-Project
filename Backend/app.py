@@ -724,10 +724,11 @@ def stripe_webhook():
 @app.route('/api/reits/advanced-filter', methods=['GET'])
 def get_advanced_filtered_reits():
     """
-    CORRECTED MVP ENDPOINT: Filters using Average Year-over-Year Growth and TTM Operating Margin.
-    This version fixes the "Subquery returns more than 1 row" error by ensuring the subquery only returns a single value.
+    CORRECTED MVP ENDPOINT with enhanced logging for debugging.
     """
-    app.logger.info("Request received for CORRECTED YoY Growth filter with args: %s", request.args)
+    # ================== LOG #1: What did the server receive? ==================
+    app.logger.info(f"ADVANCED FILTER REQUEST ARGS: {request.args}")
+    # =========================================================================
 
     args = request.args
     property_type = args.get('property_type')
@@ -735,30 +736,23 @@ def get_advanced_filtered_reits():
     min_ffo_growth = args.get('min_ffo_growth', type=float)
     min_operating_margin = args.get('min_operating_margin', type=float)
 
-    # --- THIS QUERY IS NOW CORRECTED AND ROBUST ---
     query = text("""
         WITH TTM_Data AS (
-            -- Step A: Calculate Trailing-Twelve-Months (TTM) data.
             SELECT
                 ticker,
                 SUM(CASE WHEN line_item = 'Total Revenue' THEN value ELSE 0 END) AS ttm_revenue,
                 SUM(CASE WHEN line_item = 'Operating Income' THEN value ELSE 0 END) AS ttm_operating_income
             FROM reit_income_statement
             WHERE CONCAT(fiscal_year, LPAD(fiscal_quarter, 2, '0')) > (
-                -- =================== THE FIX IS HERE ===================
-                -- This subquery now correctly finds the UNIQUE 5th most recent quarter date
-                -- across all REITs, ensuring it returns ONLY ONE row for the comparison.
                 SELECT CONCAT(fiscal_year, LPAD(fiscal_quarter, 2, '0'))
                 FROM reit_income_statement
                 GROUP BY fiscal_year, fiscal_quarter
                 ORDER BY fiscal_year DESC, fiscal_quarter DESC
                 LIMIT 1 OFFSET 4
-                -- =======================================================
             )
             GROUP BY ticker
         ),
         YoY_Growth AS (
-            -- Step B: Calculate Year-over-Year growth for all available quarters.
             SELECT
                 ticker,
                 line_item,
@@ -778,7 +772,6 @@ def get_advanced_filtered_reits():
             WHERE last_year_value IS NOT NULL AND last_year_value > 0
         ),
         Avg_YoY_Growth AS (
-            -- Step C: Average the YoY growth values for each metric.
             SELECT
                 ticker,
                 AVG(CASE WHEN line_item = 'Total Revenue' THEN yoy_growth ELSE NULL END) as avg_revenue_yoy_growth,
@@ -786,7 +779,6 @@ def get_advanced_filtered_reits():
             FROM YoY_Growth
             GROUP BY ticker
         )
-        -- Final SELECT: Combine all calculated metrics
         SELECT
             rbd.Ticker,
             rbd.Company_Name,
@@ -824,9 +816,13 @@ def get_advanced_filtered_reits():
 
     try:
         with db.engine.connect() as conn:
+            # ================== LOG #2: What is being sent to the database? ==================
+            app.logger.info(f"EXECUTING SQL: {sql_string}")
+            app.logger.info(f"WITH PARAMS: {params}")
+            # ===============================================================================
             result_df = pd.read_sql(text(sql_string), conn, params=params)
             result_df = result_df.astype(object).where(pd.notna(result_df), None)
-            reits_json = result_df.to_dict(orient='records')
+            reits_json = result_df.to_dict('records')
             return jsonify({"reits": reits_json})
     except Exception as e:
         app.logger.error(f"Error executing final advanced query: {e}")
