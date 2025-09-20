@@ -329,7 +329,7 @@ def get_portfolio_breakdowns(ticker):
     return jsonify({"ticker": ticker, "breakdowns": result}), 200
 
 # -------------------------------------------------------------------------
-# OVERVIEW FINANCIAL DATA ENDPOINT (Last 6 quarters)
+# OVERVIEW FINANCIAL DATA ENDPOINT
 # -------------------------------------------------------------------------
 def convert_date_to_quarter(date_obj):
     """
@@ -716,167 +716,116 @@ def stripe_webhook():
 
     return 'Success', 200
 
-# -------------------------------------------------------------------------
-# =========================== Peer Scatter ENDPOINTS ==============================
-# -------------------------------------------------------------------------
-
-@app.route("/api/peer-scatter", methods=["GET"])
-def get_peer_scatter():
-    """
-    Returns peer scatter data for all REITs whose Property_Type includes the requested property type.
-    The endpoint expects a query parameter 'property_type'.
-    It returns an array of objects: { "ticker": <Ticker>, "x": <Stability Percentile>, "y": <Fundamental Percentile> }
-    """
-    property_type = request.args.get("property_type")
-    if not property_type:
-        return jsonify({"error": "property_type parameter is required"}), 400
-
-    try:
-        with db.engine.connect() as conn:
-            # Query business data to get tickers matching the property type (using a LIKE query)
-            query_business = text("""
-                SELECT Ticker
-                FROM reit_business_data
-                WHERE Property_Type LIKE :prop
-            """)
-            business_df = pd.read_sql(query_business, conn, params={"prop": f"%{property_type}%"})
-            
-            if business_df.empty:
-                return jsonify([])  # No REITs found for this property type
-
-            # Get unique tickers
-            tickers = tuple(business_df["Ticker"].unique())
-            # Ensure tickers is a tuple (if only one, force a tuple with a trailing comma)
-            if len(tickers) == 1:
-                tickers = (tickers[0],)
-
-            # Query scoring analysis data for these tickers
-            query_scoring = text("""
-                SELECT Ticker, `Stability Percentile` AS stability, `Fundamental_Percentile` AS fundamental
-                FROM reit_scoring_analysis
-                WHERE Ticker IN :tickers
-            """)
-            scoring_df = pd.read_sql(query_scoring, conn, params={"tickers": tickers})
-
-            # Build the output list
-            result = []
-            for _, row in scoring_df.iterrows():
-                if row["stability"] is not None and row["fundamental"] is not None:
-                    result.append({
-                        "ticker": row["Ticker"],
-                        "x": float(row["stability"]),
-                        "y": float(row["fundamental"])
-                    })
-            return jsonify(result)
-    except Exception as e:
-        app.logger.error("Error in get_peer_scatter: " + str(e))
-        return jsonify({"error": str(e)}), 500
 
 # -------------------------------------------------------------------------
-# ====================== REC ENDPOINTS ===============================
+# =========================== ADVANCED FILTER ENDPOINT ==============================
 # -------------------------------------------------------------------------
-@app.route('/api/rec/universe', methods=['GET'])
-def get_rec_universe():
+
+@app.route('/api/reits/advanced-filter', methods=['GET'])
+def get_advanced_filtered_reits():
     """
-    Returns a list of all Real Estate Crowdfunding vehicles 
-    with basic info from the 'rec_universe' table.
+    NEW DEDICATED ENDPOINT for advanced filtering with on-the-fly calculations.
+    This handles TTM Operating Margin and 5-Year CAGR.
     """
-    try:
-        with db.engine.connect() as conn:
-            query = "SELECT * FROM rec_universe"
-            universe_df = pd.read_sql(query, conn)
-    except Exception as e:
-        app.logger.error(f"Error loading REC universe data: {e}")
-        return jsonify({"error": "Failed to load REC Universe data"}), 500
+    app.logger.info("Request received for ADVANCED filter with args: %s", request.args)
 
-    if universe_df.empty:
-        return jsonify({"message": "No REC vehicles found.", "rec_universe": []}), 200
+    # --- 1. Get Filter Parameters from Request ---
+    args = request.args
+    property_type = args.get('property_type')
+    # New fundamental filters
+    min_revenue_cagr = args.get('min_revenue_cagr', type=float)
+    min_ffo_cagr = args.get('min_ffo_cagr', type=float)
+    min_operating_margin = args.get('min_operating_margin', type=float)
 
-    # Replace NaN values with None for safe JSON serialization
-    universe_df = universe_df.astype(object).where(pd.notna(universe_df), None)
-
-    # Convert DataFrame to a list of dicts
-    rec_universe_list = universe_df.to_dict(orient='records')
-    return jsonify({"rec_universe": rec_universe_list}), 200
-
-
-@app.route("/api/rec/<string:investment_vehicle>/performance", methods=['GET'])
-def get_rec_performance(investment_vehicle):
-    """
-    Returns time-series data (e.g., total return, NAV growth, distribution yield)
-    for the specified REC vehicle. The actual DB columns may have underscores
-    instead of spaces, so we automatically replace spaces with underscores 
-    before looking for the column.
-    """
-
-    # 1) Convert spaces to underscores to match your DB column naming convention
-    col_name = investment_vehicle.replace(' ', '_')
-
-    try:
-        with db.engine.connect() as conn:
-            # Load each table
-            df_return = pd.read_sql("SELECT * FROM rec_total_return", conn)
-            df_distribution = pd.read_sql("SELECT * FROM rec_distribution_yield", conn)
-            df_nav = pd.read_sql("SELECT * FROM rec_nav_growth", conn)
-    except Exception as e:
-        app.logger.error(f"Error loading REC time-series tables: {e}")
-        return jsonify({"error": "Failed to load one or more REC tables"}), 500
-
-    if df_return.empty and df_distribution.empty and df_nav.empty:
-        return jsonify({"message": "No time-series data available for any vehicle."}), 200
-
-    data_out = {
-        "vehicle": investment_vehicle, 
-        "total_return": [],
-        "distribution_yield": [],
-        "nav_growth": []
-    }
-
-    def extract_series(df_wide, column):
-        """ 
-        Convert wide-format DF into a list of {date, value}, 
-        stripping '%' if found and converting to float.
-        """
-        if df_wide.empty or column not in df_wide.columns:
-            return []
-        df_wide = df_wide.copy()
-
-        # Convert 'Dates' to datetime
-        df_wide['Dates'] = pd.to_datetime(df_wide['Dates'], errors="coerce")
-
-        # Keep only date + the single vehicle column, drop NA
-        df_wide = df_wide[['Dates', column]].dropna(subset=[column])
-
-        # Strip '%' and convert to float
-        df_wide[column] = (
-            df_wide[column]
-            .astype(str)
-            .apply(pd.to_numeric, errors='coerce')
+    # --- 2. Build the Advanced SQL Query ---
+    query = text("""
+        WITH TTM_Data AS (
+            -- Step A: Calculate Trailing-Twelve-Months (TTM) for revenue and operating income.
+            SELECT
+                ticker,
+                SUM(CASE WHEN line_item = 'Total Revenue' THEN value ELSE 0 END) AS ttm_revenue,
+                SUM(CASE WHEN line_item = 'Operating Income' THEN value ELSE 0 END) AS ttm_operating_income
+            FROM reit_income_statement
+            WHERE CONCAT(fiscal_year, LPAD(fiscal_quarter, 2, '0')) > (
+                SELECT CONCAT(MAX(fiscal_year) - 1, LPAD(MAX(fiscal_quarter), 2, '0')) FROM reit_income_statement
+            )
+            GROUP BY ticker
+        ),
+        CAGR_Data AS (
+            -- Step B: Calculate the 5-Year CAGR for Revenue and FFO.
+            SELECT
+                ticker,
+                -- Revenue CAGR
+                POWER(
+                    (SELECT value FROM reit_income_statement ris WHERE ris.ticker = t.ticker AND line_item = 'Total Revenue' ORDER BY fiscal_year DESC, fiscal_quarter DESC LIMIT 1) /
+                    (SELECT value FROM reit_income_statement ris WHERE ris.ticker = t.ticker AND line_item = 'Total Revenue' AND value > 0 ORDER BY fiscal_year ASC, fiscal_quarter ASC LIMIT 1),
+                    1.0/5.0
+                ) - 1 AS revenue_cagr,
+                -- FFO CAGR
+                POWER(
+                    (SELECT value FROM reit_industry_metrics rim WHERE rim.ticker = t.ticker AND line_item = 'FFO' ORDER BY fiscal_year DESC, fiscal_quarter DESC LIMIT 1) /
+                    (SELECT value FROM reit_industry_metrics rim WHERE rim.ticker = t.ticker AND line_item = 'FFO' AND value > 0 ORDER BY fiscal_year ASC, fiscal_quarter ASC LIMIT 1),
+                    1.0/5.0
+                ) - 1 AS ffo_cagr
+            FROM (SELECT DISTINCT ticker FROM reit_business_data) AS t
+        ),
+        Calculated_Metrics AS (
+            -- Step C: Combine metrics and calculate ratios.
+            SELECT
+                t.ticker,
+                c.revenue_cagr,
+                c.ffo_cagr,
+                CASE
+                    WHEN ttm.ttm_revenue > 0 THEN ttm.ttm_operating_income / ttm.ttm_revenue
+                    ELSE NULL
+                END AS operating_margin
+            FROM (SELECT DISTINCT ticker FROM reit_business_data) AS t
+            LEFT JOIN TTM_Data ttm ON t.ticker = ttm.ticker
+            LEFT JOIN CAGR_Data c ON t.ticker = c.ticker
         )
-        df_wide.dropna(subset=[column], inplace=True)
+        -- Final SELECT
+        SELECT
+            rbd.Ticker,
+            rbd.Company_Name,
+            rbd.Business_Description,
+            rbd.Website
+        FROM
+            reit_business_data rbd
+        JOIN
+            Calculated_Metrics cm ON rbd.Ticker = cm.ticker
+        WHERE 1=1
+    """)
 
-        # Sort by date ascending
-        df_wide.sort_values(by='Dates', inplace=True)
+    # --- 3. Dynamically Add WHERE Clauses to the Query String ---
+    params = {}
+    sql_string = str(query)
 
-        results = []
-        for _, row in df_wide.iterrows():
-            results.append({
-                "date": row['Dates'].strftime('%Y-%m-%d') if not pd.isna(row['Dates']) else None,
-                "value": row[column]
-            })
-        return results
+    if property_type:
+        sql_string += " AND rbd.Property_Type LIKE :property_type"
+        params['property_type'] = f"%{property_type}%"
+        
+    if min_operating_margin is not None:
+        sql_string += " AND cm.operating_margin >= :min_operating_margin"
+        params['min_operating_margin'] = min_operating_margin
 
-    # Extract from each table
-    data_out["total_return"] = extract_series(df_return, col_name)
-    data_out["distribution_yield"] = extract_series(df_distribution, col_name)
-    data_out["nav_growth"] = extract_series(df_nav, col_name)
+    if min_revenue_cagr is not None:
+        sql_string += " AND cm.revenue_cagr >= :min_revenue_cagr"
+        params['min_revenue_cagr'] = min_revenue_cagr
 
-    # If all are empty, no match
-    if not data_out["total_return"] and not data_out["distribution_yield"] and not data_out["nav_growth"]:
-        return jsonify({"message": f"No timeseries data found for vehicle '{investment_vehicle}'"}), 200
+    if min_ffo_cagr is not None:
+        sql_string += " AND cm.ffo_cagr >= :min_ffo_cagr"
+        params['min_ffo_cagr'] = min_ffo_cagr
 
-    return jsonify(data_out), 200
+    # --- 4. Execute Query and Return Results ---
+    try:
+        with db.engine.connect() as conn:
+            result_df = pd.read_sql(text(sql_string), conn, params=params)
+            result_df = result_df.astype(object).where(pd.notna(result_df), None)
+            reits_json = result_df.to_dict(orient='records')
+            app.logger.info(f"Advanced query successful, returning {len(reits_json)} REITs.")
+            return jsonify({"reits": reits_json})
+    except Exception as e:
+        app.logger.error(f"Error executing advanced filter query: {e}")
+        traceback.print_exc()
+        return jsonify({"error": "An error occurred in the database query."}), 500
 
-
-if __name__ == '__main__':
-    app.run(debug=True)

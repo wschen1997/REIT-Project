@@ -1,23 +1,33 @@
 Viserra
+AI integrated platform for now
+
 
 Prep work needed:
-1. Refactor app theme
-2. Sort out auth workflow
-3. Make mobile responsive (low priority)
-4. Connect email/signup DB to zoho mai;
-5. UK stock software market research
- - API for basic fundemental quene, cap IQ for more distinct dataset
-6. Back up code with 2nd computer
+- Connect email/signup DB to zoho mai;
+- UK stock software market research
+  API for basic fundemental quene, cap IQ for more distinct dataset
+
 
 Marketing:
 1. regular financial database at baseline, market as open for pre-using
 2. founder let marketing (content creation)
-3. Marketing content targeting UK audience, seperate from saturated US market
-4. MVP - can still prioritize functions/display, but narror to fewer Stocks
+user generated content
+- Open on the calc and back end calc and dataset that we feed into AI
+- The ranking we construct
+- The Screening
 
-UI
+- Structure everything so it can quickly be switch to US stock
+3. Marketing content targeting UK audience, seperate from saturated US market
+4. MVP - prioritize functions/display, but narror to fewer stocks - UK stockscreener that directs people to detail pages
+
+
+
 1. Add black/white photos to the app
 2.scrolling animation
+
+Cofounder target:
+Someone with large distribution channel, specifically in the field of personal finance
+
 
 Misc
 1. Wrap all loading state, pop up modal into appjs
