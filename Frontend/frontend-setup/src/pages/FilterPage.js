@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { useLoading } from "../context/LoadingContext.js";
@@ -7,9 +7,15 @@ const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:5000
 
 function FilterPage() {
   const [reits, setReits] = useState([]);
-  const [explanation, setExplanation] = useState("");
-  const [selectedPropertyType, setSelectedPropertyType] = useState("");
-  const [minAvgReturn, setMinAvgReturn] = useState("");
+  const [explanation, setExplanation] = useState("Select a filter to begin screening for REITs.");
+
+  // New consolidated state for all filters
+  const [filters, setFilters] = useState({
+      selectedPropertyType: "",
+      minRevenueCagr: "",
+      minFfoCagr: "",
+      minOperatingMargin: "",
+  });
   const { setLoading: setIsLoading } = useLoading();
 
   const propertyTypeOptions = [
@@ -21,37 +27,60 @@ function FilterPage() {
 
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (minAvgReturn || selectedPropertyType) {
-      fetchREITs();
-    }
-  }, [minAvgReturn, selectedPropertyType]);
+  const fetchREITs = useCallback(() => {
+      setIsLoading(true);
+      // Point the URL to your new backend endpoint
+      const url = `${API_BASE_URL}/api/reits/advanced-filter`;
 
-  const fetchREITs = () => {
-    setIsLoading(true);
-    const url = `${API_BASE_URL}/api/reits`;
-    const convertedMinAvgReturn = minAvgReturn ? parseFloat(minAvgReturn) / 100 : "";
-    axios
-      .get(url, {
-        params: {
-          min_avg_return: convertedMinAvgReturn,
-          property_type: selectedPropertyType,
-        },
-      })
-      .then((response) => {
-        let responseData = typeof response.data === "string" ? JSON.parse(response.data) : response.data;
-        setReits(responseData.reits || []);
-        setExplanation(
-          `Filtered REITs: Minimum Annualized Return - ${minAvgReturn}%, Property Type - ${selectedPropertyType}`
-        );
-      })
-      .catch((error) => {
-        console.error("Error fetching data:", error);
-        setReits([]);
-      })
-      .finally(() => {
-        setIsLoading(false);
+      const requestParams = {
+          property_type: filters.selectedPropertyType,
+          min_revenue_cagr: filters.minRevenueCagr ? parseFloat(filters.minRevenueCagr) / 100 : null,
+          min_ffo_cagr: filters.minFfoCagr ? parseFloat(filters.minFfoCagr) / 100 : null,
+          min_operating_margin: filters.minOperatingMargin ? parseFloat(filters.minOperatingMargin) / 100 : null,
+      };
+
+      // Clean up parameters before sending
+      Object.keys(requestParams).forEach(key => {
+          if (requestParams[key] === null || requestParams[key] === "") {
+              delete requestParams[key];
+          }
       });
+
+      axios.get(url, { params: requestParams })
+          .then((response) => {
+              setReits(response.data.reits || []);
+              setExplanation(`Displaying ${response.data.reits?.length || 0} results based on active filters.`);
+          })
+          .catch((error) => {
+              console.error("Error fetching data:", error);
+              setReits([]);
+              setExplanation("An error occurred while fetching data.");
+          })
+          .finally(() => {
+              setIsLoading(false);
+          });
+  }, [filters, setIsLoading]);
+
+  useEffect(() => {
+      const hasActiveFilter = Object.values(filters).some(value => value !== "" && value !== null);
+      
+      if (hasActiveFilter) {
+          const handler = setTimeout(() => {
+              fetchREITs();
+          }, 500); // Debounce for 500ms
+          return () => clearTimeout(handler);
+      } else {
+          setReits([]);
+          setExplanation("Select a filter to begin screening for REITs.");
+      }
+  }, [filters, fetchREITs]);
+
+  const handleFilterChange = (e) => {
+    const { name, value } = e.target;
+    setFilters(prevFilters => ({
+        ...prevFilters,
+        [name]: value,
+    }));
   };
 
   const formatWebsiteUrl = (url) => {
@@ -64,42 +93,46 @@ function FilterPage() {
       <h2 className="filter-page-title">REIT Screener</h2>
 
       <div className="filter-controls">
-        <div className="filter-control-group">
-          <label style={{ marginBottom: '8px' }}>
-            Minimum Annualized Return (%):
-            <span className="tooltip-icon">
-              i
-              <span className="tooltip-text">
-                Annualized return is calculated by multiplying the average daily return (over the last five years) by 252—the approximate number of trading days in a year.
-              </span>
-            </span>
-          </label>
-          <input
-            type="number"
-            step="0.1"
-            value={minAvgReturn}
-            onChange={(e) => setMinAvgReturn(e.target.value)}
-            placeholder="Enter minimum return (%)"
-            className="input-field"
-          />
-        </div>
+        <div className="filter-control-group">
+          <label style={{ marginBottom: '8px' }}>Select Property Type:</label>
+          <select
+            name="selectedPropertyType"
+            value={filters.selectedPropertyType}
+            onChange={handleFilterChange}
+            className="input-field home-select-input"
+          >
+            <option value="">-- All Property Types --</option>
+            {propertyTypeOptions.map((type) => (
+              <option key={type} value={type}>{type}</option>
+            ))}
+          </select>
+        </div>
 
-        <div className="filter-control-group">
-          <label style={{ marginBottom: '8px' }}>Select Property Type:</label>
-          <select
-            value={selectedPropertyType}
-            onChange={(e) => setSelectedPropertyType(e.target.value)}
-            className="input-field home-select-input"
-          >
-            <option value="">-- Select Property Type --</option>
-            {propertyTypeOptions.map((type) => (
-              <option key={type} value={type}>
-                {type}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
+        <div className="filter-control-group">
+          <label>Min. Revenue Growth (5-Yr CAGR %):</label>
+          <input
+            type="number" step="0.5" name="minRevenueCagr"
+            value={filters.minRevenueCagr} onChange={handleFilterChange}
+            placeholder="e.g., 3.5" className="input-field"
+          />
+        </div>
+        <div className="filter-control-group">
+          <label>Min. FFO Growth (5-Yr CAGR %):</label>
+          <input
+            type="number" step="0.5" name="minFfoCagr"
+            value={filters.minFfoCagr} onChange={handleFilterChange}
+            placeholder="e.g., 4" className="input-field"
+          />
+        </div>
+        <div className="filter-control-group">
+          <label>Min. Operating Margin (TTM %):</label>
+          <input
+            type="number" step="1" name="minOperatingMargin"
+            value={filters.minOperatingMargin} onChange={handleFilterChange}
+            placeholder="e.g., 15" className="input-field"
+          />
+        </div>
+      </div>
 
       <h2 className="filter-results-title">Filtered REITs</h2>
       <p className="filter-explanation">{explanation}</p>

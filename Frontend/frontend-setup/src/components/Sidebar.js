@@ -8,7 +8,7 @@ const Sidebar = ({ isOpen, onClose, currentUser }) => {
   const { theme } = useContext(ThemeContext);
 
   const menu = [
-    // { label: "REITs Screener", path: "/filter" },
+    { label: "REITs Screener", path: "/filter" },
     { label: "About Us", path: "/about" },
     { label: "Contact Us", path: "/contact" },
     // { label: "Valuation Model", path: "/model" },

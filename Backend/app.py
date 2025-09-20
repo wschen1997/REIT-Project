@@ -724,20 +724,19 @@ def stripe_webhook():
 @app.route('/api/reits/advanced-filter', methods=['GET'])
 def get_advanced_filtered_reits():
     """
-    NEW DEDICATED ENDPOINT for advanced filtering with on-the-fly calculations.
-    This handles TTM Operating Margin and 5-Year CAGR.
+    MVP ENDPOINT: Filters using Average Year-over-Year Growth and TTM Operating Margin.
+    This is more robust than CAGR for an MVP.
     """
-    app.logger.info("Request received for ADVANCED filter with args: %s", request.args)
+    app.logger.info("Request received for YoY Growth filter with args: %s", request.args)
 
-    # --- 1. Get Filter Parameters from Request ---
+    # --- 1. Get Filter Parameters ---
     args = request.args
     property_type = args.get('property_type')
-    # New fundamental filters
-    min_revenue_cagr = args.get('min_revenue_cagr', type=float)
-    min_ffo_cagr = args.get('min_ffo_cagr', type=float)
+    min_revenue_growth = args.get('min_revenue_growth', type=float)
+    min_ffo_growth = args.get('min_ffo_growth', type=float)
     min_operating_margin = args.get('min_operating_margin', type=float)
 
-    # --- 2. Build the Advanced SQL Query ---
+    # --- 2. Build the Simplified SQL Query ---
     query = text("""
         WITH TTM_Data AS (
             -- Step A: Calculate Trailing-Twelve-Months (TTM) for revenue and operating income.
@@ -746,86 +745,93 @@ def get_advanced_filtered_reits():
                 SUM(CASE WHEN line_item = 'Total Revenue' THEN value ELSE 0 END) AS ttm_revenue,
                 SUM(CASE WHEN line_item = 'Operating Income' THEN value ELSE 0 END) AS ttm_operating_income
             FROM reit_income_statement
-            WHERE CONCAT(fiscal_year, LPAD(fiscal_quarter, 2, '0')) > (
-                SELECT CONCAT(MAX(fiscal_year) - 1, LPAD(MAX(fiscal_quarter), 2, '0')) FROM reit_income_statement
+            WHERE CONCAT(fiscal_year, LPAD(fiscal_quarter, 2, '0')) >= (
+                -- Get data for the last 4 complete quarters
+                SELECT CONCAT(fiscal_year, LPAD(fiscal_quarter, 2, '0'))
+                FROM reit_income_statement
+                ORDER BY fiscal_year DESC, fiscal_quarter DESC
+                LIMIT 1, 3
             )
             GROUP BY ticker
         ),
-        CAGR_Data AS (
-            -- Step B: Calculate the 5-Year CAGR for Revenue and FFO.
+        YoY_Growth AS (
+            -- Step B: Calculate Year-over-Year growth for each of the last 4 quarters.
             SELECT
                 ticker,
-                -- Revenue CAGR
-                POWER(
-                    (SELECT value FROM reit_income_statement ris WHERE ris.ticker = t.ticker AND line_item = 'Total Revenue' ORDER BY fiscal_year DESC, fiscal_quarter DESC LIMIT 1) /
-                    (SELECT value FROM reit_income_statement ris WHERE ris.ticker = t.ticker AND line_item = 'Total Revenue' AND value > 0 ORDER BY fiscal_year ASC, fiscal_quarter ASC LIMIT 1),
-                    1.0/5.0
-                ) - 1 AS revenue_cagr,
-                -- FFO CAGR
-                POWER(
-                    (SELECT value FROM reit_industry_metrics rim WHERE rim.ticker = t.ticker AND line_item = 'FFO' ORDER BY fiscal_year DESC, fiscal_quarter DESC LIMIT 1) /
-                    (SELECT value FROM reit_industry_metrics rim WHERE rim.ticker = t.ticker AND line_item = 'FFO' AND value > 0 ORDER BY fiscal_year ASC, fiscal_quarter ASC LIMIT 1),
-                    1.0/5.0
-                ) - 1 AS ffo_cagr
-            FROM (SELECT DISTINCT ticker FROM reit_business_data) AS t
+                line_item,
+                (value / last_year_value - 1) AS yoy_growth
+            FROM (
+                SELECT
+                    ticker,
+                    line_item,
+                    fiscal_year,
+                    fiscal_quarter,
+                    value,
+                    LAG(value, 4) OVER (PARTITION BY ticker, line_item ORDER BY fiscal_year, fiscal_quarter) as last_year_value
+                FROM (
+                    SELECT ticker, line_item, fiscal_year, fiscal_quarter, value FROM reit_income_statement WHERE line_item = 'Total Revenue'
+                    UNION ALL
+                    SELECT ticker, line_item, fiscal_year, fiscal_quarter, value FROM reit_industry_metrics WHERE line_item = 'FFO'
+                ) AS combined_data
+            ) AS lagged_data
+            WHERE last_year_value IS NOT NULL AND last_year_value > 0
+            -- Take the 4 most recent YoY calculations
+            ORDER BY fiscal_year DESC, fiscal_quarter DESC
+            LIMIT 4
         ),
-        Calculated_Metrics AS (
-            -- Step C: Combine metrics and calculate ratios.
+        Avg_YoY_Growth AS (
+            -- Step C: Average the YoY growth values for each metric.
             SELECT
-                t.ticker,
-                c.revenue_cagr,
-                c.ffo_cagr,
-                CASE
-                    WHEN ttm.ttm_revenue > 0 THEN ttm.ttm_operating_income / ttm.ttm_revenue
-                    ELSE NULL
-                END AS operating_margin
-            FROM (SELECT DISTINCT ticker FROM reit_business_data) AS t
-            LEFT JOIN TTM_Data ttm ON t.ticker = ttm.ticker
-            LEFT JOIN CAGR_Data c ON t.ticker = c.ticker
+                ticker,
+                AVG(CASE WHEN line_item = 'Total Revenue' THEN yoy_growth ELSE NULL END) as avg_revenue_yoy_growth,
+                AVG(CASE WHEN line_item = 'FFO' THEN yoy_growth ELSE NULL END) as avg_ffo_yoy_growth
+            FROM YoY_Growth
+            GROUP BY ticker
         )
-        -- Final SELECT
+        -- Final SELECT: Combine all calculated metrics
         SELECT
             rbd.Ticker,
             rbd.Company_Name,
             rbd.Business_Description,
-            rbd.Website
+            rbd.Website,
+            ttm.ttm_revenue,
+            (ttm.ttm_operating_income / ttm.ttm_revenue) AS operating_margin,
+            yoy.avg_revenue_yoy_growth,
+            yoy.avg_ffo_yoy_growth
         FROM
             reit_business_data rbd
-        JOIN
-            Calculated_Metrics cm ON rbd.Ticker = cm.ticker
+        LEFT JOIN TTM_Data ttm ON rbd.Ticker = ttm.ticker
+        LEFT JOIN Avg_YoY_Growth yoy ON rbd.Ticker = yoy.ticker
         WHERE 1=1
     """)
 
-    # --- 3. Dynamically Add WHERE Clauses to the Query String ---
     params = {}
     sql_string = str(query)
 
     if property_type:
         sql_string += " AND rbd.Property_Type LIKE :property_type"
         params['property_type'] = f"%{property_type}%"
-        
+
     if min_operating_margin is not None:
-        sql_string += " AND cm.operating_margin >= :min_operating_margin"
+        sql_string += " AND (ttm.ttm_operating_income / ttm.ttm_revenue) >= :min_operating_margin"
         params['min_operating_margin'] = min_operating_margin
 
-    if min_revenue_cagr is not None:
-        sql_string += " AND cm.revenue_cagr >= :min_revenue_cagr"
-        params['min_revenue_cagr'] = min_revenue_cagr
+    if min_revenue_growth is not None:
+        sql_string += " AND yoy.avg_revenue_yoy_growth >= :min_revenue_growth"
+        params['min_revenue_growth'] = min_revenue_growth
 
-    if min_ffo_cagr is not None:
-        sql_string += " AND cm.ffo_cagr >= :min_ffo_cagr"
-        params['min_ffo_cagr'] = min_ffo_cagr
+    if min_ffo_growth is not None:
+        sql_string += " AND yoy.avg_ffo_yoy_growth >= :min_ffo_growth"
+        params['min_ffo_growth'] = min_ffo_growth
 
-    # --- 4. Execute Query and Return Results ---
     try:
         with db.engine.connect() as conn:
             result_df = pd.read_sql(text(sql_string), conn, params=params)
             result_df = result_df.astype(object).where(pd.notna(result_df), None)
             reits_json = result_df.to_dict(orient='records')
-            app.logger.info(f"Advanced query successful, returning {len(reits_json)} REITs.")
+            app.logger.info(f"Avg YoY Growth query successful, returning {len(reits_json)} REITs.")
             return jsonify({"reits": reits_json})
     except Exception as e:
-        app.logger.error(f"Error executing advanced filter query: {e}")
+        app.logger.error(f"Error executing Avg YoY Growth query: {e}")
         traceback.print_exc()
         return jsonify({"error": "An error occurred in the database query."}), 500
-
