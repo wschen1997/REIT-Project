@@ -724,19 +724,21 @@ def stripe_webhook():
 @app.route('/api/reits/advanced-filter', methods=['GET'])
 def get_advanced_filtered_reits():
     """
-    CORRECTED MVP ENDPOINT with enhanced logging for debugging.
+    FINAL MVP ENDPOINT: Calculates all metrics in SQL, then filters and logs in Python
+    for maximum transparency and easier debugging.
     """
-    # ================== LOG #1: What did the server receive? ==================
-    app.logger.info(f"ADVANCED FILTER REQUEST ARGS: {request.args}")
-    # =========================================================================
+    app.logger.info(f"Request received for FINAL filter with args: {request.args}")
 
+    # --- 1. Get Filter Parameters ---
     args = request.args
     property_type = args.get('property_type')
     min_revenue_growth = args.get('min_revenue_growth', type=float)
     min_ffo_growth = args.get('min_ffo_growth', type=float)
     min_operating_margin = args.get('min_operating_margin', type=float)
 
-    query = text("""
+    # --- 2. Build SQL to CALCULATE metrics for all relevant REITs ---
+    # The WHERE clause is now only for property_type, which is efficient for the DB.
+    base_query = text("""
         WITH TTM_Data AS (
             SELECT
                 ticker,
@@ -759,9 +761,7 @@ def get_advanced_filtered_reits():
                 (value / last_year_value - 1) AS yoy_growth
             FROM (
                 SELECT
-                    ticker,
-                    line_item,
-                    value,
+                    ticker, line_item, value,
                     LAG(value, 4) OVER (PARTITION BY ticker, line_item ORDER BY fiscal_year, fiscal_quarter) as last_year_value
                 FROM (
                     SELECT ticker, line_item, fiscal_year, fiscal_quarter, value FROM reit_income_statement WHERE line_item = 'Total Revenue'
@@ -780,10 +780,7 @@ def get_advanced_filtered_reits():
             GROUP BY ticker
         )
         SELECT
-            rbd.Ticker,
-            rbd.Company_Name,
-            rbd.Business_Description,
-            rbd.Website,
+            rbd.Ticker, rbd.Company_Name, rbd.Business_Description, rbd.Website,
             (ttm.ttm_operating_income / NULLIF(ttm.ttm_revenue, 0)) AS operating_margin,
             yoy.avg_revenue_yoy_growth,
             yoy.avg_ffo_yoy_growth
@@ -793,38 +790,55 @@ def get_advanced_filtered_reits():
         LEFT JOIN Avg_YoY_Growth yoy ON rbd.Ticker = yoy.ticker
         WHERE 1=1
     """)
-
+    
     params = {}
-    sql_string = str(query)
+    sql_string = str(base_query)
 
-    # Dynamically append filters
     if property_type:
         sql_string += " AND rbd.Property_Type LIKE :property_type"
         params['property_type'] = f"%{property_type}%"
 
-    if min_operating_margin is not None:
-        sql_string += " AND (ttm.ttm_operating_income / NULLIF(ttm.ttm_revenue, 0)) >= :min_operating_margin"
-        params['min_operating_margin'] = min_operating_margin
-
-    if min_revenue_growth is not None:
-        sql_string += " AND yoy.avg_revenue_yoy_growth >= :min_revenue_growth"
-        params['min_revenue_growth'] = min_revenue_growth
-
-    if min_ffo_growth is not None:
-        sql_string += " AND yoy.avg_ffo_yoy_growth >= :min_ffo_growth"
-        params['min_ffo_growth'] = min_ffo_growth
-
     try:
         with db.engine.connect() as conn:
-            # ================== LOG #2: What is being sent to the database? ==================
-            app.logger.info(f"EXECUTING SQL: {sql_string}")
-            app.logger.info(f"WITH PARAMS: {params}")
-            # ===============================================================================
-            result_df = pd.read_sql(text(sql_string), conn, params=params)
-            result_df = result_df.astype(object).where(pd.notna(result_df), None)
-            reits_json = result_df.to_dict('records')
-            return jsonify({"reits": reits_json})
+            # --- 3. Fetch ALL potential candidates from the database ---
+            candidate_df = pd.read_sql(text(sql_string), conn, params=params)
+            # Replace NaN with None for easier handling in Python
+            candidate_df = candidate_df.astype(object).where(pd.notna(candidate_df), None)
+
+        # --- 4. Apply numeric filters in Python (pandas) ---
+        filtered_df = candidate_df.copy()
+        if min_operating_margin is not None:
+            filtered_df = filtered_df[filtered_df['operating_margin'] >= min_operating_margin]
+        if min_revenue_growth is not None:
+            filtered_df = filtered_df[filtered_df['avg_revenue_yoy_growth'] >= min_revenue_growth]
+        if min_ffo_growth is not None:
+            filtered_df = filtered_df[filtered_df['avg_ffo_yoy_growth'] >= min_ffo_growth]
+
+        # --- 5. LOG THE RESULTS FOR VERIFICATION ---
+        app.logger.info("--- VERIFICATION LOG FOR FILTERED REITS ---")
+        if filtered_df.empty:
+            app.logger.info("No REITs matched the final criteria.")
+        else:
+            # Loop through the final results and print their calculated values
+            for index, row in filtered_df.iterrows():
+                op_margin_str = f"{row['operating_margin']:.2%}" if row['operating_margin'] is not None else "N/A"
+                rev_growth_str = f"{row['avg_revenue_yoy_growth']:.2%}" if row['avg_revenue_yoy_growth'] is not None else "N/A"
+                ffo_growth_str = f"{row['avg_ffo_yoy_growth']:.2%}" if row['avg_ffo_yoy_growth'] is not None else "N/A"
+                
+                log_message = (
+                    f"Ticker: {row['Ticker']:<8} | "
+                    f"OpMargin: {op_margin_str:<10} | "
+                    f"AvgRevenueGrowth: {rev_growth_str:<10} | "
+                    f"AvgFFOGrowth: {ffo_growth_str:<10}"
+                )
+                app.logger.info(log_message)
+        app.logger.info("-------------------------------------------")
+
+        # --- 6. Convert final DataFrame to JSON and return ---
+        reits_json = filtered_df.to_dict('records')
+        return jsonify({"reits": reits_json})
+
     except Exception as e:
-        app.logger.error(f"Error executing final advanced query: {e}")
+        app.logger.error(f"Error in advanced filter logic: {e}")
         traceback.print_exc()
         return jsonify({"error": "A database error occurred."}), 500
