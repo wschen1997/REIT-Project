@@ -724,38 +724,41 @@ def stripe_webhook():
 @app.route('/api/reits/advanced-filter', methods=['GET'])
 def get_advanced_filtered_reits():
     """
-    MVP ENDPOINT: Filters using Average Year-over-Year Growth and TTM Operating Margin.
-    This is more robust than CAGR for an MVP.
+    CORRECTED MVP ENDPOINT: Filters using Average Year-over-Year Growth and TTM Operating Margin.
+    This version fixes the "Subquery returns more than 1 row" error by ensuring the subquery only returns a single value.
     """
-    app.logger.info("Request received for YoY Growth filter with args: %s", request.args)
+    app.logger.info("Request received for CORRECTED YoY Growth filter with args: %s", request.args)
 
-    # --- 1. Get Filter Parameters ---
     args = request.args
     property_type = args.get('property_type')
     min_revenue_growth = args.get('min_revenue_growth', type=float)
     min_ffo_growth = args.get('min_ffo_growth', type=float)
     min_operating_margin = args.get('min_operating_margin', type=float)
 
-    # --- 2. Build the Simplified SQL Query ---
+    # --- THIS QUERY IS NOW CORRECTED AND ROBUST ---
     query = text("""
         WITH TTM_Data AS (
-            -- Step A: Calculate Trailing-Twelve-Months (TTM) for revenue and operating income.
+            -- Step A: Calculate Trailing-Twelve-Months (TTM) data.
             SELECT
                 ticker,
                 SUM(CASE WHEN line_item = 'Total Revenue' THEN value ELSE 0 END) AS ttm_revenue,
                 SUM(CASE WHEN line_item = 'Operating Income' THEN value ELSE 0 END) AS ttm_operating_income
             FROM reit_income_statement
-            WHERE CONCAT(fiscal_year, LPAD(fiscal_quarter, 2, '0')) >= (
-                -- Get data for the last 4 complete quarters
+            WHERE CONCAT(fiscal_year, LPAD(fiscal_quarter, 2, '0')) > (
+                -- =================== THE FIX IS HERE ===================
+                -- This subquery now correctly finds the UNIQUE 5th most recent quarter date
+                -- across all REITs, ensuring it returns ONLY ONE row for the comparison.
                 SELECT CONCAT(fiscal_year, LPAD(fiscal_quarter, 2, '0'))
                 FROM reit_income_statement
+                GROUP BY fiscal_year, fiscal_quarter
                 ORDER BY fiscal_year DESC, fiscal_quarter DESC
-                LIMIT 1, 3
+                LIMIT 1 OFFSET 4
+                -- =======================================================
             )
             GROUP BY ticker
         ),
         YoY_Growth AS (
-            -- Step B: Calculate Year-over-Year growth for each of the last 4 quarters.
+            -- Step B: Calculate Year-over-Year growth for all available quarters.
             SELECT
                 ticker,
                 line_item,
@@ -764,8 +767,6 @@ def get_advanced_filtered_reits():
                 SELECT
                     ticker,
                     line_item,
-                    fiscal_year,
-                    fiscal_quarter,
                     value,
                     LAG(value, 4) OVER (PARTITION BY ticker, line_item ORDER BY fiscal_year, fiscal_quarter) as last_year_value
                 FROM (
@@ -775,9 +776,6 @@ def get_advanced_filtered_reits():
                 ) AS combined_data
             ) AS lagged_data
             WHERE last_year_value IS NOT NULL AND last_year_value > 0
-            -- Take the 4 most recent YoY calculations
-            ORDER BY fiscal_year DESC, fiscal_quarter DESC
-            LIMIT 4
         ),
         Avg_YoY_Growth AS (
             -- Step C: Average the YoY growth values for each metric.
@@ -794,8 +792,7 @@ def get_advanced_filtered_reits():
             rbd.Company_Name,
             rbd.Business_Description,
             rbd.Website,
-            ttm.ttm_revenue,
-            (ttm.ttm_operating_income / ttm.ttm_revenue) AS operating_margin,
+            (ttm.ttm_operating_income / NULLIF(ttm.ttm_revenue, 0)) AS operating_margin,
             yoy.avg_revenue_yoy_growth,
             yoy.avg_ffo_yoy_growth
         FROM
@@ -808,12 +805,13 @@ def get_advanced_filtered_reits():
     params = {}
     sql_string = str(query)
 
+    # Dynamically append filters
     if property_type:
         sql_string += " AND rbd.Property_Type LIKE :property_type"
         params['property_type'] = f"%{property_type}%"
 
     if min_operating_margin is not None:
-        sql_string += " AND (ttm.ttm_operating_income / ttm.ttm_revenue) >= :min_operating_margin"
+        sql_string += " AND (ttm.ttm_operating_income / NULLIF(ttm.ttm_revenue, 0)) >= :min_operating_margin"
         params['min_operating_margin'] = min_operating_margin
 
     if min_revenue_growth is not None:
@@ -829,9 +827,8 @@ def get_advanced_filtered_reits():
             result_df = pd.read_sql(text(sql_string), conn, params=params)
             result_df = result_df.astype(object).where(pd.notna(result_df), None)
             reits_json = result_df.to_dict(orient='records')
-            app.logger.info(f"Avg YoY Growth query successful, returning {len(reits_json)} REITs.")
             return jsonify({"reits": reits_json})
     except Exception as e:
-        app.logger.error(f"Error executing Avg YoY Growth query: {e}")
+        app.logger.error(f"Error executing final advanced query: {e}")
         traceback.print_exc()
-        return jsonify({"error": "An error occurred in the database query."}), 500
+        return jsonify({"error": "A database error occurred."}), 500

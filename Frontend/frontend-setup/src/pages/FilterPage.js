@@ -109,15 +109,15 @@ function FilterPage() {
         </div>
 
         <div className="filter-control-group">
-          <label>Min. Revenue Growth (5-Yr CAGR %):</label>
-          <input
-            type="number" step="0.5" name="minRevenueCagr"
-            value={filters.minRevenueCagr} onChange={handleFilterChange}
-            placeholder="e.g., 3.5" className="input-field"
-          />
-        </div>
+          <label>Min. Avg. FFO Growth (YoY %):</label>
+          <input
+            type="number" step="0.5" name="minFfoGrowth"
+            value={filters.minFfoGrowth} onChange={handleFilterChange}
+            placeholder="e.g., 4" className="input-field"
+          />
+        </div>
         <div className="filter-control-group">
-          <label>Min. FFO Growth (5-Yr CAGR %):</label>
+          <label>Min. Avg. FFO Growth (YoY %):</label>
           <input
             type="number" step="0.5" name="minFfoCagr"
             value={filters.minFfoCagr} onChange={handleFilterChange}
