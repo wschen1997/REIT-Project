@@ -727,9 +727,8 @@ def stripe_webhook():
 @app.route('/api/reits/advanced-filter', methods=['GET'])
 def get_advanced_filtered_reits():
     """
-    DEFINITIVE ENDPOINT: This version uses a strict method to calculate YoY growth.
-    A REIT is disqualified if it lacks complete data for the last 4 consecutive
-    YoY growth periods (i.e., requires 8 consecutive quarters of data).
+    DEFINITIVE ENDPOINT V2: Explicitly disables the 'pad' fill method in pct_change
+    to prevent forward-filling of NaN values, ensuring strict data validation.
     """
     app.logger.info(f"Request received for DEFINITIVE PANDAS-BASED filter with args: {request.args}")
 
@@ -745,7 +744,7 @@ def get_advanced_filtered_reits():
 
     try:
         with db.engine.connect() as conn:
-            # Step 1: Get tickers (No changes here)
+            # Step 1: Get tickers (No changes)
             params = {}
             sql_tickers = "SELECT Ticker, Company_Name, Business_Description, Website FROM reit_business_data WHERE 1=1"
             if property_type:
@@ -757,7 +756,7 @@ def get_advanced_filtered_reits():
                 return jsonify({"reits": []})
             candidate_tickers = tuple(candidate_df['Ticker'].tolist())
 
-            # Step 2: Fetch financial data (No changes here)
+            # Step 2: Fetch financial data (No changes)
             sql_financials = text("""
                 SELECT ticker, TRIM(line_item) as line_item, fiscal_year, fiscal_quarter, value
                 FROM reit_income_statement
@@ -767,23 +766,21 @@ def get_advanced_filtered_reits():
             
             financials_df['value'] = financials_df['value'].replace(0, np.nan)
 
-        # --- Step 3: Calculate Metrics with STRICT Logic ---
+        # Step 3: Calculate Metrics with STRICT Logic
         results = []
         app.logger.info("--- STARTING METRIC CALCULATION ---")
 
         def get_strict_yoy_growth_metrics(data_series):
-            """
-            New helper to enforce strict data validation for YoY growth.
-            """
             recent_data = data_series.tail(8)
-            # 1. We must have 8 consecutive quarters to make 4 YoY comparisons.
             if len(recent_data) < 8:
                 return None, pd.Series([np.nan] * 4)
 
-            yoy_growths = recent_data.pct_change(periods=4)
+            # --- THE CRITICAL FIX IS HERE ---
+            # Added fill_method=None to prevent the forward-fill behavior.
+            yoy_growths = recent_data.pct_change(periods=4, fill_method=None)
+            
             last_4_growths = yoy_growths.tail(4)
             
-            # 2. CRITICAL CHECK: If any of the last 4 periods are NaN, invalidate the metric.
             if last_4_growths.isnull().any():
                 return None, last_4_growths
             
@@ -800,11 +797,9 @@ def get_advanced_filtered_reits():
             ttm_operating_income = op_income_data.tail(4)['value'].sum()
             operating_margin = (ttm_operating_income / ttm_revenue) if ttm_revenue and ttm_revenue != 0 else None
 
-            # --- Apply the new strict calculation logic ---
             avg_revenue_yoy_growth, rev_growths_for_log = get_strict_yoy_growth_metrics(revenue_data['value'])
             avg_ffo_yoy_growth, ffo_growths_for_log = get_strict_yoy_growth_metrics(ffo_data['value'])
 
-            # --- Log the CORRECT data for verification ---
             app.logger.info(f"--- Processing Ticker: {ticker} ---")
             app.logger.info(f"[{ticker}] Raw Revenue points for TTM: {revenue_data.tail(4)['value'].tolist()}")
             app.logger.info(f"[{ticker}] Raw OpIncome points for TTM: {op_income_data.tail(4)['value'].tolist()}")
@@ -823,7 +818,7 @@ def get_advanced_filtered_reits():
         if not results:
              return jsonify({"reits": []})
 
-        # Step 4, 5, & 6: Merge, Filter, and Log Final (No changes needed here)
+        # Step 4, 5, & 6: Merge, Filter, and Log Final (No changes)
         metrics_df = pd.DataFrame(results)
         final_df = pd.merge(candidate_df, metrics_df, on='Ticker')
         final_df = final_df.astype(object).where(pd.notna(final_df), None)
