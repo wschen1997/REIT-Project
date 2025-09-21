@@ -760,7 +760,9 @@ def get_advanced_filtered_reits():
             sql_financials = text("""
                 SELECT ticker, TRIM(line_item) as line_item, fiscal_year, fiscal_quarter, value
                 FROM reit_income_statement
-                WHERE TRIM(line_item) IN ('Total Revenue', 'Operating Income', 'FFO') AND ticker IN :tickers
+                WHERE TRIM(line_item) IN ('Total Revenue', 'Operating Income', 'FFO')
+                AND ticker IN :tickers
+                AND fiscal_quarter IS NOT NULL         -- ADD THIS
             """)
             financials_df = pd.read_sql(sql_financials, conn, params={"tickers": candidate_tickers})
             
@@ -772,58 +774,99 @@ def get_advanced_filtered_reits():
 
         for ticker, group in financials_df.groupby('ticker'):
             group = group.sort_values(by=['fiscal_year', 'fiscal_quarter'], ascending=True)
-            
-            revenue_data = group[group['line_item'] == 'Total Revenue']
-            op_income_data = group[group['line_item'] == 'Operating Income']
-            ffo_data = group[group['line_item'] == 'FFO']
 
-            # --- NEW HELPER TO CREATE A DENSE, COMPLETE TIME-SERIES ---
-            def create_dense_timeseries(df):
+            def _period_index(df):
                 if df.empty:
-                    return pd.DataFrame(columns=['value'])
-                df = df.copy()
-                df['period'] = pd.PeriodIndex(year=df['fiscal_year'], quarter=df['fiscal_quarter'], freq='Q')
-                df = df.set_index('period').sort_index()
-                full_range = pd.period_range(start=df.index.min(), end=df.index.max(), freq='Q')
-                return df.reindex(full_range)
+                    return pd.PeriodIndex([], freq='Q-DEC')
+                return pd.PeriodIndex(year=df['fiscal_year'].astype(int),
+                                    quarter=df['fiscal_quarter'].astype(int),
+                                    freq='Q-DEC')
 
-            # --- Convert all data to dense time-series first ---
-            dense_revenue_data = create_dense_timeseries(revenue_data)
-            dense_op_income_data = create_dense_timeseries(op_income_data)
-            dense_ffo_data = create_dense_timeseries(ffo_data)
+            # Split by line item
+            revenue_data   = group[group['line_item'] == 'Total Revenue'].copy()
+            op_income_data = group[group['line_item'] == 'Operating Income'].copy()
+            ffo_data       = group[group['line_item'] == 'FFO'].copy()
 
-            # --- Now, all calculations are performed on the complete time-series data ---
-            ttm_revenue = dense_revenue_data.tail(4)['value'].sum()
-            ttm_operating_income = dense_op_income_data.tail(4)['value'].sum()
-            operating_margin = (ttm_operating_income / ttm_revenue) if ttm_revenue and ttm_revenue != 0 else None
+            # Build a MASTER index spanning the union of all quarters seen for this ticker
+            idxs = []
+            for df_part in (revenue_data, op_income_data, ffo_data):
+                pi = _period_index(df_part)
+                if len(pi) > 0:
+                    idxs.append(pi)
 
-            def get_strict_yoy_growth_metrics(dense_series):
-                if len(dense_series) < 8:
-                    return None, pd.Series([np.nan] * 4)
-                
-                recent_data = dense_series.tail(8)
-                yoy_growths = recent_data.pct_change(periods=4, fill_method=None)
-                last_4_growths = yoy_growths.tail(4)
-                
-                if last_4_growths.isnull().any():
-                    return None, last_4_growths
-                
-                return last_4_growths.mean(), last_4_growths
+            if not idxs:
+                # No usable data at all; skip cleanly
+                results.append({
+                    'Ticker': ticker,
+                    'operating_margin': None,
+                    'avg_revenue_yoy_growth': None,
+                    'avg_ffo_yoy_growth': None
+                })
+                continue
 
-            avg_revenue_yoy_growth, rev_growths_for_log = get_strict_yoy_growth_metrics(dense_revenue_data['value'])
-            avg_ffo_yoy_growth, ffo_growths_for_log = get_strict_yoy_growth_metrics(dense_ffo_data['value'])
+            start = min(pi.min() for pi in idxs)
+            end   = max(pi.max() for pi in idxs)
+            master_index = pd.period_range(start=start, end=end, freq='Q-DEC')
 
+            def _series_on_master(df):
+                if df.empty:
+                    return pd.Series(index=master_index, dtype='float64')
+                s = pd.Series(df['value'].values, index=_period_index(df))
+                # Ensure numeric and keep NaNs (no filling)
+                s = pd.to_numeric(s, errors='coerce')
+                return s.reindex(master_index)
+
+            # Aligned series on the same master timeline
+            rev_series = _series_on_master(revenue_data)
+            op_series  = _series_on_master(op_income_data)
+            ffo_series = _series_on_master(ffo_data)
+            
+            app.logger.info(f"[{ticker}] Master tail(8) periods: {list(master_index[-8:])}")
+            app.logger.info(f"[{ticker}] FFO tail(8) values: {ffo_series.tail(8).tolist()}")
+
+
+            def _ttm_sum_strict(s):
+                last4 = s.tail(4)
+                # If any quarter missing, return None (avoid partial sums)
+                if last4.isna().any() or len(last4) < 4:
+                    return None
+                return float(last4.sum())
+
+            # Compute TTM & Op margin strictly
+            ttm_revenue = _ttm_sum_strict(rev_series)
+            ttm_op_inc  = _ttm_sum_strict(op_series)
+            operating_margin = (ttm_op_inc / ttm_revenue) if (ttm_revenue not in (None, 0) and ttm_op_inc is not None) else None
+
+            def get_strict_yoy_growth_metrics_on_master(s):
+                # Need at least 8 quarters on the *master* axis
+                if len(s.dropna()) == 0 or len(s) < 8:
+                    return None, pd.Series([np.nan] * 4, index=s.tail(4).index)
+                recent = s.tail(8)
+                yoy = recent.pct_change(periods=4, fill_method=None)  # no filling
+                last4 = yoy.tail(4)
+                if last4.isnull().any():
+                    return None, last4
+                return float(last4.mean()), last4
+
+            avg_revenue_yoy_growth, rev_growths_for_log = get_strict_yoy_growth_metrics_on_master(rev_series)
+            avg_ffo_yoy_growth,     ffo_growths_for_log = get_strict_yoy_growth_metrics_on_master(ffo_series)
+
+            # --- Logging stays the same but now uses the aligned series ---
             app.logger.info(f"--- Processing Ticker: {ticker} ---")
-            app.logger.info(f"[{ticker}] Raw Revenue points for TTM: {dense_revenue_data.tail(4)['value'].tolist()}")
-            app.logger.info(f"[{ticker}] Raw OpIncome points for TTM: {dense_op_income_data.tail(4)['value'].tolist()}")
-            app.logger.info(f"[{ticker}] Individual Revenue YoY Growths for Avg: {[f'{x:.2%}' if pd.notna(x) else 'N/A' for x in rev_growths_for_log]}")
-            app.logger.info(f"[{ticker}] Individual FFO YoY Growths for Avg: {[f'{x:.2%}' if pd.notna(x) else 'N/A' for x in ffo_growths_for_log]}")
+            app.logger.info(f"[{ticker}] Raw Revenue points for TTM: {rev_series.tail(4).tolist()}")
+            app.logger.info(f"[{ticker}] Raw OpIncome points for TTM: {op_series.tail(4).tolist()}")
+            app.logger.info(f"[{ticker}] Individual Revenue YoY Growths for Avg: "
+                            f"{[f'{x:.2%}' if pd.notna(x) else 'N/A' for x in rev_growths_for_log]}")
+            app.logger.info(f"[{ticker}] Individual FFO YoY Growths for Avg: "
+                            f"{[f'{x:.2%}' if pd.notna(x) else 'N/A' for x in ffo_growths_for_log]}")
 
             results.append({
-                'Ticker': ticker, 'operating_margin': operating_margin,
+                'Ticker': ticker,
+                'operating_margin': operating_margin,
                 'avg_revenue_yoy_growth': avg_revenue_yoy_growth,
                 'avg_ffo_yoy_growth': avg_ffo_yoy_growth
             })
+
         
         app.logger.info("--- FINISHED METRIC CALCULATION ---")
 
