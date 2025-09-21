@@ -722,14 +722,13 @@ def stripe_webhook():
 # -------------------------------------------------------------------------
 # =========================== ADVANCED FILTER ENDPOINT ==============================
 # -------------------------------------------------------------------------
-
-# REPLACE the existing advanced-filter function with this one
+# REPLACE the existing advanced-filter function with this FINAL version.
 
 @app.route('/api/reits/advanced-filter', methods=['GET'])
 def get_advanced_filtered_reits():
     """
-    FINAL ROBUST ENDPOINT: This version correctly handles negative base values for YoY growth
-    and uses a reliable Python-based calculation method.
+    FINAL ROBUST ENDPOINT: This version isolates each metric's data before calculation
+    and adds detailed logging to show the raw numbers being used.
     """
     app.logger.info(f"Request received for FINAL PANDAS-BASED filter with args: {request.args}")
 
@@ -741,22 +740,19 @@ def get_advanced_filtered_reits():
 
     try:
         with db.engine.connect() as conn:
-            # --- Step 1: Get the list of tickers that match the property type ---
+            # Step 1: Get tickers matching the property type
             params = {}
             sql_tickers = "SELECT Ticker, Company_Name, Business_Description, Website FROM reit_business_data WHERE 1=1"
             if property_type:
                 sql_tickers += " AND Property_Type LIKE :property_type"
                 params['property_type'] = f"%{property_type}%"
-            
             candidate_df = pd.read_sql(text(sql_tickers), conn, params=params)
             
             if candidate_df.empty:
                 return jsonify({"reits": []})
-
             candidate_tickers = tuple(candidate_df['Ticker'].tolist())
 
-            # --- Step 2: Fetch ALL relevant financial data, using TRIM() to clean the data ---
-            # This query no longer filters out negative values.
+            # Step 2: Fetch all relevant financial data for those tickers
             sql_financials = text("""
                 SELECT ticker, TRIM(line_item) as line_item, fiscal_year, fiscal_quarter, value
                 FROM reit_income_statement
@@ -768,25 +764,41 @@ def get_advanced_filtered_reits():
             """)
             financials_df = pd.read_sql(sql_financials, conn, params={"tickers": candidate_tickers})
 
-        # --- Step 3: Calculate Metrics in Pandas for each Ticker ---
+        # --- Step 3: Calculate Metrics in Pandas (CORRECTED LOGIC) ---
         results = []
+        app.logger.info("--- RAW DATA AND CALCULATION LOG ---")
         for ticker, group in financials_df.groupby('ticker'):
-            group = group.sort_values(by=['fiscal_year', 'fiscal_quarter']).set_index(['fiscal_year', 'fiscal_quarter'])
+            group = group.sort_values(by=['fiscal_year', 'fiscal_quarter'])
             
-            # TTM Calculation
-            last_4_q = group.tail(4)
-            ttm_revenue = last_4_q[last_4_q['line_item'] == 'Total Revenue']['value'].sum()
-            ttm_operating_income = last_4_q[last_4_q['line_item'] == 'Operating Income']['value'].sum()
+            # --- Isolate each metric's data before calculating ---
+            revenue_data = group[group['line_item'] == 'Total Revenue']
+            op_income_data = group[group['line_item'] == 'Operating Income']
+            ffo_data = group[group['line_item'] == 'FFO']
+
+            # --- LOG THE RAW DATA BEING USED ---
+            app.logger.info(f"--- Processing Ticker: {ticker} ---")
+            app.logger.info(f"[{ticker}] Raw Revenue points for TTM: {revenue_data.tail(4)['value'].tolist()}")
+            app.logger.info(f"[{ticker}] Raw OpIncome points for TTM: {op_income_data.tail(4)['value'].tolist()}")
+            
+            # TTM Calculation on isolated data
+            ttm_revenue = revenue_data.tail(4)['value'].sum()
+            ttm_operating_income = op_income_data.tail(4)['value'].sum()
             operating_margin = (ttm_operating_income / ttm_revenue) if ttm_revenue else None
 
-            # YoY Growth Calculation - CORRECTED LOGIC
-            group['last_year_value'] = group.groupby('line_item')['value'].shift(4)
+            # YoY Growth Calculation
+            revenue_data = revenue_data.copy()
+            ffo_data = ffo_data.copy()
+            revenue_data.loc[:, 'last_year_value'] = revenue_data['value'].shift(4)
+            revenue_data.loc[:, 'yoy_growth'] = (revenue_data['value'] / revenue_data['last_year_value']) - 1
             
-            # The calculation now correctly includes negative base values.
-            group['yoy_growth'] = (group['value'] / group['last_year_value']) - 1
-            
-            rev_yoy_series = group[group['line_item'] == 'Total Revenue']['yoy_growth'].dropna()
-            ffo_yoy_series = group[group['line_item'] == 'FFO']['yoy_growth'].dropna()
+            ffo_data.loc[:, 'last_year_value'] = ffo_data['value'].shift(4)
+            ffo_data.loc[:, 'yoy_growth'] = (ffo_data['value'] / ffo_data['last_year_value']) - 1
+
+            # --- LOG THE RAW YOY GROWTH NUMBERS ---
+            rev_yoy_series = revenue_data['yoy_growth'].dropna()
+            ffo_yoy_series = ffo_data['yoy_growth'].dropna()
+            app.logger.info(f"[{ticker}] Individual Revenue YoY Growths for Avg: {[f'{x:.2%}' for x in rev_yoy_series.tail(4)]}")
+            app.logger.info(f"[{ticker}] Individual FFO YoY Growths for Avg: {[f'{x:.2%}' for x in ffo_yoy_series.tail(4)]}")
 
             avg_revenue_yoy_growth = rev_yoy_series.tail(4).mean() if not rev_yoy_series.empty else None
             avg_ffo_yoy_growth = ffo_yoy_series.tail(4).mean() if not ffo_yoy_series.empty else None
@@ -797,11 +809,12 @@ def get_advanced_filtered_reits():
                 'avg_revenue_yoy_growth': avg_revenue_yoy_growth,
                 'avg_ffo_yoy_growth': avg_ffo_yoy_growth
             })
+        app.logger.info("------------------------------------")
 
         if not results:
              return jsonify({"reits": []})
 
-        # --- Step 4 & 5: Merge, Filter, and Return ---
+        # Step 4 & 5: Merge, Filter, and Return (Logic is the same)
         metrics_df = pd.DataFrame(results)
         final_df = pd.merge(candidate_df, metrics_df, on='Ticker')
         final_df = final_df.astype(object).where(pd.notna(final_df), None)
@@ -814,7 +827,7 @@ def get_advanced_filtered_reits():
         if min_ffo_growth is not None:
             filtered_df = filtered_df[filtered_df['avg_ffo_yoy_growth'].notna() & (filtered_df['avg_ffo_yoy_growth'] >= min_ffo_growth)]
 
-        # --- Step 6: Log and Return ---
+        # Step 6: Log Final Results
         app.logger.info("--- VERIFICATION LOG (FINAL) ---")
         if filtered_df.empty:
             app.logger.info("No REITs matched the final criteria.")
