@@ -1,56 +1,118 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { useLoading } from "../context/LoadingContext.js";
 
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:5000";
 
+// No changes to this master list
+const MASTER_FILTER_LIST = [
+  { 
+    apiName: 'property_type', 
+    label: 'Property Type',
+    type: 'select',
+    options: [
+        "Apartments", "Industrial Assets", "Office Buildings", "Data Centers",
+        "Single Family Houses", "Hotels/Resorts", "Retail Centers", "Health Care Communities",
+        "Self Storage", "Infrastructure", "Manufactured Homes", "Specialty",
+        "Timber", "Medical Facilities", "Life Science Laboratories"
+    ]
+  },
+  { 
+    apiName: 'revenue_growth', // Changed from min_... to be more generic
+    label: 'Avg. Revenue Growth (YoY %)',
+    type: 'numeric',
+    placeholder: 'e.g., 5'
+  },
+  { 
+    apiName: 'ffo_growth', // Changed from min_...
+    label: 'Avg. FFO Growth (YoY %)',
+    type: 'numeric',
+    placeholder: 'e.g., 10'
+  },
+  { 
+    apiName: 'operating_margin', // Changed from min_...
+    label: 'Operating Margin (TTM %)',
+    type: 'numeric',
+    placeholder: 'e.g., 15'
+  },
+];
+
+
 function FilterPage() {
   const [reits, setReits] = useState([]);
-  const [explanation, setExplanation] = useState("Select a filter to begin screening for REITs.");
-
-  // New consolidated state for all filters
-  const [filters, setFilters] = useState({
-      selectedPropertyType: "",
-      minRevenueGrowth: "", // Renamed from Cagr
-      minFfoGrowth: "",     // Renamed from Cagr
-      minOperatingMargin: "",
-  });
-  const [appliedFilters, setAppliedFilters] = useState({});
+  const [explanation, setExplanation] = useState("Add a filter to begin screening for REITs.");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [activeFilters, setActiveFilters] = useState([]);
+  
   const { setLoading: setIsLoading } = useLoading();
-
-  const propertyTypeOptions = [
-    "Apartments", "Industrial Assets", "Office Buildings", "Data Centers",
-    "Single Family Houses", "Hotels/Resorts", "Retail Centers", "Health Care Communities",
-    "Self Storage", "Infrastructure", "Manufactured Homes", "Specialty",
-    "Timber", "Medical Facilities", "Life Science Laboratories"
-  ];
-
   const navigate = useNavigate();
 
-  const fetchREITs = useCallback(() => {
-    // Check if there are any applied filters. If not, don't make an API call.
-    const hasAppliedFilters = Object.values(appliedFilters).some(value => value !== "" && value !== null);
-    if (!hasAppliedFilters) {
-      setReits([]);
-      setExplanation("Select filters and click Apply to begin screening.");
+  // CHANGE #1: Add value2 for 'between' condition
+  const handleAddFilter = (filter) => {
+    if (activeFilters.some(f => f.apiName === filter.apiName)) {
+      setIsModalOpen(false);
+      return;
+    }
+    const newFilter = {
+      id: Date.now(),
+      ...filter,
+      condition: filter.type === 'select' ? 'equals' : 'over',
+      value: '',
+      value2: '' // Add a second value field for the 'between' case
+    };
+    setActiveFilters(prev => [...prev, newFilter]);
+    setIsModalOpen(false);
+  };
+
+  const handleUpdateFilter = (id, field, value) => {
+    setActiveFilters(prev => 
+      prev.map(f => (f.id === id ? { ...f, [field]: value } : f))
+    );
+  };
+
+  const handleRemoveFilter = (id) => {
+    setActiveFilters(prev => prev.filter(f => f.id !== id));
+  };
+  
+  const handleResetFilters = () => {
+    setActiveFilters([]);
+    setReits([]);
+    setExplanation("Add a filter to begin screening for REITs.");
+  };
+
+  // CHANGE #2: Update API logic to handle 'over', 'under', and 'between'
+  const handleApplyFilters = useCallback(() => {
+    if (activeFilters.length === 0) {
+      handleResetFilters();
       return;
     }
 
     setIsLoading(true);
     const url = `${API_BASE_URL}/api/reits/advanced-filter`;
-
-    const requestParams = {
-        property_type: appliedFilters.selectedPropertyType,
-        min_revenue_growth: appliedFilters.minRevenueGrowth ? parseFloat(appliedFilters.minRevenueGrowth) / 100 : null,
-        min_ffo_growth: appliedFilters.minFfoGrowth ? parseFloat(appliedFilters.minFfoGrowth) / 100 : null,
-        min_operating_margin: appliedFilters.minOperatingMargin ? parseFloat(appliedFilters.minOperatingMargin) / 100 : null,
-    };
     
-    Object.keys(requestParams).forEach(key => {
-        if (requestParams[key] === null || requestParams[key] === "") {
-            delete requestParams[key];
+    const requestParams = {};
+    activeFilters.forEach(filter => {
+      // Basic validation: only send filters that have a value
+      if (filter.value !== '') {
+        if (filter.type === 'select') {
+          requestParams[filter.apiName] = filter.value;
+        } else if (filter.type === 'numeric') {
+          // Construct API parameters based on the condition
+          const baseApiName = filter.apiName;
+          const val1 = parseFloat(filter.value) / 100;
+
+          if (filter.condition === 'over') {
+            requestParams[`min_${baseApiName}`] = val1;
+          } else if (filter.condition === 'under') {
+            requestParams[`max_${baseApiName}`] = val1;
+          } else if (filter.condition === 'between' && filter.value2 !== '') {
+            const val2 = parseFloat(filter.value2) / 100;
+            requestParams[`min_${baseApiName}`] = Math.min(val1, val2);
+            requestParams[`max_${baseApiName}`] = Math.max(val1, val2);
+          }
         }
+      }
     });
 
     console.log("Sending to backend:", requestParams);
@@ -59,11 +121,7 @@ function FilterPage() {
       .then((response) => {
         const reitsData = response.data.reits || [];
         setReits(reitsData);
-        if (reitsData.length > 0) {
-            setExplanation(`Displaying ${reitsData.length} results.`);
-        } else {
-            setExplanation("No REITs found matching your specific criteria. Try adjusting your filters.");
-        }
+        setExplanation(`Displaying ${reitsData.length} results based on your criteria.`);
       })
       .catch((error) => {
         console.error("Error fetching data:", error);
@@ -73,87 +131,110 @@ function FilterPage() {
       .finally(() => {
         setIsLoading(false);
       });
-  }, [appliedFilters, setIsLoading]); // This now depends on appliedFilters
-
-  useEffect(() => {
-    fetchREITs();
-  }, [fetchREITs]); // This now triggers ONLY when appliedFilters changes.
-
-  const handleFilterChange = (e) => {
-    const { name, value } = e.target;
-    setFilters(prevFilters => ({
-        ...prevFilters,
-        [name]: value,
-    }));
-  };
-
-  const handleApplyClick = () => {
-    setAppliedFilters(filters);
-  };
+  }, [activeFilters, setIsLoading]);
 
   const formatWebsiteUrl = (url) => {
     if (!url) return "No website available";
     return url.startsWith("http") ? url : `https://${url}`;
   };
 
+  const availableFilters = MASTER_FILTER_LIST.filter(
+    masterFilter => !activeFilters.some(activeFilter => activeFilter.apiName === masterFilter.apiName)
+  );
+
   return (
     <div className="filter-page">
       <h2 className="filter-page-title">REIT Screener</h2>
-
-      <div className="filter-controls">
-        <div className="filter-control-group">
-          <label>Select Property Type:</label>
-          <select
-            name="selectedPropertyType"
-            value={filters.selectedPropertyType}
-            onChange={handleFilterChange}
-            className="input-field home-select-input"
-          >
-            <option value="">-- All Property Types --</option>
-            {propertyTypeOptions.map((type) => (
-              <option key={type} value={type}>{type}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className="filter-control-group">
-          <label>Min. Avg. Revenue Growth (YoY %):</label>
-          <input
-            type="number" step="0.5" name="minRevenueGrowth"
-            value={filters.minRevenueGrowth} onChange={handleFilterChange}
-            placeholder="e.g., 3.5" className="input-field"
-          />
-        </div>
-
-        <div className="filter-control-group">
-          <label>Min. Avg. FFO Growth (YoY %):</label>
-          <input
-            type="number" step="0.5" name="minFfoGrowth"
-            value={filters.minFfoGrowth} onChange={handleFilterChange}
-            placeholder="e.g., 4" className="input-field"
-          />
-        </div>
-        
-        <div className="filter-control-group">
-          <label>Min. Operating Margin (TTM %):</label>
-          <input
-            type="number" step="1" name="minOperatingMargin"
-            value={filters.minOperatingMargin} onChange={handleFilterChange}
-            placeholder="e.g., 15" className="input-field"
-          />
-        </div>
-      </div>
-
-      <div className="filter-actions">
-        <button onClick={handleApplyClick} className="btn btn-primary btn-apply-filters">
-          Apply Filters
+      
+      <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+        <button className="btn btn-secondary btn-sm" onClick={() => setIsModalOpen(true)}>
+          + Add Filter
         </button>
+        <button className="btn btn-secondary btn-sm" onClick={handleResetFilters}>Reset All</button>
+        <button className="btn btn-primary btn-sm" onClick={handleApplyFilters}>Apply Filters</button>
       </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+        {activeFilters.length > 0 ? (
+          activeFilters.map(filter => (
+            <div key={filter.id} className="card filter-row-layout">
+              <label>{filter.label}</label>
+              
+              {/* CHANGE #3: Add "Between" to dropdown and render second input box */}
+              {filter.type === 'numeric' && (
+                <>
+                  <select 
+                    className="input-field"
+                    value={filter.condition}
+                    onChange={(e) => handleUpdateFilter(filter.id, 'condition', e.target.value)}
+                  >
+                    <option value="over">Over</option>
+                    <option value="under">Under</option>
+                    <option value="between">Between</option>
+                  </select>
+
+                  <input
+                    type="number"
+                    className="input-field"
+                    placeholder={filter.placeholder || 'Value'}
+                    value={filter.value}
+                    onChange={(e) => handleUpdateFilter(filter.id, 'value', e.target.value)}
+                  />
+
+                  {filter.condition === 'between' && (
+                    <>
+                      <span>and</span>
+                      <input
+                        type="number"
+                        className="input-field"
+                        placeholder="Value 2"
+                        value={filter.value2}
+                        onChange={(e) => handleUpdateFilter(filter.id, 'value2', e.target.value)}
+                      />
+                    </>
+                  )}
+                </>
+              )}
+
+              {filter.type === 'select' && (
+                <select
+                  className="input-field"
+                  value={filter.value}
+                  onChange={(e) => handleUpdateFilter(filter.id, 'value', e.target.value)}
+                >
+                  <option value="">-- Select --</option>
+                  {filter.options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                </select>
+              )}
+              
+              <button className="sidebar-close-btn" onClick={() => handleRemoveFilter(filter.id)}>
+                &times;
+              </button>
+            </div>
+          ))
+        ) : (
+          <p className="filter-explanation">No active filters.</p>
+        )}
+      </div>
+
+      {isModalOpen && (
+        <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
+          <div className="modal-box" onClick={e => e.stopPropagation()}>
+            <h3 className="popup-modal-title">Select a Filter</h3>
+            <div style={{ marginTop: '1rem' }}>
+              {availableFilters.map(filter => (
+                <div key={filter.apiName} className="dropdown-item" onClick={() => handleAddFilter(filter)}>
+                  {filter.label}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <h2 className="filter-results-title">Filtered REITs</h2>
       <p className="filter-explanation">{explanation}</p>
-
-      {/* --- THIS IS THE ONLY CHANGE --- */}
+      
       <div className="reits-table-container">
         <table className="reits-table">
           <thead>
@@ -167,26 +248,16 @@ function FilterPage() {
             {reits.length > 0 ? (
               reits.map((reit, index) => (
                 <tr key={index}>
-                  <td
-                    className="reit-company-name-clickable"
-                    onClick={() => navigate(`/reits/${reit.Ticker}`)}
-                  >
+                  <td className="reit-company-name-clickable" onClick={() => navigate(`/reits/${reit.Ticker}`)}>
                     {reit.Company_Name}
                   </td>
                   <td>{reit.Business_Description || "No description available."}</td>
                   <td>
                     {reit.Website ? (
-                      <a
-                        href={formatWebsiteUrl(reit.Website)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="reit-link"
-                      >
+                      <a href={formatWebsiteUrl(reit.Website)} target="_blank" rel="noopener noreferrer" className="reit-link">
                         Visit
                       </a>
-                    ) : (
-                      "No website available"
-                    )}
+                    ) : ("No website available")}
                   </td>
                 </tr>
               ))

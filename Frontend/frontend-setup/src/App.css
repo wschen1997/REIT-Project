@@ -768,7 +768,7 @@ label {
 
 /* Filter Page */
 .filter-page {
-  padding: 10px;
+  padding: 35px;
   background-color: var(--background-color);
   
   /* --- ADD THESE LINES --- */
@@ -2038,18 +2038,6 @@ label {
   color: var(--primary-color);
 }
 
-.filter-controls {
-  display: flex;
-  gap: 30px;
-  align-items: flex-end;
-}
-
-.filter-control-group {
-  display: flex;
-  flex-direction: column;
-  min-width: 250px;
-}
-
 .filter-explanation {
   color: var(--text-color-muted);
   font-style: italic;
@@ -2464,6 +2452,40 @@ transition: width 0.5s ease-in-out;
 .filter-control-group .input-field {
   margin-bottom: 0;
 }
+.filter-row-layout {
+  flex-direction: row;   /* This OVERRIDES the 'column' from .card */
+  align-items: center; /* This OVERRIDES the 'center' from .card */
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+  padding: 15px;
+  margin: 0;
+}
+
+/* Target the label and inputs inside our specific layout */
+.filter-row-layout > label {
+  font-weight: bold;
+  flex-grow: 1;
+  flex-basis: 250px;
+  margin: 0;
+  display: block; /* Add this line */
+}
+
+.filter-row-layout .input-field {
+  margin-bottom: 0;   /* IMPORTANT override */
+  flex-grow: 1;
+  flex-basis: 120px;   /* Give inputs a base width */
+}
+
+/* Override the reused .sidebar-close-btn for this context */
+.filter-row-layout .sidebar-close-btn {
+  position: static;   /* Its default is 'absolute', we must override it */
+  margin-left: auto;  /* Push to the far right */
+  font-size: 1.5rem;
+}
+
+
+
 
 
 

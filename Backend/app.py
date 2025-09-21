@@ -737,6 +737,10 @@ def get_advanced_filtered_reits():
     min_revenue_growth = args.get('min_revenue_growth', type=float)
     min_ffo_growth = args.get('min_ffo_growth', type=float)
     min_operating_margin = args.get('min_operating_margin', type=float)
+    
+    max_revenue_growth = args.get('max_revenue_growth', type=float)
+    max_ffo_growth = args.get('max_ffo_growth', type=float)
+    max_operating_margin = args.get('max_operating_margin', type=float)
 
     try:
         with db.engine.connect() as conn:
@@ -820,12 +824,21 @@ def get_advanced_filtered_reits():
         final_df = final_df.astype(object).where(pd.notna(final_df), None)
 
         filtered_df = final_df.copy()
+        # --- MINIMUM VALUE FILTERS ---
         if min_operating_margin is not None:
             filtered_df = filtered_df[filtered_df['operating_margin'].notna() & (filtered_df['operating_margin'] >= min_operating_margin)]
         if min_revenue_growth is not None:
             filtered_df = filtered_df[filtered_df['avg_revenue_yoy_growth'].notna() & (filtered_df['avg_revenue_yoy_growth'] >= min_revenue_growth)]
         if min_ffo_growth is not None:
             filtered_df = filtered_df[filtered_df['avg_ffo_yoy_growth'].notna() & (filtered_df['avg_ffo_yoy_growth'] >= min_ffo_growth)]
+
+        # --- MAXIMUM VALUE FILTERS ---
+        if max_operating_margin is not None:
+            filtered_df = filtered_df[filtered_df['operating_margin'].notna() & (filtered_df['operating_margin'] <= max_operating_margin)]
+        if max_revenue_growth is not None:
+            filtered_df = filtered_df[filtered_df['avg_revenue_yoy_growth'].notna() & (filtered_df['avg_revenue_yoy_growth'] <= max_revenue_growth)]
+        if max_ffo_growth is not None:
+            filtered_df = filtered_df[filtered_df['avg_ffo_yoy_growth'].notna() & (filtered_df['avg_ffo_yoy_growth'] <= max_ffo_growth)]
 
         # Step 6: Log Final Results
         app.logger.info("--- VERIFICATION LOG (FINAL) ---")
