@@ -5,8 +5,6 @@ import * as ReactGaModule from "react-ga4";
 import HomePage from "./pages/HomePage.js";
 import FilterPage from "./pages/FilterPage.js";
 import DetailPage from "./pages/DetailPage.js";
-import CrowdfundingPage from "./pages/Crowdfunding.js";
-import RecDetailPage from "./pages/RecDetailPage.js";
 import AboutUs from "./pages/AboutUs.js";
 import ContactUs from "./pages/ContactUs.js";
 import PricingPage from "./pages/Pricing.js";
@@ -79,8 +77,6 @@ const AppContent = () => {
           <Route path="/" element={<HomePage />} />
           <Route path="/filter" element={<FilterPage />} />
           <Route path="/reits/:ticker" element={<DetailPage userPlan={userPlan} />} />
-          <Route path="/Crowdfunding" element={<CrowdfundingPage />} />
-          <Route path="/Crowdfunding/:vehicle" element={<RecDetailPage userPlan={userPlan} />} />
           <Route path="/about" element={<AboutUs />} />
           <Route path="/contact" element={<ContactUs />} />
           <Route path="/pricing" element={<PricingPage currentUser={currentUser} userPlan={userPlan} />} />
