@@ -2443,6 +2443,20 @@ transition: width 0.5s ease-in-out;
   overflow: visible; /* <-- Now it applies to all screen sizes */
 }
 
+.filter-actions {
+  /* This container is no longer needed for alignment, but we'll use it for spacing */
+  margin-top: -10px; /* Pulls it closer to the filters */
+  margin-bottom: 40px;
+}
+
+.btn-apply-filters {
+  padding: 0.75rem; 
+  font-size: 1rem; /* Same font-size as .input-field */
+  width: 250px; 
+  display: block; /* Ensures margin auto works */
+  margin-left: 0; /* Aligns to the left by default */
+  box-sizing: border-box; /* Ensures padding is included in the width/height calculation */
+}
 
 
 
@@ -2823,5 +2837,15 @@ transition: width 0.5s ease-in-out;
   }
   .financials-table {
     white-space: normal; /* This tells the entire table to allow text wrapping on mobile */
+  }
+  .filter-actions {
+    /* On mobile, we use the full width of the container */
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .btn-apply-filters {
+    /* On mobile, the button will take up the full width, just like the inputs */
+    width: 100%; 
   }
 }

@@ -16,6 +16,7 @@ function FilterPage() {
       minFfoGrowth: "",     // Renamed from Cagr
       minOperatingMargin: "",
   });
+  const [appliedFilters, setAppliedFilters] = useState({});
   const { setLoading: setIsLoading } = useLoading();
 
   const propertyTypeOptions = [
@@ -28,54 +29,55 @@ function FilterPage() {
   const navigate = useNavigate();
 
   const fetchREITs = useCallback(() => {
-      setIsLoading(true);
-      // Point the URL to your new backend endpoint
-      const url = `${API_BASE_URL}/api/reits/advanced-filter`;
+    // Check if there are any applied filters. If not, don't make an API call.
+    const hasAppliedFilters = Object.values(appliedFilters).some(value => value !== "" && value !== null);
+    if (!hasAppliedFilters) {
+      setReits([]);
+      setExplanation("Select filters and click Apply to begin screening.");
+      return;
+    }
 
-      const requestParams = {
-          property_type: filters.selectedPropertyType,
-          min_revenue_growth: filters.minRevenueGrowth ? parseFloat(filters.minRevenueGrowth) / 100 : null,
-          min_ffo_growth: filters.minFfoGrowth ? parseFloat(filters.minFfoGrowth) / 100 : null,
-          min_operating_margin: filters.minOperatingMargin ? parseFloat(filters.minOperatingMargin) / 100 : null,
-      };
+    setIsLoading(true);
+    const url = `${API_BASE_URL}/api/reits/advanced-filter`;
 
-      // Clean up parameters before sending
-      Object.keys(requestParams).forEach(key => {
-          if (requestParams[key] === null || requestParams[key] === "") {
-              delete requestParams[key];
-          }
+    const requestParams = {
+        property_type: appliedFilters.selectedPropertyType,
+        min_revenue_growth: appliedFilters.minRevenueGrowth ? parseFloat(appliedFilters.minRevenueGrowth) / 100 : null,
+        min_ffo_growth: appliedFilters.minFfoGrowth ? parseFloat(appliedFilters.minFfoGrowth) / 100 : null,
+        min_operating_margin: appliedFilters.minOperatingMargin ? parseFloat(appliedFilters.minOperatingMargin) / 100 : null,
+    };
+    
+    Object.keys(requestParams).forEach(key => {
+        if (requestParams[key] === null || requestParams[key] === "") {
+            delete requestParams[key];
+        }
+    });
+
+    console.log("Sending to backend:", requestParams);
+
+    axios.get(url, { params: requestParams })
+      .then((response) => {
+        const reitsData = response.data.reits || [];
+        setReits(reitsData);
+        if (reitsData.length > 0) {
+            setExplanation(`Displaying ${reitsData.length} results.`);
+        } else {
+            setExplanation("No REITs found matching your specific criteria. Try adjusting your filters.");
+        }
+      })
+      .catch((error) => {
+        console.error("Error fetching data:", error);
+        setReits([]);
+        setExplanation("An error occurred while fetching data.");
+      })
+      .finally(() => {
+        setIsLoading(false);
       });
-
-      console.log("Sending to backend:", requestParams);
-
-      axios.get(url, { params: requestParams })
-          .then((response) => {
-              setReits(response.data.reits || []);
-              setExplanation(`Displaying ${response.data.reits?.length || 0} results based on active filters.`);
-          })
-          .catch((error) => {
-              console.error("Error fetching data:", error);
-              setReits([]);
-              setExplanation("An error occurred while fetching data.");
-          })
-          .finally(() => {
-              setIsLoading(false);
-          });
-  }, [filters, setIsLoading]);
+  }, [appliedFilters, setIsLoading]); // This now depends on appliedFilters
 
   useEffect(() => {
-      const hasActiveFilter = Object.values(filters).some(value => value !== "" && value !== null);
-      
-      if (hasActiveFilter) {
-          const handler = setTimeout(() => {
-              fetchREITs();
-          }, 500); // Debounce for 500ms
-          return () => clearTimeout(handler);
-      } else {
-          setReits([]);
-          setExplanation("Select a filter to begin screening for REITs.");
-      }
-  }, [filters, fetchREITs]);
+    fetchREITs();
+  }, [fetchREITs]); // This now triggers ONLY when appliedFilters changes.
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
@@ -83,6 +85,10 @@ function FilterPage() {
         ...prevFilters,
         [name]: value,
     }));
+  };
+
+  const handleApplyClick = () => {
+    setAppliedFilters(filters);
   };
 
   const formatWebsiteUrl = (url) => {
@@ -136,6 +142,12 @@ function FilterPage() {
             placeholder="e.g., 15" className="input-field"
           />
         </div>
+      </div>
+
+      <div className="filter-actions">
+        <button onClick={handleApplyClick} className="btn btn-primary btn-apply-filters">
+          Apply Filters
+        </button>
       </div>
 
       <h2 className="filter-results-title">Filtered REITs</h2>
