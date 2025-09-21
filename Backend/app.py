@@ -770,7 +770,7 @@ def get_advanced_filtered_reits():
 
         # --- Step 3: Calculate Metrics in Pandas ---
         results = []
-        app.logger.info("--- STARTING METRIC CALCULATION ---")
+        app.logger.info("--- RAW DATA AND CALCULATION LOG ---")
         for ticker, group in financials_df.groupby('ticker'):
             group = group.sort_values(by=['fiscal_year', 'fiscal_quarter'])
             
@@ -785,35 +785,23 @@ def get_advanced_filtered_reits():
             operating_margin = (ttm_operating_income / ttm_revenue) if ttm_revenue and ttm_revenue != 0 else None
 
             # --- Time-Aware YoY Growth Calculation ---
-            def calculate_avg_yoy_growth(df):
-                if df.empty or len(df) < 2: # Need at least 2 points to compare
-                    return None
-                
-                df = df.copy()
-                df['fiscal_year'] = df['fiscal_year'].astype(int)
-                df['fiscal_quarter'] = df['fiscal_quarter'].astype(int)
+            recent_revenue = revenue_data.tail(8)
+            recent_ffo = ffo_data.tail(8)
 
-                last_4_quarters = df.tail(4)
-                
-                yoy_growths = []
-                for _, current_q in last_4_quarters.iterrows():
-                    prev_year_q = df[
-                        (df['fiscal_year'] == current_q['fiscal_year'] - 1) &
-                        (df['fiscal_quarter'] == current_q['fiscal_quarter'])
-                    ]
-                    
-                    if not prev_year_q.empty and pd.notna(prev_year_q['value'].iloc[0]):
-                        prev_val = prev_year_q['value'].iloc[0]
-                        current_val = current_q['value']
-                        
-                        if prev_val != 0 and pd.notna(current_val):
-                            growth = (current_val / prev_val) - 1
-                            yoy_growths.append(growth)
+            # Use pct_change(periods=4) which is tailor-made for YoY quarterly comparisons
+            revenue_yoy_growth = recent_revenue['value'].pct_change(periods=4)
+            ffo_yoy_growth = recent_ffo['value'].pct_change(periods=4)
 
-                return np.mean(yoy_growths) if yoy_growths else None
+            # Average ONLY the last 4 results from this time-aware calculation
+            avg_revenue_yoy_growth = revenue_yoy_growth.dropna().tail(4).mean() if not revenue_yoy_growth.dropna().empty else None
+            avg_ffo_yoy_growth = ffo_yoy_growth.dropna().tail(4).mean() if not ffo_yoy_growth.dropna().empty else None
 
-            avg_revenue_yoy_growth = calculate_avg_yoy_growth(revenue_data)
-            avg_ffo_yoy_growth = calculate_avg_yoy_growth(ffo_data)
+            # --- Log the data for verification ---
+            app.logger.info(f"--- Processing Ticker: {ticker} ---")
+            app.logger.info(f"[{ticker}] Raw Revenue points for TTM: {revenue_data.tail(4)['value'].tolist()}")
+            app.logger.info(f"[{ticker}] Raw OpIncome points for TTM: {op_income_data.tail(4)['value'].tolist()}")
+            app.logger.info(f"[{ticker}] Individual Revenue YoY Growths for Avg: {[f'{x:.2%}' for x in revenue_yoy_growth.dropna().tail(4)]}")
+            app.logger.info(f"[{ticker}] Individual FFO YoY Growths for Avg: {[f'{x:.2%}' for x in ffo_yoy_growth.dropna().tail(4)]}")
 
             results.append({
                 'Ticker': ticker,
@@ -821,7 +809,7 @@ def get_advanced_filtered_reits():
                 'avg_revenue_yoy_growth': avg_revenue_yoy_growth,
                 'avg_ffo_yoy_growth': avg_ffo_yoy_growth
             })
-        app.logger.info("--- FINISHED METRIC CALCULATION ---")
+        app.logger.info("------------------------------------")
 
         if not results:
              return jsonify({"reits": []})
