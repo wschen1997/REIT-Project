@@ -727,8 +727,9 @@ def stripe_webhook():
 @app.route('/api/reits/advanced-filter', methods=['GET'])
 def get_advanced_filtered_reits():
     """
-    DEFINITIVE ENDPOINT V2: Explicitly disables the 'pad' fill method in pct_change
-    to prevent forward-filling of NaN values, ensuring strict data validation.
+    DEFINITIVE ENDPOINT V3: Reconstructs a full time-series for each REIT before
+    calculation. This ensures YoY growth is always calculated over a true one-year
+    period, correctly handling sparse data.
     """
     app.logger.info(f"Request received for DEFINITIVE PANDAS-BASED filter with args: {request.args}")
 
@@ -744,7 +745,7 @@ def get_advanced_filtered_reits():
 
     try:
         with db.engine.connect() as conn:
-            # Step 1: Get tickers (No changes)
+            # Step 1 & 2: Data fetching remains the same
             params = {}
             sql_tickers = "SELECT Ticker, Company_Name, Business_Description, Website FROM reit_business_data WHERE 1=1"
             if property_type:
@@ -756,7 +757,6 @@ def get_advanced_filtered_reits():
                 return jsonify({"reits": []})
             candidate_tickers = tuple(candidate_df['Ticker'].tolist())
 
-            # Step 2: Fetch financial data (No changes)
             sql_financials = text("""
                 SELECT ticker, TRIM(line_item) as line_item, fiscal_year, fiscal_quarter, value
                 FROM reit_income_statement
@@ -766,25 +766,9 @@ def get_advanced_filtered_reits():
             
             financials_df['value'] = financials_df['value'].replace(0, np.nan)
 
-        # Step 3: Calculate Metrics with STRICT Logic
+        # --- Step 3: Calculate Metrics with Time-Aware Logic ---
         results = []
         app.logger.info("--- STARTING METRIC CALCULATION ---")
-
-        def get_strict_yoy_growth_metrics(data_series):
-            recent_data = data_series.tail(8)
-            if len(recent_data) < 8:
-                return None, pd.Series([np.nan] * 4)
-
-            # --- THE CRITICAL FIX IS HERE ---
-            # Added fill_method=None to prevent the forward-fill behavior.
-            yoy_growths = recent_data.pct_change(periods=4, fill_method=None)
-            
-            last_4_growths = yoy_growths.tail(4)
-            
-            if last_4_growths.isnull().any():
-                return None, last_4_growths
-            
-            return last_4_growths.mean(), last_4_growths
 
         for ticker, group in financials_df.groupby('ticker'):
             group = group.sort_values(by=['fiscal_year', 'fiscal_quarter'], ascending=True)
@@ -792,23 +776,51 @@ def get_advanced_filtered_reits():
             revenue_data = group[group['line_item'] == 'Total Revenue']
             op_income_data = group[group['line_item'] == 'Operating Income']
             ffo_data = group[group['line_item'] == 'FFO']
-            
-            ttm_revenue = revenue_data.tail(4)['value'].sum()
-            ttm_operating_income = op_income_data.tail(4)['value'].sum()
+
+            # --- NEW HELPER TO CREATE A DENSE, COMPLETE TIME-SERIES ---
+            def create_dense_timeseries(df):
+                if df.empty:
+                    return pd.DataFrame(columns=['value'])
+                df = df.copy()
+                df['period'] = pd.PeriodIndex(year=df['fiscal_year'], quarter=df['fiscal_quarter'], freq='Q')
+                df = df.set_index('period').sort_index()
+                full_range = pd.period_range(start=df.index.min(), end=df.index.max(), freq='Q')
+                return df.reindex(full_range)
+
+            # --- Convert all data to dense time-series first ---
+            dense_revenue_data = create_dense_timeseries(revenue_data)
+            dense_op_income_data = create_dense_timeseries(op_income_data)
+            dense_ffo_data = create_dense_timeseries(ffo_data)
+
+            # --- Now, all calculations are performed on the complete time-series data ---
+            ttm_revenue = dense_revenue_data.tail(4)['value'].sum()
+            ttm_operating_income = dense_op_income_data.tail(4)['value'].sum()
             operating_margin = (ttm_operating_income / ttm_revenue) if ttm_revenue and ttm_revenue != 0 else None
 
-            avg_revenue_yoy_growth, rev_growths_for_log = get_strict_yoy_growth_metrics(revenue_data['value'])
-            avg_ffo_yoy_growth, ffo_growths_for_log = get_strict_yoy_growth_metrics(ffo_data['value'])
+            def get_strict_yoy_growth_metrics(dense_series):
+                if len(dense_series) < 8:
+                    return None, pd.Series([np.nan] * 4)
+                
+                recent_data = dense_series.tail(8)
+                yoy_growths = recent_data.pct_change(periods=4, fill_method=None)
+                last_4_growths = yoy_growths.tail(4)
+                
+                if last_4_growths.isnull().any():
+                    return None, last_4_growths
+                
+                return last_4_growths.mean(), last_4_growths
+
+            avg_revenue_yoy_growth, rev_growths_for_log = get_strict_yoy_growth_metrics(dense_revenue_data['value'])
+            avg_ffo_yoy_growth, ffo_growths_for_log = get_strict_yoy_growth_metrics(dense_ffo_data['value'])
 
             app.logger.info(f"--- Processing Ticker: {ticker} ---")
-            app.logger.info(f"[{ticker}] Raw Revenue points for TTM: {revenue_data.tail(4)['value'].tolist()}")
-            app.logger.info(f"[{ticker}] Raw OpIncome points for TTM: {op_income_data.tail(4)['value'].tolist()}")
+            app.logger.info(f"[{ticker}] Raw Revenue points for TTM: {dense_revenue_data.tail(4)['value'].tolist()}")
+            app.logger.info(f"[{ticker}] Raw OpIncome points for TTM: {dense_op_income_data.tail(4)['value'].tolist()}")
             app.logger.info(f"[{ticker}] Individual Revenue YoY Growths for Avg: {[f'{x:.2%}' if pd.notna(x) else 'N/A' for x in rev_growths_for_log]}")
             app.logger.info(f"[{ticker}] Individual FFO YoY Growths for Avg: {[f'{x:.2%}' if pd.notna(x) else 'N/A' for x in ffo_growths_for_log]}")
 
             results.append({
-                'Ticker': ticker,
-                'operating_margin': operating_margin,
+                'Ticker': ticker, 'operating_margin': operating_margin,
                 'avg_revenue_yoy_growth': avg_revenue_yoy_growth,
                 'avg_ffo_yoy_growth': avg_ffo_yoy_growth
             })
@@ -818,19 +830,18 @@ def get_advanced_filtered_reits():
         if not results:
              return jsonify({"reits": []})
 
-        # Step 4, 5, & 6: Merge, Filter, and Log Final (No changes)
+        # Step 4, 5, & 6: Merging, Filtering, and Final Logging (No changes needed)
         metrics_df = pd.DataFrame(results)
         final_df = pd.merge(candidate_df, metrics_df, on='Ticker')
         final_df = final_df.astype(object).where(pd.notna(final_df), None)
-
         filtered_df = final_df.copy()
+
         if min_operating_margin is not None:
             filtered_df = filtered_df[filtered_df['operating_margin'].notna() & (filtered_df['operating_margin'] >= min_operating_margin)]
         if min_revenue_growth is not None:
             filtered_df = filtered_df[filtered_df['avg_revenue_yoy_growth'].notna() & (filtered_df['avg_revenue_yoy_growth'] >= min_revenue_growth)]
         if min_ffo_growth is not None:
             filtered_df = filtered_df[filtered_df['avg_ffo_yoy_growth'].notna() & (filtered_df['avg_ffo_yoy_growth'] >= min_ffo_growth)]
-
         if max_operating_margin is not None:
             filtered_df = filtered_df[filtered_df['operating_margin'].notna() & (filtered_df['operating_margin'] <= max_operating_margin)]
         if max_revenue_growth is not None:
