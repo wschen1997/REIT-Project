@@ -733,7 +733,6 @@ label {
 .reits-table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 20px;
 }
 
 .reit-table th,
@@ -769,10 +768,14 @@ label {
 
 /* Filter Page */
 .filter-page {
-    padding: 20px;
-    background-color: var(--background-color);
+  padding: 10px;
+  background-color: var(--background-color);
+  
+  /* --- ADD THESE LINES --- */
+  display: flex;
+  flex-direction: column;
+  gap: 35px; /* Creates a consistent space between all sections */
 }
-
 /* Tooltip for Info Icon */
 .tooltip-icon {
     position: relative;
@@ -2031,10 +2034,6 @@ label {
   text-align: left;
 }
 
-.filter-page {
-  padding: 20px;
-}
-
 .filter-page-title, .filter-results-title {
   color: var(--primary-color);
 }
@@ -2043,7 +2042,6 @@ label {
   display: flex;
   gap: 30px;
   align-items: flex-end;
-  margin: 20px 0 40px;
 }
 
 .filter-control-group {
@@ -2444,9 +2442,8 @@ transition: width 0.5s ease-in-out;
 }
 
 .filter-actions {
-  /* This container is no longer needed for alignment, but we'll use it for spacing */
-  margin-top: -10px; /* Pulls it closer to the filters */
-  margin-bottom: 40px;
+  display: flex;
+  justify-content: left;
 }
 
 .btn-apply-filters {
@@ -2457,9 +2454,16 @@ transition: width 0.5s ease-in-out;
   margin-left: 0; /* Aligns to the left by default */
   box-sizing: border-box; /* Ensures padding is included in the width/height calculation */
 }
-
-
-
+.filter-control-group > label {
+  margin-bottom: 8px;
+}
+.filter-page > h2,
+.filter-page > p {
+  margin: 0;
+}
+.filter-control-group .input-field {
+  margin-bottom: 0;
+}
 
 
 

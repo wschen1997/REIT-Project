@@ -102,7 +102,7 @@ function FilterPage() {
 
       <div className="filter-controls">
         <div className="filter-control-group">
-          <label style={{ marginBottom: '8px' }}>Select Property Type:</label>
+          <label>Select Property Type:</label>
           <select
             name="selectedPropertyType"
             value={filters.selectedPropertyType}
