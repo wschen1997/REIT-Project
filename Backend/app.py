@@ -19,6 +19,7 @@ from google.cloud import firestore
 import firebase_admin
 from firebase_admin import credentials, firestore as admin_firestore
 import logging
+import numpy as np
 
 # Explicitly load environment variables from the Credentials.env file
 dotenv_path = os.path.abspath(
@@ -759,16 +760,15 @@ def get_advanced_filtered_reits():
             sql_financials = text("""
                 SELECT ticker, TRIM(line_item) as line_item, fiscal_year, fiscal_quarter, value
                 FROM reit_income_statement
-                WHERE TRIM(line_item) IN ('Total Revenue', 'Operating Income') AND ticker IN :tickers
-                UNION ALL
-                SELECT ticker, TRIM(line_item) as line_item, fiscal_year, fiscal_quarter, value
-                FROM reit_industry_metrics
-                WHERE TRIM(line_item) = 'FFO' AND ticker IN :tickers
+                WHERE TRIM(line_item) IN ('Total Revenue', 'Operating Income', 'FFO') AND ticker IN :tickers
             """)
             financials_df = pd.read_sql(sql_financials, conn, params={"tickers": candidate_tickers})
-            financials_df['value'] = pd.to_numeric(financials_df['value'], errors='coerce')
+            
+            # Treat zeros that came from '-' as missing data
+            financials_df['value'] = financials_df['value'].replace(0, np.nan)
 
-        # --- Step 3: Calculate Metrics in Pandas (CORRECTED LOGIC) ---
+
+        # --- Step 3: Calculate Metrics in Pandas ---
         results = []
         app.logger.info("--- RAW DATA AND CALCULATION LOG ---")
         for ticker, group in financials_df.groupby('ticker'):
@@ -778,34 +778,30 @@ def get_advanced_filtered_reits():
             revenue_data = group[group['line_item'] == 'Total Revenue']
             op_income_data = group[group['line_item'] == 'Operating Income']
             ffo_data = group[group['line_item'] == 'FFO']
+            
+            # TTM Calculation (Last 4 quarters of data)
+            ttm_revenue = revenue_data.tail(4)['value'].sum()
+            ttm_operating_income = op_income_data.tail(4)['value'].sum()
+            operating_margin = (ttm_operating_income / ttm_revenue) if ttm_revenue and ttm_revenue != 0 else None
 
-            # --- LOG THE RAW DATA BEING USED ---
+            # --- Time-Aware YoY Growth Calculation ---
+            recent_revenue = revenue_data.tail(8)
+            recent_ffo = ffo_data.tail(8)
+
+            # Use pct_change(periods=4) which is tailor-made for YoY quarterly comparisons
+            revenue_yoy_growth = recent_revenue['value'].pct_change(periods=4)
+            ffo_yoy_growth = recent_ffo['value'].pct_change(periods=4)
+
+            # Average ONLY the last 4 results from this time-aware calculation
+            avg_revenue_yoy_growth = revenue_yoy_growth.dropna().tail(4).mean() if not revenue_yoy_growth.dropna().empty else None
+            avg_ffo_yoy_growth = ffo_yoy_growth.dropna().tail(4).mean() if not ffo_yoy_growth.dropna().empty else None
+
+            # --- Log the data for verification ---
             app.logger.info(f"--- Processing Ticker: {ticker} ---")
             app.logger.info(f"[{ticker}] Raw Revenue points for TTM: {revenue_data.tail(4)['value'].tolist()}")
             app.logger.info(f"[{ticker}] Raw OpIncome points for TTM: {op_income_data.tail(4)['value'].tolist()}")
-            
-            # TTM Calculation on isolated data
-            ttm_revenue = revenue_data.tail(4)['value'].sum()
-            ttm_operating_income = op_income_data.tail(4)['value'].sum()
-            operating_margin = (ttm_operating_income / ttm_revenue) if ttm_revenue else None
-
-            # YoY Growth Calculation
-            revenue_data = revenue_data.copy()
-            ffo_data = ffo_data.copy()
-            revenue_data.loc[:, 'last_year_value'] = revenue_data['value'].shift(4)
-            revenue_data.loc[:, 'yoy_growth'] = (revenue_data['value'] / revenue_data['last_year_value']) - 1
-            
-            ffo_data.loc[:, 'last_year_value'] = ffo_data['value'].shift(4)
-            ffo_data.loc[:, 'yoy_growth'] = (ffo_data['value'] / ffo_data['last_year_value']) - 1
-
-            # --- LOG THE RAW YOY GROWTH NUMBERS ---
-            rev_yoy_series = revenue_data['yoy_growth'].dropna()
-            ffo_yoy_series = ffo_data['yoy_growth'].dropna()
-            app.logger.info(f"[{ticker}] Individual Revenue YoY Growths for Avg: {[f'{x:.2%}' for x in rev_yoy_series.tail(4)]}")
-            app.logger.info(f"[{ticker}] Individual FFO YoY Growths for Avg: {[f'{x:.2%}' for x in ffo_yoy_series.tail(4)]}")
-
-            avg_revenue_yoy_growth = rev_yoy_series.tail(4).mean() if not rev_yoy_series.empty else None
-            avg_ffo_yoy_growth = ffo_yoy_series.tail(4).mean() if not ffo_yoy_series.empty else None
+            app.logger.info(f"[{ticker}] Individual Revenue YoY Growths for Avg: {[f'{x:.2%}' for x in revenue_yoy_growth.dropna().tail(4)]}")
+            app.logger.info(f"[{ticker}] Individual FFO YoY Growths for Avg: {[f'{x:.2%}' for x in ffo_yoy_growth.dropna().tail(4)]}")
 
             results.append({
                 'Ticker': ticker,
