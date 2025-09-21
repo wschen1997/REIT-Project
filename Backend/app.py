@@ -724,11 +724,16 @@ def stripe_webhook():
 # =========================== ADVANCED FILTER ENDPOINT ==============================
 # -------------------------------------------------------------------------
 
+# -------------------------------------------------------------------------
+# =========================== ADVANCED FILTER ENDPOINT ==============================
+# -------------------------------------------------------------------------
+
 @app.route('/api/reits/advanced-filter', methods=['GET'])
 def get_advanced_filtered_reits():
     """
     FINAL ROBUST ENDPOINT: This version isolates each metric's data before calculation
-    and adds detailed logging to show the raw numbers being used.
+    and adds detailed logging to show the raw numbers being used. It enforces a strict
+    YoY growth calculation, requiring 4 valid, consecutive YoY periods.
     """
     app.logger.info(f"Request received for FINAL PANDAS-BASED filter with args: {request.args}")
 
@@ -764,15 +769,43 @@ def get_advanced_filtered_reits():
             """)
             financials_df = pd.read_sql(sql_financials, conn, params={"tickers": candidate_tickers})
             
-            # Treat zeros that came from '-' as missing data
+            # Treat zeros that came from '-' as missing data (NaN)
             financials_df['value'] = financials_df['value'].replace(0, np.nan)
 
 
         # --- Step 3: Calculate Metrics in Pandas ---
         results = []
-        app.logger.info("--- RAW DATA AND CALCULATION LOG ---")
+        app.logger.info("--- STARTING METRIC CALCULATION ---")
+        
+        # --- NEW HELPER FUNCTION FOR STRICT YOY CALCULATION ---
+        def calculate_strict_avg_yoy_growth(df, metric_name):
+            """
+            Calculates the average YoY growth for the last 4 quarters.
+            Returns None if ANY of the last 4 YoY periods are incalculable.
+            """
+            # Take the last 8 quarters to calculate the last 4 YoY growths
+            recent_data = df.tail(8)
+            
+            # Not enough data to even attempt a calculation
+            if len(recent_data) < 8:
+                return None, pd.Series(dtype=float) # Return empty series for logging
+
+            # pct_change is the correct tool for this YoY calculation
+            yoy_growths = recent_data['value'].pct_change(periods=4)
+            
+            # Isolate ONLY the last 4 growth periods
+            last_4_growths = yoy_growths.tail(4)
+            
+            # THE CRITICAL CHECK: If any of these 4 periods are NaN, invalidate the whole metric
+            if last_4_growths.isnull().any():
+                return None, last_4_growths # Return None for the average, but the raw data for logging
+            
+            # If all 4 are valid, return their mean
+            return last_4_growths.mean(), last_4_growths
+
+
         for ticker, group in financials_df.groupby('ticker'):
-            group = group.sort_values(by=['fiscal_year', 'fiscal_quarter'])
+            group = group.sort_values(by=['fiscal_year', 'fiscal_quarter'], ascending=True)
             
             # --- Isolate each metric's data before calculating ---
             revenue_data = group[group['line_item'] == 'Total Revenue']
@@ -784,24 +817,16 @@ def get_advanced_filtered_reits():
             ttm_operating_income = op_income_data.tail(4)['value'].sum()
             operating_margin = (ttm_operating_income / ttm_revenue) if ttm_revenue and ttm_revenue != 0 else None
 
-            # --- Time-Aware YoY Growth Calculation ---
-            recent_revenue = revenue_data.tail(8)
-            recent_ffo = ffo_data.tail(8)
-
-            # Use pct_change(periods=4) which is tailor-made for YoY quarterly comparisons
-            revenue_yoy_growth = recent_revenue['value'].pct_change(periods=4)
-            ffo_yoy_growth = recent_ffo['value'].pct_change(periods=4)
-
-            # Average ONLY the last 4 results from this time-aware calculation
-            avg_revenue_yoy_growth = revenue_yoy_growth.dropna().tail(4).mean() if not revenue_yoy_growth.dropna().empty else None
-            avg_ffo_yoy_growth = ffo_yoy_growth.dropna().tail(4).mean() if not ffo_yoy_growth.dropna().empty else None
+            # --- Apply the new strict calculation logic ---
+            avg_revenue_yoy_growth, rev_growths_for_log = calculate_strict_avg_yoy_growth(revenue_data, 'Revenue')
+            avg_ffo_yoy_growth, ffo_growths_for_log = calculate_strict_avg_yoy_growth(ffo_data, 'FFO')
 
             # --- Log the data for verification ---
             app.logger.info(f"--- Processing Ticker: {ticker} ---")
             app.logger.info(f"[{ticker}] Raw Revenue points for TTM: {revenue_data.tail(4)['value'].tolist()}")
             app.logger.info(f"[{ticker}] Raw OpIncome points for TTM: {op_income_data.tail(4)['value'].tolist()}")
-            app.logger.info(f"[{ticker}] Individual Revenue YoY Growths for Avg: {[f'{x:.2%}' for x in revenue_yoy_growth.dropna().tail(4)]}")
-            app.logger.info(f"[{ticker}] Individual FFO YoY Growths for Avg: {[f'{x:.2%}' for x in ffo_yoy_growth.dropna().tail(4)]}")
+            app.logger.info(f"[{ticker}] Individual Revenue YoY Growths for Avg: {[f'{x:.2%}' if pd.notna(x) else 'N/A' for x in rev_growths_for_log]}")
+            app.logger.info(f"[{ticker}] Individual FFO YoY Growths for Avg: {[f'{x:.2%}' if pd.notna(x) else 'N/A' for x in ffo_growths_for_log]}")
 
             results.append({
                 'Ticker': ticker,
@@ -809,12 +834,13 @@ def get_advanced_filtered_reits():
                 'avg_revenue_yoy_growth': avg_revenue_yoy_growth,
                 'avg_ffo_yoy_growth': avg_ffo_yoy_growth
             })
-        app.logger.info("------------------------------------")
+        
+        app.logger.info("--- FINISHED METRIC CALCULATION ---")
 
         if not results:
              return jsonify({"reits": []})
 
-        # Step 4 & 5: Merge, Filter, and Return (Logic is the same)
+        # Step 4 & 5: Merge, Filter, and Return (No changes needed here)
         metrics_df = pd.DataFrame(results)
         final_df = pd.merge(candidate_df, metrics_df, on='Ticker')
         final_df = final_df.astype(object).where(pd.notna(final_df), None)
