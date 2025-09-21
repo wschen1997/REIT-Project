@@ -722,7 +722,6 @@ def stripe_webhook():
 # -------------------------------------------------------------------------
 # =========================== ADVANCED FILTER ENDPOINT ==============================
 # -------------------------------------------------------------------------
-# REPLACE the existing advanced-filter function with this FINAL version.
 
 @app.route('/api/reits/advanced-filter', methods=['GET'])
 def get_advanced_filtered_reits():
@@ -767,6 +766,7 @@ def get_advanced_filtered_reits():
                 WHERE TRIM(line_item) = 'FFO' AND ticker IN :tickers
             """)
             financials_df = pd.read_sql(sql_financials, conn, params={"tickers": candidate_tickers})
+            financials_df['value'] = pd.to_numeric(financials_df['value'], errors='coerce')
 
         # --- Step 3: Calculate Metrics in Pandas (CORRECTED LOGIC) ---
         results = []
