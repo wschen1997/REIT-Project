@@ -724,18 +724,14 @@ def stripe_webhook():
 # =========================== ADVANCED FILTER ENDPOINT ==============================
 # -------------------------------------------------------------------------
 
-# -------------------------------------------------------------------------
-# =========================== ADVANCED FILTER ENDPOINT ==============================
-# -------------------------------------------------------------------------
-
 @app.route('/api/reits/advanced-filter', methods=['GET'])
 def get_advanced_filtered_reits():
     """
-    FINAL ROBUST ENDPOINT: This version isolates each metric's data before calculation
-    and adds detailed logging to show the raw numbers being used. It enforces a strict
-    YoY growth calculation, requiring 4 valid, consecutive YoY periods.
+    DEFINITIVE ENDPOINT: This version uses a strict method to calculate YoY growth.
+    A REIT is disqualified if it lacks complete data for the last 4 consecutive
+    YoY growth periods (i.e., requires 8 consecutive quarters of data).
     """
-    app.logger.info(f"Request received for FINAL PANDAS-BASED filter with args: {request.args}")
+    app.logger.info(f"Request received for DEFINITIVE PANDAS-BASED filter with args: {request.args}")
 
     args = request.args
     property_type = args.get('property_type')
@@ -749,7 +745,7 @@ def get_advanced_filtered_reits():
 
     try:
         with db.engine.connect() as conn:
-            # Step 1: Get tickers matching the property type
+            # Step 1: Get tickers (No changes here)
             params = {}
             sql_tickers = "SELECT Ticker, Company_Name, Business_Description, Website FROM reit_business_data WHERE 1=1"
             if property_type:
@@ -761,7 +757,7 @@ def get_advanced_filtered_reits():
                 return jsonify({"reits": []})
             candidate_tickers = tuple(candidate_df['Ticker'].tolist())
 
-            # Step 2: Fetch all relevant financial data for those tickers
+            # Step 2: Fetch financial data (No changes here)
             sql_financials = text("""
                 SELECT ticker, TRIM(line_item) as line_item, fiscal_year, fiscal_quarter, value
                 FROM reit_income_statement
@@ -769,59 +765,46 @@ def get_advanced_filtered_reits():
             """)
             financials_df = pd.read_sql(sql_financials, conn, params={"tickers": candidate_tickers})
             
-            # Treat zeros that came from '-' as missing data (NaN)
             financials_df['value'] = financials_df['value'].replace(0, np.nan)
 
-
-        # --- Step 3: Calculate Metrics in Pandas ---
+        # --- Step 3: Calculate Metrics with STRICT Logic ---
         results = []
         app.logger.info("--- STARTING METRIC CALCULATION ---")
-        
-        # --- NEW HELPER FUNCTION FOR STRICT YOY CALCULATION ---
-        def calculate_strict_avg_yoy_growth(df, metric_name):
-            """
-            Calculates the average YoY growth for the last 4 quarters.
-            Returns None if ANY of the last 4 YoY periods are incalculable.
-            """
-            # Take the last 8 quarters to calculate the last 4 YoY growths
-            recent_data = df.tail(8)
-            
-            # Not enough data to even attempt a calculation
-            if len(recent_data) < 8:
-                return None, pd.Series(dtype=float) # Return empty series for logging
 
-            # pct_change is the correct tool for this YoY calculation
-            yoy_growths = recent_data['value'].pct_change(periods=4)
-            
-            # Isolate ONLY the last 4 growth periods
+        def get_strict_yoy_growth_metrics(data_series):
+            """
+            New helper to enforce strict data validation for YoY growth.
+            """
+            recent_data = data_series.tail(8)
+            # 1. We must have 8 consecutive quarters to make 4 YoY comparisons.
+            if len(recent_data) < 8:
+                return None, pd.Series([np.nan] * 4)
+
+            yoy_growths = recent_data.pct_change(periods=4)
             last_4_growths = yoy_growths.tail(4)
             
-            # THE CRITICAL CHECK: If any of these 4 periods are NaN, invalidate the whole metric
+            # 2. CRITICAL CHECK: If any of the last 4 periods are NaN, invalidate the metric.
             if last_4_growths.isnull().any():
-                return None, last_4_growths # Return None for the average, but the raw data for logging
+                return None, last_4_growths
             
-            # If all 4 are valid, return their mean
             return last_4_growths.mean(), last_4_growths
-
 
         for ticker, group in financials_df.groupby('ticker'):
             group = group.sort_values(by=['fiscal_year', 'fiscal_quarter'], ascending=True)
             
-            # --- Isolate each metric's data before calculating ---
             revenue_data = group[group['line_item'] == 'Total Revenue']
             op_income_data = group[group['line_item'] == 'Operating Income']
             ffo_data = group[group['line_item'] == 'FFO']
             
-            # TTM Calculation (Last 4 quarters of data)
             ttm_revenue = revenue_data.tail(4)['value'].sum()
             ttm_operating_income = op_income_data.tail(4)['value'].sum()
             operating_margin = (ttm_operating_income / ttm_revenue) if ttm_revenue and ttm_revenue != 0 else None
 
             # --- Apply the new strict calculation logic ---
-            avg_revenue_yoy_growth, rev_growths_for_log = calculate_strict_avg_yoy_growth(revenue_data, 'Revenue')
-            avg_ffo_yoy_growth, ffo_growths_for_log = calculate_strict_avg_yoy_growth(ffo_data, 'FFO')
+            avg_revenue_yoy_growth, rev_growths_for_log = get_strict_yoy_growth_metrics(revenue_data['value'])
+            avg_ffo_yoy_growth, ffo_growths_for_log = get_strict_yoy_growth_metrics(ffo_data['value'])
 
-            # --- Log the data for verification ---
+            # --- Log the CORRECT data for verification ---
             app.logger.info(f"--- Processing Ticker: {ticker} ---")
             app.logger.info(f"[{ticker}] Raw Revenue points for TTM: {revenue_data.tail(4)['value'].tolist()}")
             app.logger.info(f"[{ticker}] Raw OpIncome points for TTM: {op_income_data.tail(4)['value'].tolist()}")
@@ -840,13 +823,12 @@ def get_advanced_filtered_reits():
         if not results:
              return jsonify({"reits": []})
 
-        # Step 4 & 5: Merge, Filter, and Return (No changes needed here)
+        # Step 4, 5, & 6: Merge, Filter, and Log Final (No changes needed here)
         metrics_df = pd.DataFrame(results)
         final_df = pd.merge(candidate_df, metrics_df, on='Ticker')
         final_df = final_df.astype(object).where(pd.notna(final_df), None)
 
         filtered_df = final_df.copy()
-        # --- MINIMUM VALUE FILTERS ---
         if min_operating_margin is not None:
             filtered_df = filtered_df[filtered_df['operating_margin'].notna() & (filtered_df['operating_margin'] >= min_operating_margin)]
         if min_revenue_growth is not None:
@@ -854,7 +836,6 @@ def get_advanced_filtered_reits():
         if min_ffo_growth is not None:
             filtered_df = filtered_df[filtered_df['avg_ffo_yoy_growth'].notna() & (filtered_df['avg_ffo_yoy_growth'] >= min_ffo_growth)]
 
-        # --- MAXIMUM VALUE FILTERS ---
         if max_operating_margin is not None:
             filtered_df = filtered_df[filtered_df['operating_margin'].notna() & (filtered_df['operating_margin'] <= max_operating_margin)]
         if max_revenue_growth is not None:
@@ -862,7 +843,6 @@ def get_advanced_filtered_reits():
         if max_ffo_growth is not None:
             filtered_df = filtered_df[filtered_df['avg_ffo_yoy_growth'].notna() & (filtered_df['avg_ffo_yoy_growth'] <= max_ffo_growth)]
 
-        # Step 6: Log Final Results
         app.logger.info("--- VERIFICATION LOG (FINAL) ---")
         if filtered_df.empty:
             app.logger.info("No REITs matched the final criteria.")
