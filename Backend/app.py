@@ -723,110 +723,101 @@ def stripe_webhook():
 # =========================== ADVANCED FILTER ENDPOINT ==============================
 # -------------------------------------------------------------------------
 
+# REPLACE the existing advanced-filter function with this one
+
 @app.route('/api/reits/advanced-filter', methods=['GET'])
 def get_advanced_filtered_reits():
     """
-    FINAL MVP ENDPOINT: Calculates all metrics in SQL, then filters and logs in Python
-    for maximum transparency and easier debugging.
+    FINAL ROBUST ENDPOINT: This version uses a simple SQL query to fetch raw data
+    and performs all calculations in Python (Pandas) for maximum reliability.
     """
-    app.logger.info(f"Request received for FINAL filter with args: {request.args}")
+    app.logger.info(f"Request received for PANDAS-BASED filter with args: {request.args}")
 
-    # --- 1. Get Filter Parameters ---
     args = request.args
     property_type = args.get('property_type')
     min_revenue_growth = args.get('min_revenue_growth', type=float)
     min_ffo_growth = args.get('min_ffo_growth', type=float)
     min_operating_margin = args.get('min_operating_margin', type=float)
 
-    # --- 2. Build SQL to CALCULATE metrics for all relevant REITs ---
-    # The WHERE clause is now only for property_type, which is efficient for the DB.
-    base_query = text("""
-        WITH TTM_Data AS (
-            SELECT
-                ticker,
-                SUM(CASE WHEN line_item = 'Total Revenue' THEN value ELSE 0 END) AS ttm_revenue,
-                SUM(CASE WHEN line_item = 'Operating Income' THEN value ELSE 0 END) AS ttm_operating_income
-            FROM reit_income_statement
-            WHERE CONCAT(fiscal_year, LPAD(fiscal_quarter, 2, '0')) > (
-                SELECT CONCAT(fiscal_year, LPAD(fiscal_quarter, 2, '0'))
-                FROM reit_income_statement
-                GROUP BY fiscal_year, fiscal_quarter
-                ORDER BY fiscal_year DESC, fiscal_quarter DESC
-                LIMIT 1 OFFSET 4
-            )
-            GROUP BY ticker
-        ),
-        YoY_Growth AS (
-            SELECT
-                ticker,
-                line_item,
-                (value / last_year_value - 1) AS yoy_growth
-            FROM (
-                SELECT
-                    ticker, line_item, value,
-                    LAG(value, 4) OVER (PARTITION BY ticker, line_item ORDER BY fiscal_year, fiscal_quarter) as last_year_value
-                FROM (
-                    SELECT ticker, line_item, fiscal_year, fiscal_quarter, value FROM reit_income_statement WHERE line_item = 'Total Revenue'
-                    UNION ALL
-                    SELECT ticker, line_item, fiscal_year, fiscal_quarter, value FROM reit_industry_metrics WHERE line_item = 'FFO'
-                ) AS combined_data
-            ) AS lagged_data
-            WHERE last_year_value IS NOT NULL AND last_year_value > 0
-        ),
-        Avg_YoY_Growth AS (
-            SELECT
-                ticker,
-                AVG(CASE WHEN line_item = 'Total Revenue' THEN yoy_growth ELSE NULL END) as avg_revenue_yoy_growth,
-                AVG(CASE WHEN line_item = 'FFO' THEN yoy_growth ELSE NULL END) as avg_ffo_yoy_growth
-            FROM YoY_Growth
-            GROUP BY ticker
-        )
-        SELECT
-            rbd.Ticker, rbd.Company_Name, rbd.Business_Description, rbd.Website,
-            (ttm.ttm_operating_income / NULLIF(ttm.ttm_revenue, 0)) AS operating_margin,
-            yoy.avg_revenue_yoy_growth,
-            yoy.avg_ffo_yoy_growth
-        FROM
-            reit_business_data rbd
-        LEFT JOIN TTM_Data ttm ON rbd.Ticker = ttm.ticker
-        LEFT JOIN Avg_YoY_Growth yoy ON rbd.Ticker = yoy.ticker
-        WHERE 1=1
-    """)
-    
-    params = {}
-    sql_string = str(base_query)
-
-    if property_type:
-        sql_string += " AND rbd.Property_Type LIKE :property_type"
-        params['property_type'] = f"%{property_type}%"
-
     try:
         with db.engine.connect() as conn:
-            # --- 3. Fetch ALL potential candidates from the database ---
-            candidate_df = pd.read_sql(text(sql_string), conn, params=params)
-            # Replace NaN with None for easier handling in Python
-            candidate_df = candidate_df.astype(object).where(pd.notna(candidate_df), None)
+            # --- Step 1: Get the list of tickers that match the property type ---
+            params = {}
+            sql_tickers = "SELECT Ticker, Company_Name, Business_Description, Website FROM reit_business_data WHERE 1=1"
+            if property_type:
+                sql_tickers += " AND Property_Type LIKE :property_type"
+                params['property_type'] = f"%{property_type}%"
+            
+            candidate_df = pd.read_sql(text(sql_tickers), conn, params=params)
+            
+            if candidate_df.empty:
+                return jsonify({"reits": []})
 
-        # --- 4. Apply numeric filters in Python (pandas) ---
-        filtered_df = candidate_df.copy()
+            candidate_tickers = tuple(candidate_df['Ticker'].tolist())
+
+            # --- Step 2: Fetch ALL relevant financial data for those tickers in one go ---
+            sql_financials = text("""
+                SELECT ticker, line_item, fiscal_year, fiscal_quarter, value
+                FROM reit_income_statement
+                WHERE line_item IN ('Total Revenue', 'Operating Income') AND ticker IN :tickers
+                UNION ALL
+                SELECT ticker, line_item, fiscal_year, fiscal_quarter, value
+                FROM reit_industry_metrics
+                WHERE line_item = 'FFO' AND ticker IN :tickers
+            """)
+            financials_df = pd.read_sql(sql_financials, conn, params={"tickers": candidate_tickers})
+
+        # --- Step 3: Calculate Metrics in Pandas for each Ticker ---
+        results = []
+        for ticker, group in financials_df.groupby('ticker'):
+            group = group.sort_values(by=['fiscal_year', 'fiscal_quarter']).set_index(['fiscal_year', 'fiscal_quarter'])
+            
+            # TTM Calculation
+            last_4_q = group.tail(4)
+            ttm_revenue = last_4_q[last_4_q['line_item'] == 'Total Revenue']['value'].sum()
+            ttm_operating_income = last_4_q[last_4_q['line_item'] == 'Operating Income']['value'].sum()
+            operating_margin = (ttm_operating_income / ttm_revenue) if ttm_revenue else None
+
+            # YoY Growth Calculation
+            group['last_year_value'] = group.groupby('line_item')['value'].shift(4)
+            group['yoy_growth'] = (group['value'] / group['last_year_value']) - 1
+            
+            avg_revenue_yoy_growth = group[group['line_item'] == 'Total Revenue']['yoy_growth'].mean()
+            avg_ffo_yoy_growth = group[group['line_item'] == 'FFO']['yoy_growth'].mean()
+
+            results.append({
+                'Ticker': ticker,
+                'operating_margin': operating_margin,
+                'avg_revenue_yoy_growth': avg_revenue_yoy_growth,
+                'avg_ffo_yoy_growth': avg_ffo_yoy_growth
+            })
+
+        if not results:
+             return jsonify({"reits": []})
+
+        # --- Step 4: Merge calculated metrics with business data ---
+        metrics_df = pd.DataFrame(results)
+        final_df = pd.merge(candidate_df, metrics_df, on='Ticker')
+        final_df = final_df.astype(object).where(pd.notna(final_df), None)
+
+        # --- Step 5: Apply Numeric Filters ---
+        filtered_df = final_df.copy()
         if min_operating_margin is not None:
-            filtered_df = filtered_df[filtered_df['operating_margin'] >= min_operating_margin]
+            filtered_df = filtered_df[filtered_df['operating_margin'].notna() & (filtered_df['operating_margin'] >= min_operating_margin)]
         if min_revenue_growth is not None:
-            filtered_df = filtered_df[filtered_df['avg_revenue_yoy_growth'] >= min_revenue_growth]
+            filtered_df = filtered_df[filtered_df['avg_revenue_yoy_growth'].notna() & (filtered_df['avg_revenue_yoy_growth'] >= min_revenue_growth)]
         if min_ffo_growth is not None:
-            filtered_df = filtered_df[filtered_df['avg_ffo_yoy_growth'] >= min_ffo_growth]
+            filtered_df = filtered_df[filtered_df['avg_ffo_yoy_growth'].notna() & (filtered_df['avg_ffo_yoy_growth'] >= min_ffo_growth)]
 
-        # --- 5. LOG THE RESULTS FOR VERIFICATION ---
-        app.logger.info("--- VERIFICATION LOG FOR FILTERED REITS ---")
+        # --- Step 6: Log and Return ---
+        app.logger.info("--- VERIFICATION LOG (PANDAS) ---")
         if filtered_df.empty:
             app.logger.info("No REITs matched the final criteria.")
         else:
-            # Loop through the final results and print their calculated values
             for index, row in filtered_df.iterrows():
                 op_margin_str = f"{row['operating_margin']:.2%}" if row['operating_margin'] is not None else "N/A"
                 rev_growth_str = f"{row['avg_revenue_yoy_growth']:.2%}" if row['avg_revenue_yoy_growth'] is not None else "N/A"
                 ffo_growth_str = f"{row['avg_ffo_yoy_growth']:.2%}" if row['avg_ffo_yoy_growth'] is not None else "N/A"
-                
                 log_message = (
                     f"Ticker: {row['Ticker']:<8} | "
                     f"OpMargin: {op_margin_str:<10} | "
@@ -834,13 +825,12 @@ def get_advanced_filtered_reits():
                     f"AvgFFOGrowth: {ffo_growth_str:<10}"
                 )
                 app.logger.info(log_message)
-        app.logger.info("-------------------------------------------")
-
-        # --- 6. Convert final DataFrame to JSON and return ---
+        app.logger.info("------------------------------------")
+        
         reits_json = filtered_df.to_dict('records')
         return jsonify({"reits": reits_json})
 
     except Exception as e:
-        app.logger.error(f"Error in advanced filter logic: {e}")
+        app.logger.error(f"Error in pandas-based filter logic: {e}")
         traceback.print_exc()
         return jsonify({"error": "A database error occurred."}), 500
