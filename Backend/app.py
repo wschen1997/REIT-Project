@@ -724,28 +724,49 @@ def stripe_webhook():
 # =========================== ADVANCED FILTER ENDPOINT ==============================
 # -------------------------------------------------------------------------
 
+# THIS IS THE NEW CONFIGURATION OBJECT - THE "CONTROL PANEL" FOR ALL METRICS
+METRIC_CONFIG = [
+    {
+        'metric_name': 'operating_margin',
+        'calculation_type': 'ttm_margin',
+        'line_items': ['Operating Income', 'Total Revenue'], # Numerator, Denominator
+        'filter_prefix': 'operating_margin' 
+    },
+    {
+        'metric_name': 'avg_revenue_yoy_growth',
+        'calculation_type': 'avg_yoy_growth',
+        'line_items': ['Total Revenue'],
+        'filter_prefix': 'revenue_growth'
+    },
+    {
+        'metric_name': 'avg_ffo_yoy_growth',
+        'calculation_type': 'avg_yoy_growth',
+        'line_items': ['FFO'],
+        'filter_prefix': 'ffo_growth'
+    },
+    # --- EXAMPLE: How easy it is to add a new filter later ---
+    # {
+    #     'metric_name': 'avg_net_income_yoy_growth',
+    #     'calculation_type': 'avg_yoy_growth',
+    #     'line_items': ['Net Income'],
+    #     'filter_prefix': 'net_income_growth'
+    # },
+]
+
 @app.route('/api/reits/advanced-filter', methods=['GET'])
 def get_advanced_filtered_reits():
     """
-    DEFINITIVE ENDPOINT V3: Reconstructs a full time-series for each REIT before
-    calculation. This ensures YoY growth is always calculated over a true one-year
-    period, correctly handling sparse data.
+    DEFINITIVE ENDPOINT V4 (Refactored & Scalable): Uses a METRIC_CONFIG object to
+    dynamically calculate and filter any number of financial metrics without
+    changing the core calculation logic.
     """
-    app.logger.info(f"Request received for DEFINITIVE PANDAS-BASED filter with args: {request.args}")
-
+    app.logger.info(f"Request received for SCALABLE PANDAS-BASED filter with args: {request.args}")
     args = request.args
-    property_type = args.get('property_type')
-    min_revenue_growth = args.get('min_revenue_growth', type=float)
-    min_ffo_growth = args.get('min_ffo_growth', type=float)
-    min_operating_margin = args.get('min_operating_margin', type=float)
-    
-    max_revenue_growth = args.get('max_revenue_growth', type=float)
-    max_ffo_growth = args.get('max_ffo_growth', type=float)
-    max_operating_margin = args.get('max_operating_margin', type=float)
 
     try:
         with db.engine.connect() as conn:
-            # Step 1 & 2: Data fetching remains the same
+            # --- Step 1: Initial Ticker Selection (Property Type) ---
+            property_type = args.get('property_type')
             params = {}
             sql_tickers = "SELECT Ticker, Company_Name, Business_Description, Website FROM reit_business_data WHERE 1=1"
             if property_type:
@@ -757,162 +778,166 @@ def get_advanced_filtered_reits():
                 return jsonify({"reits": []})
             candidate_tickers = tuple(candidate_df['Ticker'].tolist())
 
+            # --- Step 2: Dynamically Fetch All Required Financial Data ---
+            line_items_to_fetch = set()
+            for metric in METRIC_CONFIG:
+                line_items_to_fetch.update(metric['line_items'])
+            
             sql_financials = text("""
                 SELECT ticker, TRIM(line_item) as line_item, fiscal_year, fiscal_quarter, value
                 FROM reit_income_statement
-                WHERE TRIM(line_item) IN ('Total Revenue', 'Operating Income', 'FFO')
-                AND ticker IN :tickers
-                AND fiscal_quarter IS NOT NULL         -- ADD THIS
+                WHERE TRIM(line_item) IN :line_items AND ticker IN :tickers AND fiscal_quarter IS NOT NULL
             """)
-            financials_df = pd.read_sql(sql_financials, conn, params={"tickers": candidate_tickers})
-            
+            financials_df = pd.read_sql(sql_financials, conn, params={
+                "line_items": tuple(line_items_to_fetch),
+                "tickers": candidate_tickers
+            })
             financials_df['value'] = financials_df['value'].replace(0, np.nan)
 
-        # --- Step 3: Calculate Metrics with Time-Aware Logic ---
+        # --- Step 3: Calculate Metrics Using the Configuration ---
         results = []
         app.logger.info("--- STARTING METRIC CALCULATION ---")
-
-        for ticker, group in financials_df.groupby('ticker'):
-            group = group.sort_values(by=['fiscal_year', 'fiscal_quarter'], ascending=True)
-
-            def _period_index(df):
-                if df.empty:
-                    return pd.PeriodIndex([], freq='Q-DEC')
-                return pd.PeriodIndex(year=df['fiscal_year'].astype(int),
-                                    quarter=df['fiscal_quarter'].astype(int),
-                                    freq='Q-DEC')
-
-            # Split by line item
-            revenue_data   = group[group['line_item'] == 'Total Revenue'].copy()
-            op_income_data = group[group['line_item'] == 'Operating Income'].copy()
-            ffo_data       = group[group['line_item'] == 'FFO'].copy()
-
-            # Build a MASTER index spanning the union of all quarters seen for this ticker
-            idxs = []
-            for df_part in (revenue_data, op_income_data, ffo_data):
-                pi = _period_index(df_part)
-                if len(pi) > 0:
-                    idxs.append(pi)
-
-            if not idxs:
-                # No usable data at all; skip cleanly
-                results.append({
-                    'Ticker': ticker,
-                    'operating_margin': None,
-                    'avg_revenue_yoy_growth': None,
-                    'avg_ffo_yoy_growth': None
-                })
-                continue
-
-            start = min(pi.min() for pi in idxs)
-            end   = max(pi.max() for pi in idxs)
-            master_index = pd.period_range(start=start, end=end, freq='Q-DEC')
-
-            def _series_on_master(df):
-                if df.empty:
-                    return pd.Series(index=master_index, dtype='float64')
-                s = pd.Series(df['value'].values, index=_period_index(df))
-                # Ensure numeric and keep NaNs (no filling)
-                s = pd.to_numeric(s, errors='coerce')
-                return s.reindex(master_index)
-
-            # Aligned series on the same master timeline
-            rev_series = _series_on_master(revenue_data)
-            op_series  = _series_on_master(op_income_data)
-            ffo_series = _series_on_master(ffo_data)
-            
-            app.logger.info(f"[{ticker}] Master tail(8) periods: {list(master_index[-8:])}")
-            app.logger.info(f"[{ticker}] FFO tail(8) values: {ffo_series.tail(8).tolist()}")
-
-
-            def _ttm_sum_strict(s):
-                last4 = s.tail(4)
-                # If any quarter missing, return None (avoid partial sums)
-                if last4.isna().any() or len(last4) < 4:
-                    return None
-                return float(last4.sum())
-
-            # Compute TTM & Op margin strictly
-            ttm_revenue = _ttm_sum_strict(rev_series)
-            ttm_op_inc  = _ttm_sum_strict(op_series)
-            operating_margin = (ttm_op_inc / ttm_revenue) if (ttm_revenue not in (None, 0) and ttm_op_inc is not None) else None
-
-            def get_strict_yoy_growth_metrics_on_master(s):
-                # Need at least 8 quarters on the *master* axis
-                if len(s.dropna()) == 0 or len(s) < 8:
-                    return None, pd.Series([np.nan] * 4, index=s.tail(4).index)
-                recent = s.tail(8)
-                yoy = recent.pct_change(periods=4, fill_method=None)  # no filling
-                last4 = yoy.tail(4)
-                if last4.isnull().any():
-                    return None, last4
-                return float(last4.mean()), last4
-
-            avg_revenue_yoy_growth, rev_growths_for_log = get_strict_yoy_growth_metrics_on_master(rev_series)
-            avg_ffo_yoy_growth,     ffo_growths_for_log = get_strict_yoy_growth_metrics_on_master(ffo_series)
-
-            # --- Logging stays the same but now uses the aligned series ---
-            app.logger.info(f"--- Processing Ticker: {ticker} ---")
-            app.logger.info(f"[{ticker}] Raw Revenue points for TTM: {rev_series.tail(4).tolist()}")
-            app.logger.info(f"[{ticker}] Raw OpIncome points for TTM: {op_series.tail(4).tolist()}")
-            app.logger.info(f"[{ticker}] Individual Revenue YoY Growths for Avg: "
-                            f"{[f'{x:.2%}' if pd.notna(x) else 'N/A' for x in rev_growths_for_log]}")
-            app.logger.info(f"[{ticker}] Individual FFO YoY Growths for Avg: "
-                            f"{[f'{x:.2%}' if pd.notna(x) else 'N/A' for x in ffo_growths_for_log]}")
-
-            results.append({
-                'Ticker': ticker,
-                'operating_margin': operating_margin,
-                'avg_revenue_yoy_growth': avg_revenue_yoy_growth,
-                'avg_ffo_yoy_growth': avg_ffo_yoy_growth
-            })
-
         
+        all_metrics_df = financials_df.groupby('ticker').apply(calculate_metrics_for_ticker)
+        all_metrics_df = all_metrics_df.reset_index()
+
         app.logger.info("--- FINISHED METRIC CALCULATION ---")
 
-        if not results:
-             return jsonify({"reits": []})
-
-        # Step 4, 5, & 6: Merging, Filtering, and Final Logging (No changes needed)
-        metrics_df = pd.DataFrame(results)
-        final_df = pd.merge(candidate_df, metrics_df, on='Ticker')
+        # --- Step 4: Merge, Filter, and Return ---
+        final_df = pd.merge(candidate_df, all_metrics_df, on='Ticker', how='left')
         final_df = final_df.astype(object).where(pd.notna(final_df), None)
+        
         filtered_df = final_df.copy()
 
-        if min_operating_margin is not None:
-            filtered_df = filtered_df[filtered_df['operating_margin'].notna() & (filtered_df['operating_margin'] >= min_operating_margin)]
-        if min_revenue_growth is not None:
-            filtered_df = filtered_df[filtered_df['avg_revenue_yoy_growth'].notna() & (filtered_df['avg_revenue_yoy_growth'] >= min_revenue_growth)]
-        if min_ffo_growth is not None:
-            filtered_df = filtered_df[filtered_df['avg_ffo_yoy_growth'].notna() & (filtered_df['avg_ffo_yoy_growth'] >= min_ffo_growth)]
-        if max_operating_margin is not None:
-            filtered_df = filtered_df[filtered_df['operating_margin'].notna() & (filtered_df['operating_margin'] <= max_operating_margin)]
-        if max_revenue_growth is not None:
-            filtered_df = filtered_df[filtered_df['avg_revenue_yoy_growth'].notna() & (filtered_df['avg_revenue_yoy_growth'] <= max_revenue_growth)]
-        if max_ffo_growth is not None:
-            filtered_df = filtered_df[filtered_df['avg_ffo_yoy_growth'].notna() & (filtered_df['avg_ffo_yoy_growth'] <= max_ffo_growth)]
+        # Dynamic Filtering based on METRIC_CONFIG and request args
+        for metric_conf in METRIC_CONFIG:
+            prefix = metric_conf['filter_prefix']
+            metric_col = metric_conf['metric_name']
+            
+            min_val = args.get(f'min_{prefix}', type=float)
+            max_val = args.get(f'max_{prefix}', type=float)
+            
+            if min_val is not None:
+                filtered_df = filtered_df[filtered_df[metric_col].notna() & (filtered_df[metric_col] >= min_val)]
+            if max_val is not None:
+                filtered_df = filtered_df[filtered_df[metric_col].notna() & (filtered_df[metric_col] <= max_val)]
 
+        # --- Step 5: Final Logging ---
         app.logger.info("--- VERIFICATION LOG (FINAL) ---")
         if filtered_df.empty:
             app.logger.info("No REITs matched the final criteria.")
         else:
             for index, row in filtered_df.iterrows():
-                op_margin_str = f"{row['operating_margin']:.2%}" if row['operating_margin'] is not None else "N/A"
-                rev_growth_str = f"{row['avg_revenue_yoy_growth']:.2%}" if row['avg_revenue_yoy_growth'] is not None else "N/A"
-                ffo_growth_str = f"{row['avg_ffo_yoy_growth']:.2%}" if row['avg_ffo_yoy_growth'] is not None else "N/A"
-                log_message = (
-                    f"Ticker: {row['Ticker']:<8} | "
-                    f"OpMargin: {op_margin_str:<10} | "
-                    f"AvgRevenueGrowth: {rev_growth_str:<10} | "
-                    f"AvgFFOGrowth: {ffo_growth_str:<10}"
-                )
-                app.logger.info(log_message)
+                log_parts = [f"Ticker: {row['Ticker']:<8}"]
+                for conf in METRIC_CONFIG:
+                    col = conf['metric_name']
+                    val_str = f"{row[col]:.2%}" if row[col] is not None else "N/A"
+                    log_parts.append(f"{col}: {val_str:<10}")
+                app.logger.info(" | ".join(log_parts))
+
         app.logger.info("-----------------------------")
         
         reits_json = filtered_df.to_dict('records')
         return jsonify({"reits": reits_json})
 
     except Exception as e:
-        app.logger.error(f"Error in final pandas-based filter logic: {e}")
+        app.logger.error(f"Error in scalable pandas-based filter logic: {e}")
         traceback.print_exc()
         return jsonify({"error": "A database error occurred."}), 500
+
+# --- HELPER FUNCTION: This contains your delicate calculation logic, now isolated ---
+def calculate_metrics_for_ticker(group):
+    """
+    Takes a DataFrame for a single ticker and calculates all metrics
+    defined in METRIC_CONFIG.
+    """
+    ticker = group['ticker'].iloc[0]
+    group = group.sort_values(by=['fiscal_year', 'fiscal_quarter'], ascending=True)
+
+    # --- Time-Series Reconstruction Logic (Preserved from V3) ---
+    all_periods = pd.PeriodIndex([], freq='Q-DEC')
+    if not group.empty:
+        valid_periods = group.dropna(subset=['fiscal_year', 'fiscal_quarter'])
+        if not valid_periods.empty:
+            all_periods = pd.PeriodIndex(
+                year=valid_periods['fiscal_year'].astype(int),
+                quarter=valid_periods['fiscal_quarter'].astype(int),
+                freq='Q-DEC'
+            )
+
+    if len(all_periods) == 0:
+        return pd.Series({conf['metric_name']: None for conf in METRIC_CONFIG})
+
+    start_period = all_periods.min()
+    end_period = all_periods.max()
+    master_index = pd.period_range(start=start_period, end=end_period, freq='Q-DEC')
+
+    series_cache = {}
+    def get_series_on_master(line_item):
+        if line_item in series_cache:
+            return series_cache[line_item]
+        
+        df_part = group[group['line_item'] == line_item]
+        if df_part.empty:
+            s = pd.Series(index=master_index, dtype='float64')
+        else:
+            s = pd.Series(
+                df_part['value'].values,
+                index=pd.PeriodIndex(
+                    year=df_part['fiscal_year'].astype(int),
+                    quarter=df_part['fiscal_quarter'].astype(int),
+                    freq='Q-DEC'
+                )
+            )
+        series_cache[line_item] = s.reindex(master_index)
+        return series_cache[line_item]
+
+    # --- Calculation Execution Loop ---
+    calculated_metrics = {}
+    for conf in METRIC_CONFIG:
+        metric_name = conf['metric_name']
+        calc_type = conf['calculation_type']
+        line_items = conf['line_items']
+
+        if calc_type == 'ttm_margin':
+            numerator_series = get_series_on_master(line_items[0])
+            denominator_series = get_series_on_master(line_items[1])
+            
+            ttm_num = numerator_series.rolling(window=4, min_periods=4).sum().iloc[-1]
+            ttm_den = denominator_series.rolling(window=4, min_periods=4).sum().iloc[-1]
+            
+            if pd.notna(ttm_den) and ttm_den != 0 and pd.notna(ttm_num):
+                calculated_metrics[metric_name] = ttm_num / ttm_den
+            else:
+                calculated_metrics[metric_name] = None
+        
+        elif calc_type == 'avg_yoy_growth':
+            series = get_series_on_master(line_items[0])
+            
+            if len(series) < 8: # Need at least 8 quarters for a full year of YoY
+                calculated_metrics[metric_name] = None
+                continue
+
+            yoy_growths = series.pct_change(periods=4, fill_method=None)
+            last_4_growths = yoy_growths.tail(4)
+            
+            if last_4_growths.isnull().any():
+                calculated_metrics[metric_name] = None # Strict: all 4 must be calculable
+            else:
+                calculated_metrics[metric_name] = float(last_4_growths.mean())
+
+    # --- Logging (Now inside the helper) ---
+    app.logger.info(f"--- Processing Ticker: {ticker} ---")
+    rev_series_log = get_series_on_master('Total Revenue')
+    op_series_log = get_series_on_master('Operating Income')
+    ffo_series_log = get_series_on_master('FFO')
+    
+    rev_yoy_log = rev_series_log.pct_change(periods=4, fill_method=None).tail(4)
+    ffo_yoy_log = ffo_series_log.pct_change(periods=4, fill_method=None).tail(4)
+
+    app.logger.info(f"[{ticker}] Raw Revenue points for TTM: {rev_series_log.tail(4).tolist()}")
+    app.logger.info(f"[{ticker}] Raw OpIncome points for TTM: {op_series_log.tail(4).tolist()}")
+    app.logger.info(f"[{ticker}] Individual Revenue YoY Growths for Avg: {[f'{x:.2%}' if pd.notna(x) else 'N/A' for x in rev_yoy_log]}")
+    app.logger.info(f"[{ticker}] Individual FFO YoY Growths for Avg: {[f'{x:.2%}' if pd.notna(x) else 'N/A' for x in ffo_yoy_log]}")
+    
+    return pd.Series(calculated_metrics)
