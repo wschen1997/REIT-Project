@@ -1,139 +1,39 @@
 Viserra
-AI integrated platform for now
+AI-stock filter generator + investment database
 
 
 Prep work needed:
-- Connect email/signup DB to zoho mai;
-- UK stock software market research
-  API for basic fundemental quene, cap IQ for more distinct dataset
+- Build the MVP using existing REIT tool
+	(1) Develop filters
+	(2) Develop LLM interface
+- Hosting service adjustment to UK servers?
+- Clean up existing REIT centric UI and remove BBG/Cap IQ etc marketing material
+- Improve UI pre-launch (scrolling animation/black/white photos etc on landing page)
+- Clean up unused code, stability/fundemental percentile, worker, duplicated css etc.
+- Connect email/signup DB to zoho mai
 
 
 Marketing:
-1. regular financial database at baseline, market as open for pre-using
-2. founder let marketing (content creation)
-user generated content
-- Open on the calc and back end calc and dataset that we feed into AI
-- The ranking we construct
-- The Screening
-
-- Structure everything so it can quickly be switch to US stock
-3. Marketing content targeting UK audience, seperate from saturated US market
-4. MVP - prioritize functions/display, but narror to fewer stocks - UK stockscreener that directs people to detail pages
+- MVP launch - tell people that prototype is only for demonstration purpose, prior REIT focus, etc.
+- Tell people what the full product could do, filters based on sector, much broder equity universe, etc.
+- Tell people that no signin/subscription is needed
+- Founder let marketing (content creation)
 
 
-
-1. Add black/white photos to the app
-2.scrolling animation
-
-Cofounder target:
-Someone with large distribution channel, specifically in the field of personal finance
+Ideas:
+1. User generated content?
 
 
-Misc
-1. Wrap all loading state, pop up modal into appjs
-2. Learn sales
-
-
+Cofounder Target:
+- Someone with large distribution channel, specifically in the field of personal finance
 
 
 
 Old
 -----------------------------------------------------------------------------------
-Action:
-Read in logic - make it so that a new row that's now in the database can be appended, even tho its not in a new quarter.
-
-2. Need to display more granular data, start from company level statements and holdings (see if Cap IQ batch download possible)
-3. See if lease level data is possible to source and aggregate
-4. improve UI
-5. Add back biz stat table
-6. clean up cap IQ notes, add currency, bold font, %, $, etc.
-7. Hide crowdfunding info/pricing for now, change header to side bar
-8. Make sure overdisplay aligns with financial data
-
-
-User feedback:
-Average lease duration, as well as how much they appreciate annually. A breakdown of the type of leases they have, NNN for example is a type of lease. Would be super nice to just quickly see something like 142 leases, 100% NNN, annual appreciation of 1.5%, average duration of 10 years. Those are just random numbers obviously but if you could quickly list all of that for any REIT that would be amazing. I also like to see the percentage of buildings currently occupied, and how many tenants have missed rent last month.
-A breakdown of the type of properties owned would also be great, for example 20% office buildings, 40% industrial, 40% farm land.
-Something else could be a chart that breaks down where the properties they own are, for example 25 in California, 10 in Washington, etc.
-
-
-
-Portfolio Simulation/Tracking: Allowing users to build/test portfolios?
-
-
-REIT Data Cleaning
-	regional focus (will have REIT that invest in diff countries, so category important)
-	Need to add all missing data from REIT universe
-	missing FFO - ALEX
-	RLj - extreme FFO growth (Block 2021 data as NA)
-	SVC - extreme FFO Growth (Block 2021 data as NA)
-	WHLR - extreme FFO Yield (Change to FFO annualized)
-	Stocks with extremely high annualized return - PECO, CURB, extreme surge in single day
-
-Operational score - 
-1. FFO Yield (This is the opposite of P/FFO basically, it shows that are you buying this REIT at a cheap price, how much CF or rental income are you generate if you buy now) 
-2. FFO Payout (Historical, and take into acct of fluctuation, is the stock's dividend predictable, ie how much of that CF you generated can you actually receive) 
-3. FFO growth - Historical (is the company's Operation good, is the management able to increase your rent while keeping the overhead low?)
-
-Price Volitility Score - 
-Price volitility, extreme loss events, liquidity, expected price return, etc
-
-
-Website:
-
-Marketing (Selling points):
-Data integraty only track reit, handle and double check all data point
-handle anomaly, negative earnings growth
-REIT specific metrics
-Explain the ranking/scoring
-exclude problematic REIT/FOF, and companies that classified as REIT only for tax purposes.
-
-Pricing
-Free:
-1. Customizable screener - property types, AUM, reginal investment focus, etc.
-2. REIT Display - 
-	Business Des
-	Website
-	Number of Professionals, etc.
-	Stock price and volumne data (from existing DB)
-
-3. Market Monitor? - Add later on (cap rate, interest rate, etc)
-
-Paid: 
-	Advanced analytics - price volitility
-	Target price and upside
-	Financial Statements
-	export to excel
-
-4. Advanced functionality, ex: predictive analytics or scenario analysis (like “stress test if interest rates rise another 2%”)
-
-5. Further functionality - 
-Connect REPE platform, track PE strategy and reginal focus, function as a connector? like a direct real estate listing website? but instead of real estate it's fund/developer (private investment platform)
-Add RE crowdfunding analytics function
-
-increase country coverage - UK
-Increase asset coverage - CMBS - very low competition.
-China clients?
-Think about AI integration
-Design daily routine for full time entru
-make Fundamental + Score Stability into a map
-
-FAQ - Why not single RE? (REC offers thoseas well - diversification)
-
-Long term path - automate data fetching
-
-Use Test
-Free works
-Premium works
-Email verification works
-Username double count prevention works
-Email double count prevention works
-Password characters rule work
-Real time check on email verification work
-Google signup works
-
-O1 to resolve: 
-If a user half sign-up using traditional method, back out, try to use the same email again (trad method), it'll fail, they can use gmail signup the second time with the same email, the traditional auth will be overwritten
+Auth issue to resolve: 
+If a user half sign-up using traditional method, back out, try to use the same email again (trad method), it'll fail,
+they can use gmail signup the second time with the same email, the traditional auth will be overwritten
 And half sign-up using gmail does not prevent a second attempt using gmail, again, the auth will be overwritten.
 
 

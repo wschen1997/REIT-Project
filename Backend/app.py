@@ -768,6 +768,20 @@ METRIC_CONFIG = [
         'filter_prefix': 'ffo_payout_ratio',
         'is_percentage': True
     },
+    {
+        'metric_name': 'pe_ratio',
+        'calculation_type': 'price_to_ttm_value', # A new type for P/E and P/FFO
+        'line_items': ['Basic EPS'],
+        'filter_prefix': 'pe_ratio',
+        'is_percentage': False
+    },
+    {
+        'metric_name': 'pffo_ratio',
+        'calculation_type': 'price_to_ttm_value',
+        'line_items': ['FFO per Share (Basic)'],
+        'filter_prefix': 'pffo_ratio',
+        'is_percentage': False
+    },
 ]
 
 # The METRIC_CONFIG list stays the same as before
@@ -795,6 +809,23 @@ def get_advanced_filtered_reits():
             if candidate_df.empty:
                 return jsonify({"reits": []})
             candidate_tickers = tuple(candidate_df['Ticker'].tolist())
+
+            # This SQL query efficiently finds the most recent price for each ticker
+            sql_prices = text("""
+                WITH LatestPrices AS (
+                    SELECT
+                        ticker,
+                        close_price,
+                        ROW_NUMBER() OVER(PARTITION BY ticker ORDER BY date DESC) as rn
+                    FROM reit_price_data
+                    WHERE ticker IN :tickers
+                )
+                SELECT ticker, close_price FROM LatestPrices WHERE rn = 1
+            """)
+            price_df = pd.read_sql(sql_prices, conn, params={"tickers": candidate_tickers})
+
+            # Convert the price data into a fast-lookup Series (like a dictionary)
+            latest_prices = price_df.set_index('ticker')['close_price']
 
             line_items_to_fetch = set()
             for metric in METRIC_CONFIG:
@@ -835,7 +866,9 @@ def get_advanced_filtered_reits():
         # --- Step 3: Calculate Metrics Using the Configuration ---
         app.logger.info("--- STARTING METRIC CALCULATION ---")
         
-        all_metrics_df = financials_df.groupby('ticker').apply(calculate_metrics_for_ticker)
+        all_metrics_df = financials_df.groupby('ticker').apply(
+            lambda group: calculate_metrics_for_ticker(group, latest_prices)
+        )
         
         # --- FIX IS HERE ---
         # 1. Convert index ('ticker') to a column
@@ -906,12 +939,13 @@ def get_advanced_filtered_reits():
         return jsonify({"error": "A database error occurred."}), 500
 
 # --- HELPER FUNCTION (with FutureWarning fix) ---
-def calculate_metrics_for_ticker(group):
+def calculate_metrics_for_ticker(group, prices_series):
     """
     Takes a DataFrame for a single ticker and calculates all metrics
     defined in METRIC_CONFIG.
     """
     ticker = group['ticker'].iloc[0]
+    price = prices_series.get(ticker)
     group = group.sort_values(by=['fiscal_year', 'fiscal_quarter'], ascending=True)
 
     def _period_index(df):
@@ -1025,7 +1059,23 @@ def calculate_metrics_for_ticker(group):
             # Store the value
             calculated_metrics[metric_name] = latest_value
 
+        elif calc_type == 'price_to_ttm_value':
+            # Check if we have a valid price for this ticker
+            if price is None or pd.isna(price):
+                calculated_metrics[metric_name] = None
+                continue
 
+            # Get the series for the denominator (e.g., Basic EPS or FFO per Share)
+            denominator_series = get_series_on_master(line_items[0])
+
+            # Calculate the Trailing Twelve Month (TTM) sum of the denominator
+            ttm_den = denominator_series.rolling(window=4, min_periods=4).sum().iloc[-1]
+
+            # Calculate the final ratio, ensuring the denominator is positive
+            if pd.notna(ttm_den) and ttm_den > 0:
+                calculated_metrics[metric_name] = price / ttm_den
+            else:
+                calculated_metrics[metric_name] = None
 
     app.logger.info(f"--- Processing Ticker: {ticker} ---")
     rev_series_log = get_series_on_master('Total Revenue')

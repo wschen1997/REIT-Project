@@ -66,6 +66,22 @@ const MASTER_FILTER_LIST = [
     placeholder: 'e.g., 55',
     isPercentage: true 
   },
+  { 
+    apiName: 'pe_ratio', // Matches 'filter_prefix' in backend
+    label: 'P/E Ratio (TTM)',
+    metric_name: 'pe_ratio', // Matches 'metric_name' in backend
+    type: 'numeric',
+    placeholder: 'e.g., 15',
+    isPercentage: false 
+  },
+  { 
+    apiName: 'pffo_ratio',
+    label: 'P/FFO Ratio (TTM)',
+    metric_name: 'pffo_ratio',
+    type: 'numeric',
+    placeholder: 'e.g., 12',
+    isPercentage: false 
+  },
 ];
 
 
