@@ -82,6 +82,22 @@ const MASTER_FILTER_LIST = [
     placeholder: 'e.g., 12',
     isPercentage: false 
   },
+  { 
+    apiName: 'ffo_to_revenue',
+    label: 'FFO / Revenue (Latest %)',
+    metric_name: 'ffo_to_revenue_ratio',
+    type: 'numeric',
+    placeholder: 'e.g., 45',
+    isPercentage: true 
+  },
+  { 
+    apiName: 'net_debt_to_ebitda',
+    label: 'Net Debt / EBITDA (Latest/TTM)',
+    metric_name: 'net_debt_to_ebitda',
+    type: 'numeric',
+    placeholder: 'e.g., 5.5',
+    isPercentage: false 
+  },
 ];
 
 

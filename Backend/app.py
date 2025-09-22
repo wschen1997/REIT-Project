@@ -782,6 +782,20 @@ METRIC_CONFIG = [
         'filter_prefix': 'pffo_ratio',
         'is_percentage': False
     },
+    {
+        'metric_name': 'ffo_to_revenue_ratio',
+        'calculation_type': 'latest_value',         # Reusing this simple type
+        'line_items': ['FFO / Total Revenue %'],
+        'filter_prefix': 'ffo_to_revenue',
+        'is_percentage': True
+    },
+    {
+        'metric_name': 'net_debt_to_ebitda',
+        'calculation_type': 'latest_to_ttm_ratio',  # Our new hybrid type
+        'line_items': ['Net Debt', 'EBITDA'],       # Numerator, Denominator
+        'filter_prefix': 'net_debt_to_ebitda',
+        'is_percentage': False
+    },
 ]
 
 # The METRIC_CONFIG list stays the same as before
@@ -1074,6 +1088,21 @@ def calculate_metrics_for_ticker(group, prices_series):
             # Calculate the final ratio, ensuring the denominator is positive
             if pd.notna(ttm_den) and ttm_den > 0:
                 calculated_metrics[metric_name] = price / ttm_den
+            else:
+                calculated_metrics[metric_name] = None
+
+        elif calc_type == 'latest_to_ttm_ratio':
+            # Numerator is the latest value from the Balance Sheet (e.g., Net Debt)
+            numerator_series = get_series_on_master(line_items[0])
+            latest_num = numerator_series.dropna().iloc[-1] if not numerator_series.dropna().empty else None
+
+            # Denominator is a TTM sum from the Income Statement (e.g., EBITDA)
+            denominator_series = get_series_on_master(line_items[1])
+            ttm_den = denominator_series.rolling(window=4, min_periods=4).sum().iloc[-1]
+
+            # Calculate the ratio
+            if pd.notna(ttm_den) and ttm_den != 0 and pd.notna(latest_num):
+                calculated_metrics[metric_name] = latest_num / ttm_den
             else:
                 calculated_metrics[metric_name] = None
 
