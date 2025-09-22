@@ -59,16 +59,8 @@ const MASTER_FILTER_LIST = [
     isPercentage: false 
   },
   { 
-    apiName: 'payout_ratio',
-    label: 'Payout Ratio (Latest %)',
-    metric_name: 'payout_ratio',
-    type: 'numeric',
-    placeholder: 'e.g., 65',
-    isPercentage: true 
-  },
-  { 
     apiName: 'ffo_payout_ratio',
-    label: 'FFO Payout Ratio (Latest %)',
+    label: 'Payout Ratio (FFO %)',
     metric_name: 'ffo_payout_ratio',
     type: 'numeric',
     placeholder: 'e.g., 55',

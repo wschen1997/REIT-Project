@@ -762,13 +762,6 @@ METRIC_CONFIG = [
         'is_percentage': False
     },
     {
-        'metric_name': 'payout_ratio',
-        'calculation_type': 'latest_value', # Our new, simpler type
-        'line_items': ['Payout Ratio'],      # Only one line item is needed
-        'filter_prefix': 'payout_ratio',
-        'is_percentage': True
-    },
-    {
         'metric_name': 'ffo_payout_ratio',
         'calculation_type': 'latest_value',
         'line_items': ['FFO Payout Ratio'],
