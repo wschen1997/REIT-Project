@@ -754,6 +754,27 @@ METRIC_CONFIG = [
         'filter_prefix': 'interest_coverage' ,
         'is_percentage': False
     },
+    {
+        'metric_name': 'debt_to_asset_ratio',
+        'calculation_type': 'latest_ratio', # Using our new type for Balance Sheet items
+        'line_items': ['Total Debt', 'Total Assets'], # Numerator, Denominator
+        'filter_prefix': 'debt_to_asset',
+        'is_percentage': False
+    },
+    {
+        'metric_name': 'payout_ratio',
+        'calculation_type': 'latest_value', # Our new, simpler type
+        'line_items': ['Payout Ratio'],      # Only one line item is needed
+        'filter_prefix': 'payout_ratio',
+        'is_percentage': True
+    },
+    {
+        'metric_name': 'ffo_payout_ratio',
+        'calculation_type': 'latest_value',
+        'line_items': ['FFO Payout Ratio'],
+        'filter_prefix': 'ffo_payout_ratio',
+        'is_percentage': True
+    },
 ]
 
 # The METRIC_CONFIG list stays the same as before
@@ -985,7 +1006,32 @@ def calculate_metrics_for_ticker(group):
                 calculated_metrics[metric_name] = ttm_num / abs(ttm_den) # Use abs() for interest expense
             else:
                 calculated_metrics[metric_name] = None
-    
+
+        elif calc_type == 'latest_ratio':
+            # Get the complete, time-aware series for both line items
+            numerator_series = get_series_on_master(line_items[0])
+            denominator_series = get_series_on_master(line_items[1])
+            
+            # Get the last reported non-null value for each
+            latest_num = numerator_series.dropna().iloc[-1] if not numerator_series.dropna().empty else None
+            latest_den = denominator_series.dropna().iloc[-1] if not denominator_series.dropna().empty else None
+            
+            # Calculate the ratio if both values exist and the denominator is not zero
+            if latest_den is not None and latest_den != 0 and latest_num is not None:
+                calculated_metrics[metric_name] = latest_num / latest_den
+            else:
+                calculated_metrics[metric_name] = None
+
+        elif calc_type == 'latest_value':
+            # Get the complete, time-aware series for the single line item
+            series = get_series_on_master(line_items[0])
+            
+            # Get the last reported non-null value
+            latest_value = series.dropna().iloc[-1] if not series.dropna().empty else None
+            
+            # Store the value
+            calculated_metrics[metric_name] = latest_value
+
 
 
     app.logger.info(f"--- Processing Ticker: {ticker} ---")

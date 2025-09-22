@@ -50,6 +50,30 @@ const MASTER_FILTER_LIST = [
     placeholder: 'e.g., 3.5',
     isPercentage: false // This is a raw ratio, not a percentage
   },
+  { 
+    apiName: 'debt_to_asset', // Matches 'filter_prefix' in backend
+    label: 'Debt to Asset Ratio (Latest Quarter)',
+    metric_name: 'debt_to_asset_ratio', // Matches 'metric_name' in backend
+    type: 'numeric',
+    placeholder: 'e.g., 0.5',
+    isPercentage: false 
+  },
+  { 
+    apiName: 'payout_ratio',
+    label: 'Payout Ratio (Latest %)',
+    metric_name: 'payout_ratio',
+    type: 'numeric',
+    placeholder: 'e.g., 65',
+    isPercentage: true 
+  },
+  { 
+    apiName: 'ffo_payout_ratio',
+    label: 'FFO Payout Ratio (Latest %)',
+    metric_name: 'ffo_payout_ratio',
+    type: 'numeric',
+    placeholder: 'e.g., 55',
+    isPercentage: true 
+  },
 ];
 
 
