@@ -1120,3 +1120,73 @@ def calculate_metrics_for_ticker(group, prices_series):
     app.logger.info(f"[{ticker}] Individual FFO YoY Growths for Avg: {[f'{x:.2%}' if pd.notna(x) else 'N/A' for x in ffo_yoy_log]}")
     
     return pd.Series(calculated_metrics)
+
+
+# -------------------------------------------------------------------------
+# =========================== LLM FILTER ENDPOINT =============================
+# -------------------------------------------------------------------------
+
+def translate_query_to_filters(user_query):
+    """
+    Builds a detailed prompt, calls the Gemini API, and parses the JSON response.
+    """
+    # The System Prompt is our instruction manual for the LLM.
+    # It lists every available filter and gives the LLM rules to follow.
+    system_prompt = f"""
+    You are an expert financial analyst AI. Your task is to translate a user's natural language query into a structured JSON object of filter parameters for a REIT screener.
+
+    RULES:
+    1. You MUST ONLY respond with a valid JSON object. Do not include any explanatory text, markdown formatting like ```json, or any other characters before or after the JSON.
+    2. Analyze the user's query and map their intent to the available filters below.
+    3. For numeric ranges, use your financial knowledge to set reasonable min/max values. For example, "high growth" might mean a minimum of 8% (0.08). "Low leverage" might mean a maximum Debt to Asset ratio of 0.5.
+    4. If a user's intent for a filter is unclear or not mentioned, DO NOT include that filter in the JSON output.
+    5. The filter names in the JSON must be one of the following: property_type, min_operating_margin, max_operating_margin, min_revenue_growth, max_revenue_growth, min_ffo_growth, max_ffo_growth, min_interest_coverage, max_interest_coverage, min_debt_to_asset, max_debt_to_asset, min_payout_ratio, max_payout_ratio, min_ffo_payout_ratio, max_ffo_payout_ratio, min_pe_ratio, max_pe_ratio, min_pffo_ratio, max_pffo_ratio, min_ffo_to_revenue, max_ffo_to_revenue, min_net_debt_to_ebitda, max_net_debt_to_ebitda.
+    6. All percentage values MUST be represented as decimals (e.g., 5% is 0.05).
+    7. For 'property_type', use one of the following exact strings: "Apartments", "Industrial Assets", "Office Buildings", "Data Centers", "Single Family Houses", "Hotels/Resorts", "Retail Centers", "Health Care Communities", "Self Storage", "Infrastructure", "Manufactured Homes", "Specialty", "Timber", "Medical Facilities", "Life Science Laboratories".
+
+    USER QUERY:
+    "{user_query}"
+    """
+
+    # Call Gemini API (similar to your worker)
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+    api_url = f"[https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=](https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=){GEMINI_API_KEY}"
+    payload = {
+        "contents": [{"parts": [{"text": system_prompt}]}],
+        "generationConfig": {
+            "responseMimeType": "application/json", # Tell Gemini to output JSON
+        }
+    }
+    headers = {"Content-Type": "application/json"}
+    
+    response = requests.post(api_url, headers=headers, json=payload, timeout=90)
+    response.raise_for_status()
+
+    api_response = response.json()
+    if not api_response.get("candidates"):
+        raise ValueError("AI response was blocked or empty.")
+    
+    # The response should be a clean JSON string, which we parse and return
+    json_text = api_response["candidates"][0]["content"]["parts"][0]["text"]
+    return json.loads(json_text)
+
+@app.route('/api/llm-filter', methods=['POST'])
+def generate_llm_filter():
+    """
+    Receives a natural language query and uses an LLM to translate it
+    into a JSON object of filter parameters.
+    """
+    data = request.json
+    query = data.get("query")
+
+    if not query:
+        return jsonify({"error": "Query text is required."}), 400
+
+    try:
+        # We will create this 'translate_query_to_filters' function next
+        filters_json = translate_query_to_filters(query)
+        return jsonify(filters_json)
+    except Exception as e:
+        app.logger.error(f"Error in LLM filter generation: {e}")
+        traceback.print_exc()
+        return jsonify({"error": "Failed to generate filters from query."}), 500

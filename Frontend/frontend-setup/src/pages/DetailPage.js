@@ -982,12 +982,14 @@ function DetailPage({ userPlan }) {
           <div className="detail-section-container">
             <div className="detail-section-header">
               <h3>Daily Price & Volume</h3>
-              <button
-                onClick={() => setShowScoringOverlay(true)}
-                className="btn btn-primary btn-sm"
-              >
-                AI-Powered Analysis
-              </button>
+              {/*
+                <button
+                  onClick={() => setShowScoringOverlay(true)}
+                  className="btn btn-primary btn-sm"
+                >
+                  AI-Powered Analysis
+                </button>
+              */}
             </div>
             
             {priceData.length > 0 ? (
