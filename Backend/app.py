@@ -19,7 +19,7 @@ from datetime import timedelta
 import json
 import requests
 import traceback
-from Backend.worker import generate_stability_analysis_task
+from worker import generate_stability_analysis_task
 from celery.result import AsyncResult
 from google.cloud import firestore
 import firebase_admin
