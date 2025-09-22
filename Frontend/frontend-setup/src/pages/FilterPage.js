@@ -21,20 +21,34 @@ const MASTER_FILTER_LIST = [
   { 
     apiName: 'revenue_growth', // Changed from min_... to be more generic
     label: 'Avg. Revenue Growth (YoY %)',
+    metric_name: 'avg_revenue_yoy_growth',
     type: 'numeric',
-    placeholder: 'e.g., 5'
+    placeholder: 'e.g., 5',
+    isPercentage: true
   },
   { 
     apiName: 'ffo_growth', // Changed from min_...
     label: 'Avg. FFO Growth (YoY %)',
+    metric_name: 'avg_ffo_yoy_growth',
     type: 'numeric',
-    placeholder: 'e.g., 10'
+    placeholder: 'e.g., 10',
+    isPercentage: true 
   },
   { 
     apiName: 'operating_margin', // Changed from min_...
     label: 'Operating Margin (TTM %)',
+    metric_name: 'operating_margin',
     type: 'numeric',
-    placeholder: 'e.g., 15'
+    placeholder: 'e.g., 15',
+    isPercentage: true 
+  },
+  { 
+    apiName: 'interest_coverage', // Matches 'filter_prefix' in backend
+    label: 'Interest Coverage Ratio (TTM)',
+    metric_name: 'interest_coverage_ratio',
+    type: 'numeric',
+    placeholder: 'e.g., 3.5',
+    isPercentage: false // This is a raw ratio, not a percentage
   },
 ];
 
@@ -100,14 +114,21 @@ function FilterPage() {
         } else if (filter.type === 'numeric') {
           // Construct API parameters based on the condition
           const baseApiName = filter.apiName;
-          const val1 = parseFloat(filter.value) / 100;
+
+          // --- MODIFIED LOGIC ---
+          // Check the isPercentage flag before dividing. Default to true if not specified.
+          const isPercentage = filter.isPercentage !== false;
+          const multiplier = isPercentage ? 100 : 1;
+          const val1 = parseFloat(filter.value) / multiplier;
+          // --- END OF MODIFIED LOGIC ---
 
           if (filter.condition === 'over') {
             requestParams[`min_${baseApiName}`] = val1;
           } else if (filter.condition === 'under') {
             requestParams[`max_${baseApiName}`] = val1;
           } else if (filter.condition === 'between' && filter.value2 !== '') {
-            const val2 = parseFloat(filter.value2) / 100;
+            // --- ALSO APPLY THE CHANGE HERE ---
+            const val2 = parseFloat(filter.value2) / multiplier;
             requestParams[`min_${baseApiName}`] = Math.min(val1, val2);
             requestParams[`max_${baseApiName}`] = Math.max(val1, val2);
           }
@@ -240,27 +261,65 @@ function FilterPage() {
           <thead>
             <tr>
               <th>Company Name</th>
-              <th>Description</th>
+              <th>Metrics</th>
               <th>Website</th>
             </tr>
           </thead>
           <tbody>
             {reits.length > 0 ? (
-              reits.map((reit, index) => (
-                <tr key={index}>
-                  <td className="reit-company-name-clickable" onClick={() => navigate(`/reits/${reit.Ticker}`)}>
-                    {reit.Company_Name}
-                  </td>
-                  <td>{reit.Business_Description || "No description available."}</td>
-                  <td>
-                    {reit.Website ? (
-                      <a href={formatWebsiteUrl(reit.Website)} target="_blank" rel="noopener noreferrer" className="reit-link">
-                        Visit
-                      </a>
-                    ) : ("No website available")}
-                  </td>
-                </tr>
-              ))
+              reits.map((reit, index) => {
+                const rowStyle = {
+                  backgroundColor: index % 2 !== 0 ? 'var(--surface-color-2)' : 'var(--background-color)'
+                };
+
+                return (
+                  <tr key={reit.Ticker} style={rowStyle}>
+                    <td
+                      className="reit-company-name-clickable"
+                      onClick={() => navigate(`/reits/${reit.Ticker}`)}
+                    >
+                      {reit.Company_Name}
+                    </td>
+
+                    {/* New Metrics Cell */}
+                    <td style={{ fontSize: '0.9rem' }}>
+                      {activeFilters
+                        .filter(f => f.type === 'numeric')
+                        .map(filter => {
+                          const metricName = filter.metric_name; // Directly use metric_name
+                          const metricValue = reit[metricName];
+                          let displayValue = 'N/A';
+
+                          if (metricValue != null) {
+                            displayValue = filter.isPercentage
+                              ? `${(metricValue * 100).toFixed(2)}%`
+                              : metricValue.toFixed(2);
+                          }
+                          
+                          // Creates a label like "ICR" or "FFO Growth" for brevity
+                          const shortLabel = filter.label.split('(')[0].trim(); 
+                          return `${shortLabel}: ${displayValue}`;
+                        })
+                        .join(' | ')}
+                    </td>
+
+                    <td>
+                      {reit.Website ? (
+                        <a
+                          href={formatWebsiteUrl(reit.Website)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="reit-link"
+                        >
+                          Visit
+                        </a>
+                      ) : (
+                        "No website available"
+                      )}
+                    </td>
+                  </tr>
+                );
+              })
             ) : (
               <tr>
                 <td colSpan="3">No REITs available for the selected criteria.</td>

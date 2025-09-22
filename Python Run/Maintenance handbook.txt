@@ -64,12 +64,11 @@ Update database: run
 Github update process
 git add -A; git commit -m "Development Update"; git push origin main
 
-Start website on local machine: 
-    1. run app.py (check JSON response only, cause front end will fetch API from render's endpoint, 
-       so need to push to Git or else updates won't show on website)
+test dev mode on local machine: 
+    1. Start flask
+        flask --app Backend/app run
     2. Start react
-        cd "Frontend\frontend-setup"
-        npm start 
+        cd Frontend\frontend-setup; npm start
 
 
 If there are changes to backend, re-deploy Render

@@ -1,11 +1,17 @@
+import os
+from dotenv import load_dotenv
+
+dotenv_path = os.path.abspath(
+    "C:/Users/wsche/OneDrive/桌面/Investment Research/Startup Project/Python Run/Credentials.env"
+)
+load_dotenv(dotenv_path)
+
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 import pandas as pd
 from sqlalchemy import text
 from flask_cors import CORS
 from datetime import datetime
-import os
-from dotenv import load_dotenv
 import stripe
 import bcrypt
 import jwt
@@ -13,19 +19,13 @@ from datetime import timedelta
 import json
 import requests
 import traceback
-from worker import generate_stability_analysis_task
+from .worker import generate_stability_analysis_task
 from celery.result import AsyncResult
 from google.cloud import firestore
 import firebase_admin
 from firebase_admin import credentials, firestore as admin_firestore
 import logging
 import numpy as np
-
-# Explicitly load environment variables from the Credentials.env file
-dotenv_path = os.path.abspath(
-    "C:/Users/wsche/OneDrive/桌面/Investment Research/Startup Project/Python Run/Credentials.env"
-)
-load_dotenv(dotenv_path)
 
 app = Flask(__name__)
 app.logger.setLevel(logging.INFO)
@@ -730,27 +730,30 @@ METRIC_CONFIG = [
         'metric_name': 'operating_margin',
         'calculation_type': 'ttm_margin',
         'line_items': ['Operating Income', 'Total Revenue'], # Numerator, Denominator
-        'filter_prefix': 'operating_margin' 
+        'filter_prefix': 'operating_margin',
+        'is_percentage': True 
     },
     {
         'metric_name': 'avg_revenue_yoy_growth',
         'calculation_type': 'avg_yoy_growth',
         'line_items': ['Total Revenue'],
-        'filter_prefix': 'revenue_growth'
+        'filter_prefix': 'revenue_growth',
+        'is_percentage': True 
     },
     {
         'metric_name': 'avg_ffo_yoy_growth',
         'calculation_type': 'avg_yoy_growth',
         'line_items': ['FFO'],
-        'filter_prefix': 'ffo_growth'
+        'filter_prefix': 'ffo_growth',
+        'is_percentage': True 
     },
-    # --- EXAMPLE: How easy it is to add a new filter later ---
-    # {
-    #     'metric_name': 'avg_net_income_yoy_growth',
-    #     'calculation_type': 'avg_yoy_growth',
-    #     'line_items': ['Net Income'],
-    #     'filter_prefix': 'net_income_growth'
-    # },
+    {
+        'metric_name': 'interest_coverage_ratio',
+        'calculation_type': 'ttm_ratio',
+        'line_items': ['EBIT', 'Interest Expense, Total'], # Numerator, Denominator
+        'filter_prefix': 'interest_coverage' ,
+        'is_percentage': False
+    },
 ]
 
 # The METRIC_CONFIG list stays the same as before
@@ -783,10 +786,31 @@ def get_advanced_filtered_reits():
             for metric in METRIC_CONFIG:
                 line_items_to_fetch.update(metric['line_items'])
             
+            # THIS IS THE NEW, FUTURE-PROOF QUERY
             sql_financials = text("""
-                SELECT ticker, TRIM(line_item) as line_item, fiscal_year, fiscal_quarter, value
-                FROM reit_income_statement
-                WHERE TRIM(line_item) IN :line_items AND ticker IN :tickers AND fiscal_quarter IS NOT NULL
+                (
+                    SELECT ticker, TRIM(line_item) as line_item, fiscal_year, fiscal_quarter, value
+                    FROM reit_income_statement
+                    WHERE TRIM(line_item) IN :line_items AND ticker IN :tickers AND fiscal_quarter IS NOT NULL
+                )
+                UNION ALL
+                (
+                    SELECT ticker, TRIM(line_item) as line_item, fiscal_year, fiscal_quarter, value
+                    FROM reit_industry_metrics
+                    WHERE TRIM(line_item) IN :line_items AND ticker IN :tickers AND fiscal_quarter IS NOT NULL
+                )
+                UNION ALL
+                (
+                    SELECT ticker, TRIM(line_item) as line_item, fiscal_year, fiscal_quarter, value
+                    FROM reit_balance_sheet
+                    WHERE TRIM(line_item) IN :line_items AND ticker IN :tickers AND fiscal_quarter IS NOT NULL
+                )
+                UNION ALL
+                (
+                    SELECT ticker, TRIM(line_item) as line_item, fiscal_year, fiscal_quarter, value
+                    FROM reit_cash_flow
+                    WHERE TRIM(line_item) IN :line_items AND ticker IN :tickers AND fiscal_quarter IS NOT NULL
+                )
             """)
             financials_df = pd.read_sql(sql_financials, conn, params={
                 "line_items": tuple(line_items_to_fetch),
@@ -835,15 +859,31 @@ def get_advanced_filtered_reits():
                 log_parts = [f"Ticker: {row['Ticker']:<8}"]
                 for conf in METRIC_CONFIG:
                     col = conf['metric_name']
-                    val_str = f"{row[col]:.2%}" if row[col] is not None else "N/A"
-                    # Changed the log label to be more descriptive of the final value
+                    val = row[col]
+                    
+                    # Check the flag to decide on formatting
+                    if val is not None:
+                        if conf.get('is_percentage', False):
+                            val_str = f"{val:.2%}" # Format as percentage
+                        else:
+                            val_str = f"{val:.2f}" # Format as float with 2 decimal places
+                    else:
+                        val_str = "N/A"
+
                     log_label = conf['metric_name'].replace('_', ' ').title()
                     log_parts.append(f"{log_label}: {val_str:<10}")
                 app.logger.info(" | ".join(log_parts))
 
         app.logger.info("-----------------------------")
         
-        reits_json = filtered_df.to_dict('records')
+        # Get a list of all the metric column names from our config
+        metric_columns = [conf['metric_name'] for conf in METRIC_CONFIG]
+        
+        # Define the base columns we always want to return
+        base_columns = ['Ticker', 'Company_Name', 'Business_Description', 'Website']
+
+        # Combine the lists and return all the necessary data
+        reits_json = filtered_df[base_columns + metric_columns].to_dict('records')
         return jsonify({"reits": reits_json})
 
     except Exception as e:
@@ -889,7 +929,9 @@ def calculate_metrics_for_ticker(group):
         if line_item in series_cache:
             return series_cache[line_item]
         
-        df_part = group[group['line_item'] == line_item]
+        df_part = group[group['line_item'] == line_item].drop_duplicates(
+            subset=['fiscal_year', 'fiscal_quarter'], keep='last'
+        )
         if df_part.empty:
             s = pd.Series(index=master_index, dtype='float64')
         else:
@@ -929,6 +971,22 @@ def calculate_metrics_for_ticker(group):
                 calculated_metrics[metric_name] = None
             else:
                 calculated_metrics[metric_name] = float(last_4_growths.mean())
+        
+        
+        elif calc_type == 'ttm_ratio':
+            numerator_series = get_series_on_master(line_items[0])
+            denominator_series = get_series_on_master(line_items[1])
+            
+            ttm_num = numerator_series.rolling(window=4, min_periods=4).sum().iloc[-1]
+            ttm_den = denominator_series.rolling(window=4, min_periods=4).sum().iloc[-1]
+            
+            if pd.notna(ttm_den) and ttm_den != 0 and pd.notna(ttm_num):
+                # For Interest Coverage, we want the raw ratio, not a percentage
+                calculated_metrics[metric_name] = ttm_num / abs(ttm_den) # Use abs() for interest expense
+            else:
+                calculated_metrics[metric_name] = None
+    
+
 
     app.logger.info(f"--- Processing Ticker: {ticker} ---")
     rev_series_log = get_series_on_master('Total Revenue')
