@@ -753,19 +753,20 @@ METRIC_CONFIG = [
     # },
 ]
 
+# The METRIC_CONFIG list stays the same as before
+
 @app.route('/api/reits/advanced-filter', methods=['GET'])
 def get_advanced_filtered_reits():
     """
-    DEFINITIVE ENDPOINT V4 (Refactored & Scalable): Uses a METRIC_CONFIG object to
-    dynamically calculate and filter any number of financial metrics without
-    changing the core calculation logic.
+    DEFINITIVE ENDPOINT V4.1 (Corrected): Fixes KeyError on merge by aligning
+    column name case ('ticker' vs 'Ticker').
     """
     app.logger.info(f"Request received for SCALABLE PANDAS-BASED filter with args: {request.args}")
     args = request.args
-
+    
     try:
         with db.engine.connect() as conn:
-            # --- Step 1: Initial Ticker Selection (Property Type) ---
+            # Step 1 & 2: Data fetching (No changes here)
             property_type = args.get('property_type')
             params = {}
             sql_tickers = "SELECT Ticker, Company_Name, Business_Description, Website FROM reit_business_data WHERE 1=1"
@@ -778,7 +779,6 @@ def get_advanced_filtered_reits():
                 return jsonify({"reits": []})
             candidate_tickers = tuple(candidate_df['Ticker'].tolist())
 
-            # --- Step 2: Dynamically Fetch All Required Financial Data ---
             line_items_to_fetch = set()
             for metric in METRIC_CONFIG:
                 line_items_to_fetch.update(metric['line_items'])
@@ -795,12 +795,16 @@ def get_advanced_filtered_reits():
             financials_df['value'] = financials_df['value'].replace(0, np.nan)
 
         # --- Step 3: Calculate Metrics Using the Configuration ---
-        results = []
         app.logger.info("--- STARTING METRIC CALCULATION ---")
         
         all_metrics_df = financials_df.groupby('ticker').apply(calculate_metrics_for_ticker)
+        
+        # --- FIX IS HERE ---
+        # 1. Convert index ('ticker') to a column
         all_metrics_df = all_metrics_df.reset_index()
-
+        # 2. RENAME the new 'ticker' column to 'Ticker' to match for the merge
+        all_metrics_df = all_metrics_df.rename(columns={'ticker': 'Ticker'})
+        
         app.logger.info("--- FINISHED METRIC CALCULATION ---")
 
         # --- Step 4: Merge, Filter, and Return ---
@@ -809,7 +813,7 @@ def get_advanced_filtered_reits():
         
         filtered_df = final_df.copy()
 
-        # Dynamic Filtering based on METRIC_CONFIG and request args
+        # Dynamic Filtering (No changes needed here)
         for metric_conf in METRIC_CONFIG:
             prefix = metric_conf['filter_prefix']
             metric_col = metric_conf['metric_name']
@@ -822,7 +826,7 @@ def get_advanced_filtered_reits():
             if max_val is not None:
                 filtered_df = filtered_df[filtered_df[metric_col].notna() & (filtered_df[metric_col] <= max_val)]
 
-        # --- Step 5: Final Logging ---
+        # --- Step 5: Final Logging (No changes needed here) ---
         app.logger.info("--- VERIFICATION LOG (FINAL) ---")
         if filtered_df.empty:
             app.logger.info("No REITs matched the final criteria.")
@@ -832,7 +836,9 @@ def get_advanced_filtered_reits():
                 for conf in METRIC_CONFIG:
                     col = conf['metric_name']
                     val_str = f"{row[col]:.2%}" if row[col] is not None else "N/A"
-                    log_parts.append(f"{col}: {val_str:<10}")
+                    # Changed the log label to be more descriptive of the final value
+                    log_label = conf['metric_name'].replace('_', ' ').title()
+                    log_parts.append(f"{log_label}: {val_str:<10}")
                 app.logger.info(" | ".join(log_parts))
 
         app.logger.info("-----------------------------")
@@ -845,7 +851,7 @@ def get_advanced_filtered_reits():
         traceback.print_exc()
         return jsonify({"error": "A database error occurred."}), 500
 
-# --- HELPER FUNCTION: This contains your delicate calculation logic, now isolated ---
+# --- HELPER FUNCTION (with FutureWarning fix) ---
 def calculate_metrics_for_ticker(group):
     """
     Takes a DataFrame for a single ticker and calculates all metrics
@@ -854,23 +860,29 @@ def calculate_metrics_for_ticker(group):
     ticker = group['ticker'].iloc[0]
     group = group.sort_values(by=['fiscal_year', 'fiscal_quarter'], ascending=True)
 
-    # --- Time-Series Reconstruction Logic (Preserved from V3) ---
+    def _period_index(df):
+        if df.empty:
+            return pd.PeriodIndex([], freq='Q-DEC')
+        # FIX for FutureWarning
+        return pd.PeriodIndex.from_fields(
+            year=df['fiscal_year'].astype(int),
+            quarter=df['fiscal_quarter'].astype(int),
+            freq='Q'
+        )
+
+    # ... The rest of the helper function is identical ...
     all_periods = pd.PeriodIndex([], freq='Q-DEC')
     if not group.empty:
         valid_periods = group.dropna(subset=['fiscal_year', 'fiscal_quarter'])
         if not valid_periods.empty:
-            all_periods = pd.PeriodIndex(
-                year=valid_periods['fiscal_year'].astype(int),
-                quarter=valid_periods['fiscal_quarter'].astype(int),
-                freq='Q-DEC'
-            )
+            all_periods = _period_index(valid_periods)
 
     if len(all_periods) == 0:
         return pd.Series({conf['metric_name']: None for conf in METRIC_CONFIG})
 
     start_period = all_periods.min()
     end_period = all_periods.max()
-    master_index = pd.period_range(start=start_period, end=end_period, freq='Q-DEC')
+    master_index = pd.period_range(start=start_period, end=end_period, freq='Q')
 
     series_cache = {}
     def get_series_on_master(line_item):
@@ -881,18 +893,10 @@ def calculate_metrics_for_ticker(group):
         if df_part.empty:
             s = pd.Series(index=master_index, dtype='float64')
         else:
-            s = pd.Series(
-                df_part['value'].values,
-                index=pd.PeriodIndex(
-                    year=df_part['fiscal_year'].astype(int),
-                    quarter=df_part['fiscal_quarter'].astype(int),
-                    freq='Q-DEC'
-                )
-            )
+            s = pd.Series(df_part['value'].values, index=_period_index(df_part))
         series_cache[line_item] = s.reindex(master_index)
         return series_cache[line_item]
 
-    # --- Calculation Execution Loop ---
     calculated_metrics = {}
     for conf in METRIC_CONFIG:
         metric_name = conf['metric_name']
@@ -914,7 +918,7 @@ def calculate_metrics_for_ticker(group):
         elif calc_type == 'avg_yoy_growth':
             series = get_series_on_master(line_items[0])
             
-            if len(series) < 8: # Need at least 8 quarters for a full year of YoY
+            if len(series) < 8:
                 calculated_metrics[metric_name] = None
                 continue
 
@@ -922,11 +926,10 @@ def calculate_metrics_for_ticker(group):
             last_4_growths = yoy_growths.tail(4)
             
             if last_4_growths.isnull().any():
-                calculated_metrics[metric_name] = None # Strict: all 4 must be calculable
+                calculated_metrics[metric_name] = None
             else:
                 calculated_metrics[metric_name] = float(last_4_growths.mean())
 
-    # --- Logging (Now inside the helper) ---
     app.logger.info(f"--- Processing Ticker: {ticker} ---")
     rev_series_log = get_series_on_master('Total Revenue')
     op_series_log = get_series_on_master('Operating Income')
