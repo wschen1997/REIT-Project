@@ -6,6 +6,8 @@ Prep work needed:
 - Build the MVP using existing REIT tool
 	(1) Develop filters
 	(2) Develop LLM interface
+	(3) Improve filter calc speed
+	(3) Add instruction steps with explanations
 - Hosting service adjustment to UK servers?
 - Clean up existing REIT centric UI and remove BBG/Cap IQ etc marketing material
 - Improve UI pre-launch (scrolling animation/black/white photos etc on landing page)
@@ -17,6 +19,7 @@ Marketing:
 - MVP launch - tell people that prototype is only for demonstration purpose, prior REIT focus, etc.
 - Tell people what the full product could do, filters based on sector, much broder equity universe, etc.
 - Tell people that no signin/subscription is needed
+- Tell people the product in the future will have context window so you can keep the convo going to refine the filters
 - Founder let marketing (content creation)
 
 

@@ -20,6 +20,7 @@ import ResetPassword from "./pages/ResetPassword.js";
 import BottomBanner from "./components/BottomBanner.js";
 import { LoadingProvider, useLoading } from './context/LoadingContext.js';
 import Loading from "./components/Loading.js";
+import LlmScreenerPage from "./pages/LlmScreenerPage.js";
 import "./App.css";
 
 // Log to see exactly what's in ReactGaModule
@@ -85,6 +86,7 @@ const AppContent = () => {
           <Route path="/signup" element={<Signup currentUser={currentUser} />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/llm-screener" element={<LlmScreenerPage />} />
         </Routes>
         </main>
         <BottomBanner />

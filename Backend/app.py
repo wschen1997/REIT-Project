@@ -1133,16 +1133,27 @@ def translate_query_to_filters(user_query):
     # The System Prompt is our instruction manual for the LLM.
     # It lists every available filter and gives the LLM rules to follow.
     system_prompt = f"""
-    You are an expert financial analyst AI. Your task is to translate a user's natural language query into a structured JSON object of filter parameters for a REIT screener.
+    You are an expert financial analyst AI. Your task is to translate a user's natural language query into a structured JSON object.
 
     RULES:
-    1. You MUST ONLY respond with a valid JSON object. Do not include any explanatory text, markdown formatting like ```json, or any other characters before or after the JSON.
-    2. Analyze the user's query and map their intent to the available filters below.
-    3. For numeric ranges, use your financial knowledge to set reasonable min/max values. For example, "high growth" might mean a minimum of 8% (0.08). "Low leverage" might mean a maximum Debt to Asset ratio of 0.5.
-    4. If a user's intent for a filter is unclear or not mentioned, DO NOT include that filter in the JSON output.
-    5. The filter names in the JSON must be one of the following: property_type, min_operating_margin, max_operating_margin, min_revenue_growth, max_revenue_growth, min_ffo_growth, max_ffo_growth, min_interest_coverage, max_interest_coverage, min_debt_to_asset, max_debt_to_asset, min_payout_ratio, max_payout_ratio, min_ffo_payout_ratio, max_ffo_payout_ratio, min_pe_ratio, max_pe_ratio, min_pffo_ratio, max_pffo_ratio, min_ffo_to_revenue, max_ffo_to_revenue, min_net_debt_to_ebitda, max_net_debt_to_ebitda.
-    6. All percentage values MUST be represented as decimals (e.g., 5% is 0.05).
-    7. For 'property_type', use one of the following exact strings: "Apartments", "Industrial Assets", "Office Buildings", "Data Centers", "Single Family Houses", "Hotels/Resorts", "Retail Centers", "Health Care Communities", "Self Storage", "Infrastructure", "Manufactured Homes", "Specialty", "Timber", "Medical Facilities", "Life Science Laboratories".
+    1. You MUST ONLY respond with a valid JSON object. The root of the object must contain two keys: "explanation" (a string) and "filters" (an object).
+    2. The "explanation" should be a brief, friendly, one-paragraph summary of why you chose the generated filters based on the user's query.
+    3. Prioritize the user's most important criteria for the "filters" object. You MUST NOT generate more than 3 filters in total.
+    4. For numeric ranges in the "filters" object, use your financial knowledge to set reasonable min/max values. For example, "high growth" might mean a minimum of 8% (0.08).
+    5. The filter names in the "filters" object must be one of the following: property_type, min_operating_margin, max_operating_margin, min_revenue_growth, max_revenue_growth, min_ffo_growth, max_ffo_growth, min_interest_coverage, max_interest_coverage, min_debt_to_asset, max_debt_to_asset, min_payout_ratio, max_payout_ratio, min_ffo_payout_ratio, max_ffo_payout_ratio, min_pe_ratio, max_pe_ratio, min_pffo_ratio, max_pffo_ratio, min_ffo_to_revenue, max_ffo_to_revenue, min_net_debt_to_ebitda, max_net_debt_to_ebitda.
+    6. For 'property_type', use one of the specified exact strings from the list.
+
+    EXAMPLE:
+    User Query: "Show me some safe apartment buildings with decent returns."
+    Your JSON Response:
+    {{
+      "explanation": "Certainly. To find 'safe' investments, I've applied a maximum Debt to Asset ratio to screen for companies with low leverage. For 'decent returns,' I've added a minimum FFO growth rate. 'Apartments' has been set as the property type.",
+      "filters": {{
+        "property_type": "Apartments",
+        "max_debt_to_asset": 0.5,
+        "min_ffo_growth": 0.03
+      }}
+    }}
 
     USER QUERY:
     "{user_query}"
@@ -1150,17 +1161,28 @@ def translate_query_to_filters(user_query):
 
     # Call Gemini API (similar to your worker)
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-    api_url = f"[https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=](https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=){GEMINI_API_KEY}"
+    api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key={GEMINI_API_KEY}"
     payload = {
         "contents": [{"parts": [{"text": system_prompt}]}],
         "generationConfig": {
-            "responseMimeType": "application/json", # Tell Gemini to output JSON
+            "responseMimeType": "application/json",
         }
     }
+
+
     headers = {"Content-Type": "application/json"}
     
-    response = requests.post(api_url, headers=headers, json=payload, timeout=90)
-    response.raise_for_status()
+    try:
+        response = requests.post(api_url, headers=headers, json=payload, timeout=90)
+        response.raise_for_status()
+    except requests.exceptions.HTTPError as e:
+        # This is the crucial part. It prints the detailed error message from Google.
+        app.logger.error("!!!!!!!!!! GOOGLE API ERROR RESPONSE !!!!!!!!!!")
+        app.logger.error(f"HTTP Status Code: {e.response.status_code}")
+        app.logger.error(f"--- RESPONSE BODY FROM GOOGLE ---")
+        app.logger.error(e.response.json()) # This logs the detailed error JSON
+        app.logger.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        raise # Re-raise the exception so the overall process still fails as intended
 
     api_response = response.json()
     if not api_response.get("candidates"):
@@ -1190,3 +1212,4 @@ def generate_llm_filter():
         app.logger.error(f"Error in LLM filter generation: {e}")
         traceback.print_exc()
         return jsonify({"error": "Failed to generate filters from query."}), 500
+    
