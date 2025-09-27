@@ -280,9 +280,6 @@ function LlmScreenerPage() {
           <p style={{ margin: '1rem 0' }}>
             Since this product is still in a testing phase, we limit the AI assistant to one response per session.
           </p>
-          <p style={{ color: 'var(--text-color-subtle)', fontSize: '0.9rem' }}>
-            Please refresh the page to start a new analysis.
-          </p>
           <button
             className="btn btn-primary"
             style={{ width: '100%', marginTop: '1.5rem' }}
