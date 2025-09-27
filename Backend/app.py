@@ -1138,7 +1138,7 @@ def translate_query_to_filters(user_query):
     RULES:
     1. You MUST ONLY respond with a valid JSON object. The root of the object must contain two keys: "explanation" (a string) and "filters" (an object).
     2. The "explanation" should be a brief, friendly, one-paragraph summary of why you chose the generated filters based on the user's query.
-    3. Prioritize the user's most important criteria for the "filters" object. You MUST NOT generate more than 3 filters in total.
+    3. Prioritize the user's most important criteria for the "filters" object. You MUST generate 3 to 4 filters in total.
     4. For numeric ranges in the "filters" object, use your financial knowledge to set reasonable min/max values. For example, "high growth" might mean a minimum of 8% (0.08).
     5. The filter names in the "filters" object must be one of the following: property_type, min_operating_margin, max_operating_margin, min_revenue_growth, max_revenue_growth, min_ffo_growth, max_ffo_growth, min_interest_coverage, max_interest_coverage, min_debt_to_asset, max_debt_to_asset, min_payout_ratio, max_payout_ratio, min_ffo_payout_ratio, max_ffo_payout_ratio, min_pe_ratio, max_pe_ratio, min_pffo_ratio, max_pffo_ratio, min_ffo_to_revenue, max_ffo_to_revenue, min_net_debt_to_ebitda, max_net_debt_to_ebitda.
     6. For 'property_type', use one of the specified exact strings from the list.
@@ -1161,11 +1161,14 @@ def translate_query_to_filters(user_query):
 
     # Call Gemini API (similar to your worker)
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-    api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key={GEMINI_API_KEY}"
+    if not GEMINI_API_KEY:
+        raise ValueError("GEMINI_API_KEY is not set")
+    model = "gemini-2.5-flash"
+    api_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={GEMINI_API_KEY}"
     payload = {
-        "contents": [{"parts": [{"text": system_prompt}]}],
+        "contents": [{"role": "user","parts": [{"text": system_prompt}]}],
         "generationConfig": {
-            "responseMimeType": "application/json",
+            "response_mime_type": "application/json",
         }
     }
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useLoading } from '../context/LoadingContext.js';
+import PopupModal from "../components/PopupModal.js"; 
 
 // --- Constants and Mock Data ---
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'http://127.0.0.1:5000';
@@ -42,6 +43,7 @@ function LlmScreenerPage() {
   const [conversation, setConversation] = useState([]);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isLimitModalOpen, setIsLimitModalOpen] = useState(false);
   
   // Filter & Results State (from FilterPage)
   const [reits, setReits] = useState([]);
@@ -53,6 +55,7 @@ function LlmScreenerPage() {
   const { setLoading: setGlobalLoading } = useLoading();
   const navigate = useNavigate();
   const chatEndRef = useRef(null);
+  const hasAiResponded = conversation.some(msg => msg.sender === 'ai');
 
   // --- HOOKS ---
   useEffect(() => {
@@ -63,6 +66,10 @@ function LlmScreenerPage() {
 
   // 1. Function to handle the AI conversation
   const handleGenerateFilters = async () => {
+    if (hasAiResponded) {
+        setIsLimitModalOpen(true);
+        return;
+    }
     if (!query.trim() || isAiLoading) return;
 
     const userMessage = { sender: 'user', text: query };
@@ -215,8 +222,8 @@ function LlmScreenerPage() {
         </div>
         <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--border-color)'}}>
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-            <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={handleKeyDown} placeholder="e.g., Profitable industrial REITs with low debt..." className="input-field" disabled={isAiLoading} style={{ flexGrow: 1, padding: '14px 50px 14px 18px', borderRadius: '25px', margin: 0 }} />
-            <button onClick={handleGenerateFilters} disabled={isAiLoading} className="btn" style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', width: '36px', height: '36px', borderRadius: '50%', background: 'var(--primary-color)', padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', opacity: isAiLoading ? 0.5 : 1 }}>
+            <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={handleKeyDown} placeholder={hasAiResponded ? "Please refresh to start a new search." : "e.g., Profitable industrial REITs with low debt..."} className="input-field" disabled={isAiLoading} style={{ flexGrow: 1, padding: '14px 50px 14px 18px', borderRadius: '25px', margin: 0 }} />
+            <button onClick={handleGenerateFilters} disabled={isAiLoading} className="btn" style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', width: '36px', height: '36px', borderRadius: '50%', background: 'var(--primary-color)', padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', opacity: (isAiLoading || hasAiResponded) ? 0.5 : 1 }}>
               <SendIcon />
             </button>
           </div>
@@ -265,6 +272,25 @@ function LlmScreenerPage() {
             </div>
         </div>
         {isModalOpen && (<div className="modal-overlay" onClick={() => setIsModalOpen(false)}><div className="modal-box" onClick={e => e.stopPropagation()}><h3 className="popup-modal-title">Select a Filter</h3><div style={{ marginTop: '1rem' }}>{availableFilters.map(filter => (<div key={filter.apiName} className="dropdown-item" onClick={() => handleAddFilter(filter)}>{filter.label}</div>))}</div></div></div>)}
+        <PopupModal
+          show={isLimitModalOpen}
+          onClose={() => setIsLimitModalOpen(false)}
+          title="One Request Per Session"
+        >
+          <p style={{ margin: '1rem 0' }}>
+            Since this product is still in a testing phase, we limit the AI assistant to one response per session.
+          </p>
+          <p style={{ color: 'var(--text-color-subtle)', fontSize: '0.9rem' }}>
+            Please refresh the page to start a new analysis.
+          </p>
+          <button
+            className="btn btn-primary"
+            style={{ width: '100%', marginTop: '1.5rem' }}
+            onClick={() => setIsLimitModalOpen(false)}
+          >
+            Got it
+          </button>
+        </PopupModal>
       </div>
     </div>
   );

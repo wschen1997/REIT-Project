@@ -7,7 +7,7 @@ Prep work needed:
 	(1) Develop filters
 	(2) Develop LLM interface
 	(3) Improve filter calc speed
-	(3) Add instruction steps with explanations
+	(4) Add instruction steps with explanations spotlights
 - Hosting service adjustment to UK servers?
 - Clean up existing REIT centric UI and remove BBG/Cap IQ etc marketing material
 - Improve UI pre-launch (scrolling animation/black/white photos etc on landing page)
