@@ -9,11 +9,13 @@ const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'http://127.0.0.1:5000
 const MOCK_API_CALLS = false; // Set to true to use mock data for testing
 
 const MOCK_RESPONSE = {
-  "explanation": "Based on your request for stable, tech-focused REITs, I've selected 'Data Centers' as the property type. To align with 'stable', I've set a maximum Debt to Asset ratio to ensure low leverage and a modest minimum FFO growth to filter for financially healthy companies.",
+  "explanation": "Based on your request for stable, tech-focused REITs, I've selected 'Apartments' as the property type. To align with 'stable', I've set a maximum Debt to Asset ratio to ensure low leverage and a modest minimum FFO growth to filter for financially healthy companies.",
   "filters": {
-    "property_type": "Data Centers",
-    "max_debt_to_asset": 0.5,
-    "min_ffo_growth": 0.03
+    "property_type": "Industrial Assets",
+    "max_debt_to_asset": 0.6,
+    "min_ffo_growth": 0.02,
+    "min_revenue_growth": 0.01,
+    "min_interest_coverage": 2.0
   }
 };
 
@@ -223,7 +225,12 @@ function LlmScreenerPage() {
         <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--border-color)'}}>
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
             <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={handleKeyDown} placeholder={hasAiResponded ? "Please refresh to start a new search." : "e.g., Profitable industrial REITs with low debt..."} className="input-field" disabled={isAiLoading} style={{ flexGrow: 1, padding: '14px 50px 14px 18px', borderRadius: '25px', margin: 0 }} />
-            <button onClick={handleGenerateFilters} disabled={isAiLoading} className="btn" style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', width: '36px', height: '36px', borderRadius: '50%', background: 'var(--primary-color)', padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', opacity: (isAiLoading || hasAiResponded) ? 0.5 : 1 }}>
+            <button 
+              onClick={handleGenerateFilters} 
+              disabled={isAiLoading} 
+              className="ai-send-btn" 
+              style={{ opacity: (isAiLoading || hasAiResponded) ? 0.5 : 1 }}
+            >
               <SendIcon />
             </button>
           </div>
@@ -238,7 +245,6 @@ function LlmScreenerPage() {
             <div style={{marginLeft: 'auto', display: 'flex', gap: '15px'}}>
                 <button className="btn btn-secondary btn-sm" onClick={() => setIsModalOpen(true)}>+ Add Filter</button>
                 <button className="btn btn-secondary btn-sm" onClick={handleResetFilters}>Reset All</button>
-                <button className="btn btn-primary btn-sm" onClick={handleApplyFilters}>Apply Filters</button>
             </div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
@@ -253,6 +259,13 @@ function LlmScreenerPage() {
               ))
             ) : <p className="filter-explanation">No active filters.</p>}
           </div>
+          {activeFilters.length > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
+              <button className="btn btn-primary btn-sm" onClick={handleApplyFilters} style={{ width: 'auto' }}>
+                Apply Filters
+              </button>
+            </div>
+          )}
         </div>
         <div className="filter-results" style={{ flexGrow: 1 }}>
             <p className="filter-explanation">{explanation}</p>

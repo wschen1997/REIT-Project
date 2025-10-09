@@ -19,6 +19,8 @@ from datetime import timedelta
 import json
 import requests
 import traceback
+import time
+from itertools import product
 from worker import generate_stability_analysis_task
 from celery.result import AsyncResult
 from google.cloud import firestore
@@ -26,10 +28,25 @@ import firebase_admin
 from firebase_admin import credentials, firestore as admin_firestore
 import logging
 import numpy as np
+from flask_limiter import Limiter
 
 app = Flask(__name__)
 app.logger.setLevel(logging.INFO)
 CORS(app, resources={r"/api/*": {"origins": ["http://localhost:3000", "https://www.viserra-group.com"]}})
+
+# --- RATE LIMITING ---
+def get_user_ip():
+    # Get the user's real IP address, even when behind Render's proxy
+    if request.headers.getlist("X-Forwarded-For"):
+       return request.headers.getlist("X-Forwarded-For")[0]
+    else:
+       return request.remote_addr
+
+limiter = Limiter(
+    key_func=get_user_ip,
+    app=app,
+    default_limits=["200 per day", "50 per hour"] # General limits for all routes
+)
 
 # get the stripe secret key from the environment variables
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
@@ -798,329 +815,205 @@ METRIC_CONFIG = [
     },
 ]
 
-# The METRIC_CONFIG list stays the same as before
+# HELPER FUNCTION - NAN Handling
+def strict_avg_growth(s):
+    """
+    Calculates the mean of the last 4 data points in a series,
+    but ONLY if all 4 points are valid (not NaN). Otherwise, returns NaN.
+    This exactly replicates the original strict logic.
+    """
+    # Get the last 4 values from the growth series for a given ticker
+    last_4 = s.tail(4)
+    
+    # The crucial check: are all 4 values present and valid?
+    if len(last_4) == 4 and last_4.notna().all():
+        # If yes, calculate and return the mean
+        app.logger.info(f"Ticker: {s.name:<8} | Using 4 valid growth rates for avg: {[f'{x:.2%}' for x in last_4]}")
+        return last_4.mean()
+    else:
+        # If no, log the invalid data and return NaN
+        app.logger.info(f"Ticker: {s.name:<8} | Skipping avg because of incomplete data: {[f'{x:.2%}' if pd.notna(x) else 'NaN' for x in last_4]}")
+        return np.nan
 
+# The METRIC_CONFIG list stays the same as before
 @app.route('/api/reits/advanced-filter', methods=['GET'])
 def get_advanced_filtered_reits():
     """
-    DEFINITIVE ENDPOINT V4.1 (Corrected): Fixes KeyError on merge by aligning
-    column name case ('ticker' vs 'Ticker').
+    DEFINITIVE ENDPOINT V5.1 (VECTORIZED + PROFILING): Adds performance
+    logging to pinpoint bottlenecks.
     """
-    app.logger.info(f"Request received for SCALABLE PANDAS-BASED filter with args: {request.args}")
-    args = request.args
+    # --- PROFILING SETUP ---
+    start_time = time.time()
+    last_step_time = start_time
     
+    app.logger.info(f"Request received for VECTORIZED filter with args: {request.args}")
+    args = request.args
+
     try:
         with db.engine.connect() as conn:
-            # Step 1 & 2: Data fetching (No changes here)
-            property_type = args.get('property_type')
-            params = {}
-            sql_tickers = "SELECT Ticker, Company_Name, Business_Description, Website FROM reit_business_data WHERE 1=1"
-            if property_type:
-                sql_tickers += " AND Property_Type LIKE :property_type"
-                params['property_type'] = f"%{property_type}%"
-            candidate_df = pd.read_sql(text(sql_tickers), conn, params=params)
+            # --- Step 1: Fetch candidate tickers and latest prices ---
+            sql_tickers = "SELECT Ticker, Company_Name, Business_Description, Website FROM reit_business_data"
+            candidate_df = pd.read_sql(text(sql_tickers), conn)
             
             if candidate_df.empty:
                 return jsonify({"reits": []})
             candidate_tickers = tuple(candidate_df['Ticker'].tolist())
 
-            # This SQL query efficiently finds the most recent price for each ticker
             sql_prices = text("""
                 WITH LatestPrices AS (
-                    SELECT
-                        ticker,
-                        close_price,
-                        ROW_NUMBER() OVER(PARTITION BY ticker ORDER BY date DESC) as rn
-                    FROM reit_price_data
-                    WHERE ticker IN :tickers
+                    SELECT ticker, close_price, ROW_NUMBER() OVER(PARTITION BY ticker ORDER BY date DESC) as rn
+                    FROM reit_price_data WHERE ticker IN :tickers
                 )
                 SELECT ticker, close_price FROM LatestPrices WHERE rn = 1
             """)
             price_df = pd.read_sql(sql_prices, conn, params={"tickers": candidate_tickers})
-
-            # Convert the price data into a fast-lookup Series (like a dictionary)
             latest_prices = price_df.set_index('ticker')['close_price']
-
-            line_items_to_fetch = set()
-            for metric in METRIC_CONFIG:
-                line_items_to_fetch.update(metric['line_items'])
             
-            # THIS IS THE NEW, FUTURE-PROOF QUERY
+            # --- PROFILING LOG 1 ---
+            current_time = time.time()
+            app.logger.info(f"[PERF_LOG] Step 1: Fetched {len(candidate_tickers)} candidate tickers and prices took {current_time - last_step_time:.4f} seconds.")
+            last_step_time = current_time
+
+            # --- Step 2: Fetch all necessary financial data (The "Mega-Query") ---
+            line_items_to_fetch = tuple({item for metric in METRIC_CONFIG for item in metric['line_items']})
+            
             sql_financials = text("""
-                (
-                    SELECT ticker, TRIM(line_item) as line_item, fiscal_year, fiscal_quarter, value
-                    FROM reit_income_statement
-                    WHERE TRIM(line_item) IN :line_items AND ticker IN :tickers AND fiscal_quarter IS NOT NULL
-                )
+                (SELECT ticker, TRIM(line_item) as line_item, fiscal_year, fiscal_quarter, value FROM reit_income_statement WHERE TRIM(line_item) IN :line_items AND ticker IN :tickers AND fiscal_quarter IS NOT NULL)
                 UNION ALL
-                (
-                    SELECT ticker, TRIM(line_item) as line_item, fiscal_year, fiscal_quarter, value
-                    FROM reit_industry_metrics
-                    WHERE TRIM(line_item) IN :line_items AND ticker IN :tickers AND fiscal_quarter IS NOT NULL
-                )
+                (SELECT ticker, TRIM(line_item) as line_item, fiscal_year, fiscal_quarter, value FROM reit_industry_metrics WHERE TRIM(line_item) IN :line_items AND ticker IN :tickers AND fiscal_quarter IS NOT NULL)
                 UNION ALL
-                (
-                    SELECT ticker, TRIM(line_item) as line_item, fiscal_year, fiscal_quarter, value
-                    FROM reit_balance_sheet
-                    WHERE TRIM(line_item) IN :line_items AND ticker IN :tickers AND fiscal_quarter IS NOT NULL
-                )
+                (SELECT ticker, TRIM(line_item) as line_item, fiscal_year, fiscal_quarter, value FROM reit_balance_sheet WHERE TRIM(line_item) IN :line_items AND ticker IN :tickers AND fiscal_quarter IS NOT NULL)
                 UNION ALL
-                (
-                    SELECT ticker, TRIM(line_item) as line_item, fiscal_year, fiscal_quarter, value
-                    FROM reit_cash_flow
-                    WHERE TRIM(line_item) IN :line_items AND ticker IN :tickers AND fiscal_quarter IS NOT NULL
-                )
+                (SELECT ticker, TRIM(line_item) as line_item, fiscal_year, fiscal_quarter, value FROM reit_cash_flow WHERE TRIM(line_item) IN :line_items AND ticker IN :tickers AND fiscal_quarter IS NOT NULL)
             """)
-            financials_df = pd.read_sql(sql_financials, conn, params={
-                "line_items": tuple(line_items_to_fetch),
-                "tickers": candidate_tickers
-            })
+            financials_df = pd.read_sql(sql_financials, conn, params={"line_items": line_items_to_fetch, "tickers": candidate_tickers})
             financials_df['value'] = financials_df['value'].replace(0, np.nan)
 
-        # --- Step 3: Calculate Metrics Using the Configuration ---
-        app.logger.info("--- STARTING METRIC CALCULATION ---")
-        
-        all_metrics_df = financials_df.groupby('ticker').apply(
-            lambda group: calculate_metrics_for_ticker(group, latest_prices)
-        )
-        
-        # --- FIX IS HERE ---
-        # 1. Convert index ('ticker') to a column
-        all_metrics_df = all_metrics_df.reset_index()
-        # 2. RENAME the new 'ticker' column to 'Ticker' to match for the merge
-        all_metrics_df = all_metrics_df.rename(columns={'ticker': 'Ticker'})
-        
-        app.logger.info("--- FINISHED METRIC CALCULATION ---")
-
-        # --- Step 4: Merge, Filter, and Return ---
-        final_df = pd.merge(candidate_df, all_metrics_df, on='Ticker', how='left')
-        final_df = final_df.astype(object).where(pd.notna(final_df), None)
-        
-        filtered_df = final_df.copy()
-
-        # Dynamic Filtering (No changes needed here)
-        for metric_conf in METRIC_CONFIG:
-            prefix = metric_conf['filter_prefix']
-            metric_col = metric_conf['metric_name']
+            if financials_df.empty:
+                return jsonify({"reits": []})
             
-            min_val = args.get(f'min_{prefix}', type=float)
-            max_val = args.get(f'max_{prefix}', type=float)
-            
-            if min_val is not None:
-                filtered_df = filtered_df[filtered_df[metric_col].notna() & (filtered_df[metric_col] >= min_val)]
-            if max_val is not None:
-                filtered_df = filtered_df[filtered_df[metric_col].notna() & (filtered_df[metric_col] <= max_val)]
+            # --- PROFILING LOG 2 ---
+            current_time = time.time()
+            app.logger.info(f"[PERF_LOG] Step 2: Fetched {len(financials_df)} financial data rows (Mega-Query) took {current_time - last_step_time:.4f} seconds.")
+            last_step_time = current_time
 
-        # --- Step 5: Final Logging (No changes needed here) ---
-        app.logger.info("--- VERIFICATION LOG (FINAL) ---")
-        if filtered_df.empty:
-            app.logger.info("No REITs matched the final criteria.")
-        else:
-            for index, row in filtered_df.iterrows():
-                log_parts = [f"Ticker: {row['Ticker']:<8}"]
-                for conf in METRIC_CONFIG:
-                    col = conf['metric_name']
-                    val = row[col]
-                    
-                    # Check the flag to decide on formatting
-                    if val is not None:
-                        if conf.get('is_percentage', False):
-                            val_str = f"{val:.2%}" # Format as percentage
+            # --- Step 3: Pivot the DataFrame ---
+            financials_df['period'] = pd.PeriodIndex.from_fields(year=financials_df['fiscal_year'], quarter=financials_df['fiscal_quarter'], freq='Q')
+            pivoted_df = financials_df.pivot_table(index=['ticker', 'period'], columns='line_item', values='value').sort_index()
+
+            # --- PROFILING LOG 3 ---
+            current_time = time.time()
+            app.logger.info(f"[PERF_LOG] Step 3: Pivoted financial data took {current_time - last_step_time:.4f} seconds.")
+            last_step_time = current_time
+
+            # --- Step 4: Calculate all metrics ---
+            metrics_df = pd.DataFrame(index=pivoted_df.index.get_level_values('ticker').unique())
+            for conf in METRIC_CONFIG:
+                # (The calculation logic remains the same)
+                metric_name = conf['metric_name']
+                calc_type = conf['calculation_type']
+                line_items = conf['line_items']
+                try:
+                    if calc_type in ['ttm_margin', 'ttm_ratio']:
+                        num_series = pivoted_df[line_items[0]]
+                        den_series = pivoted_df[line_items[1]]
+                        ttm_num = num_series.groupby('ticker').rolling(window=4, min_periods=4).sum().droplevel(0)
+                        ttm_den = den_series.groupby('ticker').rolling(window=4, min_periods=4).sum().droplevel(0)
+                        if metric_name == 'interest_coverage_ratio': ttm_den = abs(ttm_den)
+                        metric_series = (ttm_num / ttm_den)
+                        metrics_df[metric_name] = metric_series.groupby('ticker').last()
+                    elif calc_type == 'avg_yoy_growth':
+                        series = pivoted_df[line_items[0]]
+                        # Step A: Calculate YoY growth correctly.
+                        yoy_growth = series.groupby('ticker').pct_change(periods=4, fill_method=None)                       
+                        # Step B: Apply our strict averaging function to each ticker's growth series.
+                        avg_growth = yoy_growth.groupby('ticker').apply(strict_avg_growth)                     
+                        metrics_df[metric_name] = avg_growth
+                    elif calc_type == 'latest_ratio':
+                        latest_num = pivoted_df[line_items[0]].groupby('ticker').last()
+                        latest_den = pivoted_df[line_items[1]].groupby('ticker').last()
+                        metrics_df[metric_name] = latest_num / latest_den
+                    elif calc_type == 'latest_value':
+                        metrics_df[metric_name] = pivoted_df[line_items[0]].groupby('ticker').last()
+                    elif calc_type == 'price_to_ttm_value':
+                        den_series = pivoted_df[line_items[0]]
+                        ttm_den = den_series.groupby('ticker').rolling(window=4, min_periods=4).sum().droplevel(0).groupby('ticker').last()
+                        ttm_den = ttm_den[ttm_den > 0] 
+                        metrics_df[metric_name] = latest_prices.div(ttm_den).reindex(metrics_df.index)
+                    elif calc_type == 'latest_to_ttm_ratio':
+                        latest_num = pivoted_df[line_items[0]].groupby('ticker').last()
+                        ttm_den = pivoted_df[line_items[1]].groupby('ticker').rolling(window=4, min_periods=4).sum().droplevel(0).groupby('ticker').last()
+                        metrics_df[metric_name] = latest_num / ttm_den
+                except KeyError as e:
+                    metrics_df[metric_name] = np.nan
+
+            # --- PROFILING LOG 4 ---
+            current_time = time.time()
+            app.logger.info(f"[PERF_LOG] Step 4: Vectorized metric calculations took {current_time - last_step_time:.4f} seconds.")
+            last_step_time = current_time
+            
+            # --- Step 5: Merge, Filter, and Return ---
+            metrics_df = metrics_df.reset_index().rename(columns={'ticker': 'Ticker'})
+            final_df = pd.merge(candidate_df, metrics_df, on='Ticker', how='left')
+            
+            # NAN Handling and Filtering - For MVP, we drop any company missing ANY metric
+            metric_columns = [conf['metric_name'] for conf in METRIC_CONFIG]
+            app.logger.info(f"Checking data quality for {len(final_df)} companies before NaN filter...")
+            final_df.dropna(subset=metric_columns, inplace=True)
+            app.logger.info(f"{len(final_df)} companies survived the global data quality filter.")
+            
+            final_df = final_df.astype(object).where(pd.notna(final_df), None)
+            filtered_df = final_df.copy()
+
+            for metric_conf in METRIC_CONFIG:
+                prefix = metric_conf['filter_prefix']
+                metric_col = metric_conf['metric_name']
+                min_val = args.get(f'min_{prefix}', type=float)
+                max_val = args.get(f'max_{prefix}', type=float)
+                if min_val is not None:
+                    filtered_df = filtered_df[filtered_df[metric_col].notna() & (filtered_df[metric_col] >= min_val)]
+                if max_val is not None:
+                    filtered_df = filtered_df[filtered_df[metric_col].notna() & (filtered_df[metric_col] <= max_val)]
+
+            # verification log
+            app.logger.info("--- VERIFICATION LOG (FINAL) ---")
+            if filtered_df.empty:
+                app.logger.info("No REITs matched the final criteria.")
+            else:
+                for index, row in filtered_df.iterrows():
+                    log_parts = [f"Ticker: {row['Ticker']:<8}"]
+                    for conf in METRIC_CONFIG:
+                        col = conf['metric_name']
+                        val = row[col]
+                        
+                        if val is not None:
+                            if conf.get('is_percentage', False):
+                                val_str = f"{val:.2%}" # Format as percentage
+                            else:
+                                val_str = f"{val:.2f}" # Format as float
                         else:
-                            val_str = f"{val:.2f}" # Format as float with 2 decimal places
-                    else:
-                        val_str = "N/A"
+                            val_str = "N/A"
 
-                    log_label = conf['metric_name'].replace('_', ' ').title()
-                    log_parts.append(f"{log_label}: {val_str:<10}")
-                app.logger.info(" | ".join(log_parts))
+                        log_label = conf['metric_name'].replace('_', ' ').title()
+                        log_parts.append(f"{log_label}: {val_str:<10}")
+                    app.logger.info(" | ".join(log_parts))
+            app.logger.info("-----------------------------")
 
-        app.logger.info("-----------------------------")
-        
-        # Get a list of all the metric column names from our config
-        metric_columns = [conf['metric_name'] for conf in METRIC_CONFIG]
-        
-        # Define the base columns we always want to return
-        base_columns = ['Ticker', 'Company_Name', 'Business_Description', 'Website']
+            metric_columns = [conf['metric_name'] for conf in METRIC_CONFIG]
+            base_columns = ['Ticker', 'Company_Name', 'Business_Description', 'Website']
+            reits_json = filtered_df[base_columns + metric_columns].to_dict('records')
+            
+            # --- PROFILING LOG 5 ---
+            current_time = time.time()
+            app.logger.info(f"[PERF_LOG] Step 5: Final merge, filter, and response prep took {current_time - last_step_time:.4f} seconds.")
+            app.logger.info(f"[PERF_LOG] TOTAL TIME for endpoint: {current_time - start_time:.4f} seconds.")
 
-        # Combine the lists and return all the necessary data
-        reits_json = filtered_df[base_columns + metric_columns].to_dict('records')
-        return jsonify({"reits": reits_json})
+            return jsonify({"reits": reits_json})
 
     except Exception as e:
-        app.logger.error(f"Error in scalable pandas-based filter logic: {e}")
+        app.logger.error(f"Error in VECTORIZED filter logic: {e}")
         traceback.print_exc()
         return jsonify({"error": "A database error occurred."}), 500
-
-# --- HELPER FUNCTION (with FutureWarning fix) ---
-def calculate_metrics_for_ticker(group, prices_series):
-    """
-    Takes a DataFrame for a single ticker and calculates all metrics
-    defined in METRIC_CONFIG.
-    """
-    ticker = group['ticker'].iloc[0]
-    price = prices_series.get(ticker)
-    group = group.sort_values(by=['fiscal_year', 'fiscal_quarter'], ascending=True)
-
-    def _period_index(df):
-        if df.empty:
-            return pd.PeriodIndex([], freq='Q-DEC')
-        # FIX for FutureWarning
-        return pd.PeriodIndex.from_fields(
-            year=df['fiscal_year'].astype(int),
-            quarter=df['fiscal_quarter'].astype(int),
-            freq='Q'
-        )
-
-    # ... The rest of the helper function is identical ...
-    all_periods = pd.PeriodIndex([], freq='Q-DEC')
-    if not group.empty:
-        valid_periods = group.dropna(subset=['fiscal_year', 'fiscal_quarter'])
-        if not valid_periods.empty:
-            all_periods = _period_index(valid_periods)
-
-    if len(all_periods) == 0:
-        return pd.Series({conf['metric_name']: None for conf in METRIC_CONFIG})
-
-    start_period = all_periods.min()
-    end_period = all_periods.max()
-    master_index = pd.period_range(start=start_period, end=end_period, freq='Q')
-
-    series_cache = {}
-    def get_series_on_master(line_item):
-        if line_item in series_cache:
-            return series_cache[line_item]
-        
-        df_part = group[group['line_item'] == line_item].drop_duplicates(
-            subset=['fiscal_year', 'fiscal_quarter'], keep='last'
-        )
-        if df_part.empty:
-            s = pd.Series(index=master_index, dtype='float64')
-        else:
-            s = pd.Series(df_part['value'].values, index=_period_index(df_part))
-        series_cache[line_item] = s.reindex(master_index)
-        return series_cache[line_item]
-
-    calculated_metrics = {}
-    for conf in METRIC_CONFIG:
-        metric_name = conf['metric_name']
-        calc_type = conf['calculation_type']
-        line_items = conf['line_items']
-
-        if calc_type == 'ttm_margin':
-            numerator_series = get_series_on_master(line_items[0])
-            denominator_series = get_series_on_master(line_items[1])
-            
-            ttm_num = numerator_series.rolling(window=4, min_periods=4).sum().iloc[-1]
-            ttm_den = denominator_series.rolling(window=4, min_periods=4).sum().iloc[-1]
-            
-            if pd.notna(ttm_den) and ttm_den != 0 and pd.notna(ttm_num):
-                calculated_metrics[metric_name] = ttm_num / ttm_den
-            else:
-                calculated_metrics[metric_name] = None
-        
-        elif calc_type == 'avg_yoy_growth':
-            series = get_series_on_master(line_items[0])
-            
-            if len(series) < 8:
-                calculated_metrics[metric_name] = None
-                continue
-
-            yoy_growths = series.pct_change(periods=4, fill_method=None)
-            last_4_growths = yoy_growths.tail(4)
-            
-            if last_4_growths.isnull().any():
-                calculated_metrics[metric_name] = None
-            else:
-                calculated_metrics[metric_name] = float(last_4_growths.mean())
-        
-        
-        elif calc_type == 'ttm_ratio':
-            numerator_series = get_series_on_master(line_items[0])
-            denominator_series = get_series_on_master(line_items[1])
-            
-            ttm_num = numerator_series.rolling(window=4, min_periods=4).sum().iloc[-1]
-            ttm_den = denominator_series.rolling(window=4, min_periods=4).sum().iloc[-1]
-            
-            if pd.notna(ttm_den) and ttm_den != 0 and pd.notna(ttm_num):
-                # For Interest Coverage, we want the raw ratio, not a percentage
-                calculated_metrics[metric_name] = ttm_num / abs(ttm_den) # Use abs() for interest expense
-            else:
-                calculated_metrics[metric_name] = None
-
-        elif calc_type == 'latest_ratio':
-            # Get the complete, time-aware series for both line items
-            numerator_series = get_series_on_master(line_items[0])
-            denominator_series = get_series_on_master(line_items[1])
-            
-            # Get the last reported non-null value for each
-            latest_num = numerator_series.dropna().iloc[-1] if not numerator_series.dropna().empty else None
-            latest_den = denominator_series.dropna().iloc[-1] if not denominator_series.dropna().empty else None
-            
-            # Calculate the ratio if both values exist and the denominator is not zero
-            if latest_den is not None and latest_den != 0 and latest_num is not None:
-                calculated_metrics[metric_name] = latest_num / latest_den
-            else:
-                calculated_metrics[metric_name] = None
-
-        elif calc_type == 'latest_value':
-            # Get the complete, time-aware series for the single line item
-            series = get_series_on_master(line_items[0])
-            
-            # Get the last reported non-null value
-            latest_value = series.dropna().iloc[-1] if not series.dropna().empty else None
-            
-            # Store the value
-            calculated_metrics[metric_name] = latest_value
-
-        elif calc_type == 'price_to_ttm_value':
-            # Check if we have a valid price for this ticker
-            if price is None or pd.isna(price):
-                calculated_metrics[metric_name] = None
-                continue
-
-            # Get the series for the denominator (e.g., Basic EPS or FFO per Share)
-            denominator_series = get_series_on_master(line_items[0])
-
-            # Calculate the Trailing Twelve Month (TTM) sum of the denominator
-            ttm_den = denominator_series.rolling(window=4, min_periods=4).sum().iloc[-1]
-
-            # Calculate the final ratio, ensuring the denominator is positive
-            if pd.notna(ttm_den) and ttm_den > 0:
-                calculated_metrics[metric_name] = price / ttm_den
-            else:
-                calculated_metrics[metric_name] = None
-
-        elif calc_type == 'latest_to_ttm_ratio':
-            # Numerator is the latest value from the Balance Sheet (e.g., Net Debt)
-            numerator_series = get_series_on_master(line_items[0])
-            latest_num = numerator_series.dropna().iloc[-1] if not numerator_series.dropna().empty else None
-
-            # Denominator is a TTM sum from the Income Statement (e.g., EBITDA)
-            denominator_series = get_series_on_master(line_items[1])
-            ttm_den = denominator_series.rolling(window=4, min_periods=4).sum().iloc[-1]
-
-            # Calculate the ratio
-            if pd.notna(ttm_den) and ttm_den != 0 and pd.notna(latest_num):
-                calculated_metrics[metric_name] = latest_num / ttm_den
-            else:
-                calculated_metrics[metric_name] = None
-
-    app.logger.info(f"--- Processing Ticker: {ticker} ---")
-    rev_series_log = get_series_on_master('Total Revenue')
-    op_series_log = get_series_on_master('Operating Income')
-    ffo_series_log = get_series_on_master('FFO')
-    
-    rev_yoy_log = rev_series_log.pct_change(periods=4, fill_method=None).tail(4)
-    ffo_yoy_log = ffo_series_log.pct_change(periods=4, fill_method=None).tail(4)
-
-    app.logger.info(f"[{ticker}] Raw Revenue points for TTM: {rev_series_log.tail(4).tolist()}")
-    app.logger.info(f"[{ticker}] Raw OpIncome points for TTM: {op_series_log.tail(4).tolist()}")
-    app.logger.info(f"[{ticker}] Individual Revenue YoY Growths for Avg: {[f'{x:.2%}' if pd.notna(x) else 'N/A' for x in rev_yoy_log]}")
-    app.logger.info(f"[{ticker}] Individual FFO YoY Growths for Avg: {[f'{x:.2%}' if pd.notna(x) else 'N/A' for x in ffo_yoy_log]}")
-    
-    return pd.Series(calculated_metrics)
-
 
 # -------------------------------------------------------------------------
 # =========================== LLM FILTER ENDPOINT =============================
@@ -1140,16 +1033,14 @@ def translate_query_to_filters(user_query):
     2. The "explanation" should be a brief, friendly, one-paragraph summary of why you chose the generated filters based on the user's query.
     3. Prioritize the user's most important criteria for the "filters" object. You MUST generate 3 to 4 filters in total.
     4. For numeric ranges in the "filters" object, use your financial knowledge to set reasonable min/max values. For example, "high growth" might mean a minimum of 8% (0.08).
-    5. The filter names in the "filters" object must be one of the following: property_type, min_operating_margin, max_operating_margin, min_revenue_growth, max_revenue_growth, min_ffo_growth, max_ffo_growth, min_interest_coverage, max_interest_coverage, min_debt_to_asset, max_debt_to_asset, min_payout_ratio, max_payout_ratio, min_ffo_payout_ratio, max_ffo_payout_ratio, min_pe_ratio, max_pe_ratio, min_pffo_ratio, max_pffo_ratio, min_ffo_to_revenue, max_ffo_to_revenue, min_net_debt_to_ebitda, max_net_debt_to_ebitda.
-    6. For 'property_type', use one of the specified exact strings from the list.
+    5. The filter names in the "filters" object must be one of the following: min_operating_margin, max_operating_margin, min_revenue_growth, max_revenue_growth, min_ffo_growth, max_ffo_growth, min_interest_coverage, max_interest_coverage, min_debt_to_asset, max_debt_to_asset, min_payout_ratio, max_payout_ratio, min_ffo_payout_ratio, max_ffo_payout_ratio, min_pe_ratio, max_pe_ratio, min_pffo_ratio, max_pffo_ratio, min_ffo_to_revenue, max_ffo_to_revenue, min_net_debt_to_ebitda, max_net_debt_to_ebitda.
 
     EXAMPLE:
     User Query: "Show me some safe apartment buildings with decent returns."
     Your JSON Response:
     {{
-      "explanation": "Certainly. To find 'safe' investments, I've applied a maximum Debt to Asset ratio to screen for companies with low leverage. For 'decent returns,' I've added a minimum FFO growth rate. 'Apartments' has been set as the property type.",
+      "explanation": "Certainly. To find 'safe' investments, I've applied a maximum Debt to Asset ratio to screen for companies with low leverage. For 'decent returns,' I've added a minimum FFO growth rate.",
       "filters": {{
-        "property_type": "Apartments",
         "max_debt_to_asset": 0.5,
         "min_ffo_growth": 0.03
       }}
@@ -1196,6 +1087,7 @@ def translate_query_to_filters(user_query):
     return json.loads(json_text)
 
 @app.route('/api/llm-filter', methods=['POST'])
+@limiter.limit("10 per hour; 30 per day") # Rate limit to prevent abuse
 def generate_llm_filter():
     """
     Receives a natural language query and uses an LLM to translate it
@@ -1216,3 +1108,113 @@ def generate_llm_filter():
         traceback.print_exc()
         return jsonify({"error": "Failed to generate filters from query."}), 500
     
+
+
+# -------------------------------------------------------------------------
+# ====================== Crowdfunding ENDPOINTS ===============================
+# -------------------------------------------------------------------------
+@app.route('/api/rec/universe', methods=['GET'])
+def get_rec_universe():
+    """
+    Returns a list of all Real Estate Crowdfunding vehicles 
+    with basic info from the 'rec_universe' table.
+    """
+    try:
+        with db.engine.connect() as conn:
+            query = "SELECT * FROM rec_universe"
+            universe_df = pd.read_sql(query, conn)
+    except Exception as e:
+        app.logger.error(f"Error loading REC universe data: {e}")
+        return jsonify({"error": "Failed to load REC Universe data"}), 500
+
+    if universe_df.empty:
+        return jsonify({"message": "No REC vehicles found.", "rec_universe": []}), 200
+
+    # Replace NaN values with None for safe JSON serialization
+    universe_df = universe_df.astype(object).where(pd.notna(universe_df), None)
+
+    # Convert DataFrame to a list of dicts
+    rec_universe_list = universe_df.to_dict(orient='records')
+    return jsonify({"rec_universe": rec_universe_list}), 200
+
+
+@app.route("/api/rec/<string:investment_vehicle>/performance", methods=['GET'])
+def get_rec_performance(investment_vehicle):
+    """
+    Returns time-series data (e.g., total return, NAV growth, distribution yield)
+    for the specified REC vehicle. The actual DB columns may have underscores
+    instead of spaces, so we automatically replace spaces with underscores 
+    before looking for the column.
+    """
+
+    # 1) Convert spaces to underscores to match your DB column naming convention
+    col_name = investment_vehicle.replace(' ', '_')
+
+    try:
+        with db.engine.connect() as conn:
+            # Load each table
+            df_return = pd.read_sql("SELECT * FROM rec_total_return", conn)
+            df_distribution = pd.read_sql("SELECT * FROM rec_distribution_yield", conn)
+            df_nav = pd.read_sql("SELECT * FROM rec_nav_growth", conn)
+    except Exception as e:
+        app.logger.error(f"Error loading REC time-series tables: {e}")
+        return jsonify({"error": "Failed to load one or more REC tables"}), 500
+
+    if df_return.empty and df_distribution.empty and df_nav.empty:
+        return jsonify({"message": "No time-series data available for any vehicle."}), 200
+
+    data_out = {
+        "vehicle": investment_vehicle, 
+        "total_return": [],
+        "distribution_yield": [],
+        "nav_growth": []
+    }
+
+    def extract_series(df_wide, column):
+        """ 
+        Convert wide-format DF into a list of {date, value}, 
+        stripping '%' if found and converting to float.
+        """
+        if df_wide.empty or column not in df_wide.columns:
+            return []
+        df_wide = df_wide.copy()
+
+        # Convert 'Dates' to datetime
+        df_wide['Dates'] = pd.to_datetime(df_wide['Dates'], errors="coerce")
+
+        # Keep only date + the single vehicle column, drop NA
+        df_wide = df_wide[['Dates', column]].dropna(subset=[column])
+
+        # Strip '%' and convert to float
+        df_wide[column] = (
+            df_wide[column]
+            .astype(str)
+            .apply(pd.to_numeric, errors='coerce')
+        )
+        df_wide.dropna(subset=[column], inplace=True)
+
+        # Sort by date ascending
+        df_wide.sort_values(by='Dates', inplace=True)
+
+        results = []
+        for _, row in df_wide.iterrows():
+            results.append({
+                "date": row['Dates'].strftime('%Y-%m-%d') if not pd.isna(row['Dates']) else None,
+                "value": row[column]
+            })
+        return results
+
+    # Extract from each table
+    data_out["total_return"] = extract_series(df_return, col_name)
+    data_out["distribution_yield"] = extract_series(df_distribution, col_name)
+    data_out["nav_growth"] = extract_series(df_nav, col_name)
+
+    # If all are empty, no match
+    if not data_out["total_return"] and not data_out["distribution_yield"] and not data_out["nav_growth"]:
+        return jsonify({"message": f"No timeseries data found for vehicle '{investment_vehicle}'"}), 200
+
+    return jsonify(data_out), 200
+
+
+if __name__ == '__main__':
+    app.run(debug=True)

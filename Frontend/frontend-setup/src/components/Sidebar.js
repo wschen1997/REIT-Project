@@ -11,8 +11,6 @@ const Sidebar = ({ isOpen, onClose, currentUser }) => {
     { label: "About Us", path: "/about" },
     { label: "Contact Us", path: "/contact" },
     { label: "Subscription", path: "/pricing" },
-    { label: "REITs Screener", path: "/filter" },
-    // { label: "LLM Testing", path: "/llm-screener" },
   ];
 
   const handleAccountClick = () => {

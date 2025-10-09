@@ -586,6 +586,30 @@ background: var(--surface-color-2);
   box-shadow: none; /* No shadow in dark mode for consistency */
 }
 
+[data-theme='dark'] .ai-send-btn {
+  /* Dark Mode Colors (from .btn-primary dark theme) */
+  background-color: rgba(var(--primary-color-rgb), 0.5);
+  border: 1px solid var(--primary-border-static);
+}
+
+[data-theme='dark'] .ai-send-btn:hover {
+  /* Dark Mode Hover (from .btn-primary:hover dark theme) */
+  background-color: rgba(var(--primary-color-rgb), 0.4);
+  box-shadow: 0 0 4px 0 var(--primary-glow-color);
+  border-color: var(--primary-glow-color);
+}
+[data-theme='dark'] .floating-prompt {
+  background-color: var(--surface-color-2);
+  border: 1px solid var(--border-color);
+  color: var(--text-color-dark);
+}
+
+[data-theme='dark'] .floating-prompt:hover {
+  background-color: var(--surface-hover-color);
+}
+
+
+
 
 
 
@@ -2056,6 +2080,7 @@ label {
 
 .reit-company-name-clickable:hover {
   color: var(--primary-color-light);
+  text-decoration: underline; 
 }
 
 .sidebar-link.theme-switcher-link:hover {
@@ -2456,9 +2481,9 @@ transition: width 0.5s ease-in-out;
   flex-direction: row;   /* This OVERRIDES the 'column' from .card */
   align-items: center; /* This OVERRIDES the 'center' from .card */
   display: flex;
-  gap: 15px;
+  gap: 10px;
   flex-wrap: wrap;
-  padding: 15px;
+  padding: 10px;
   margin: 0;
 }
 
@@ -2469,12 +2494,16 @@ transition: width 0.5s ease-in-out;
   flex-basis: 250px;
   margin: 0;
   display: block; /* Add this line */
+  text-align: left; 
 }
 
 .filter-row-layout .input-field {
   margin-bottom: 0;   /* IMPORTANT override */
   flex-grow: 1;
-  flex-basis: 120px;   /* Give inputs a base width */
+  padding: 0.3rem; 
+  flex-basis: 80px;
+  font-size: 0.9rem;
+  height: auto;
 }
 
 /* Override the reused .sidebar-close-btn for this context */
@@ -2482,6 +2511,89 @@ transition: width 0.5s ease-in-out;
   position: static;   /* Its default is 'absolute', we must override it */
   margin-left: auto;  /* Push to the far right */
   font-size: 1.5rem;
+}
+
+.ai-send-btn {
+  /* Positioning & Sizing (from your old inline styles) */
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  /* Light Mode Colors (from .btn-primary) */
+  background-color: var(--primary-color);
+  color: var(--text-color-light); /* For the SVG icon */
+}
+
+.ai-send-btn:hover {
+  /* Light Mode Hover (from .btn-primary:hover) */
+  background-color: var(--primary-color-light);
+}
+/* --- FLOATING SCROLL PROMPT --- */
+@keyframes fadeInBottom {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.floating-prompt {
+  position: fixed;
+  bottom: 25px;
+  left: 0;
+  right: 0;
+  margin: 0 auto;
+  width: fit-content;
+  padding: 12px 20px;
+  background-color: var(--primary-color);
+  color: var(--text-color-light);
+  border-radius: 30px;
+  box-shadow: var(--box-shadow);
+  z-index: 1000;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  font-weight: 500;
+  animation: fadeInBottom 0.5s ease-out forwards;
+  transition: background-color 0.2s ease;
+}
+
+.floating-prompt:hover {
+  background-color: var(--primary-color-light);
+}
+
+.floating-prompt-close-btn {
+  background: rgba(0, 0, 0, 0.2);
+  border: none;
+  color: white;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0;
+}
+.scroll-target {
+  scroll-margin-top: 100px; /* This must match your desktop header's height */
 }
 
 
@@ -2873,5 +2985,8 @@ transition: width 0.5s ease-in-out;
   .btn-apply-filters {
     /* On mobile, the button will take up the full width, just like the inputs */
     width: 100%; 
+  }
+  .scroll-target {
+    scroll-margin-top: 90px; /* This must match your mobile header's height */
   }
 }

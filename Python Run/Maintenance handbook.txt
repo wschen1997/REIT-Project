@@ -65,11 +65,16 @@ Github update process
 git add -A; git commit -m "Development Update"; git push origin main
 
 test dev mode on local machine: 
+    0. Strat environment
+        cntrl + shift + p 
+        Python: Select Interpreter
     1. Start flask
         cd Backend; python -m flask --app app run
     2. Start react
         cd Frontend\frontend-setup; npm start
 
+Broswer console - bypass LLM limit
+localStorage.removeItem('llmUsageCount')
 
 If there are changes to backend, re-deploy Render
 If there are changes to frontend's asset or added pages, re-deploy Vercel

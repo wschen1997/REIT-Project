@@ -1,16 +1,18 @@
-import React, { useState, useContext } from "react"; // 1. Import useContext
+import React, { useState, useContext, useRef, useEffect } from "react"; 
 import { useNavigate } from "react-router-dom";
-import { ThemeContext } from "../context/ThemeContext.js"; // 2. Import your ThemeContext
+import { ThemeContext } from "../context/ThemeContext.js"; 
 import { useLoading } from "../context/LoadingContext.js"; 
 import PopupModal from "../components/PopupModal.js";
+import LlmScreenerHome from "../components/LlmScreenerHome.js";
 
 const API_BASE_URL =
   process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:5000";
 
 function HomePage() {
   const navigate = useNavigate();
-  const { theme } = useContext(ThemeContext); // 3. Get the current theme from context
-
+  const { theme } = useContext(ThemeContext);
+  const signupSectionRef = useRef(null);
+  const llmSectionRef = useRef(null);
   const [email, setEmail] = useState("");
   const [feedback, setFeedback] = useState("");
   const [interest, setInterest] = useState("");
@@ -18,6 +20,34 @@ function HomePage() {
   const [showPopup, setShowPopup] = useState(false);
   const { setLoading: setIsLoading } = useLoading();
   const [errorMessage, setErrorMessage] = useState("");
+  const [startLlmTour, setStartLlmTour] = useState(false);
+  const [llmScreenerKey, setLlmScreenerKey] = useState(0); 
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []); // The empty array ensures this runs only once when the page loads
+
+  const [showScrollPrompt, setShowScrollPrompt] = useState(true);
+
+  const handleScrollToLLM = () => {
+    // This line forces LlmScreenerHome to re-mount with a fresh state
+    setLlmScreenerKey(prevKey => prevKey + 1); // <-- ADD THIS LINE
+
+    llmSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+    setShowScrollPrompt(false);
+    setTimeout(() => {
+      setStartLlmTour(true);
+    }, 1000); 
+  };
+
+  const handleScrollToSignup = () => {
+    signupSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleTourFinish = () => {
+    setShowScrollPrompt(true);
+    setStartLlmTour(false); // <-- ADD THIS LINE to reset the trigger
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -66,14 +96,13 @@ function HomePage() {
           <div className="hero-content-home">
             <div className="hero-text-home">
               <h1 className="hero-title-home">
-                EMPOWER YOUR<br />REAL ESTATE INVESTING<br />WITH <span className="highlight">VISERRA.</span>
+                GENERATE YOUR<br />INVESTMENT IDEAS<br />WITH <span className="highlight">VISERRA.</span>
               </h1>
               <p className="hero-subtitle-home">
                 Track and compare public REITs, explore fundamental insights, and unlock powerful AI analytics — all in one place.
               </p>
             </div>
             <div className="hero-image-container-home">
-              {/* 4. Use a ternary operator to dynamically set the image source */}
               <img 
                 src={theme === 'dark' ? '/Dashboard-Dark.png' : '/Dashboard.png'} 
                 alt="Viserra Dashboard" 
@@ -83,6 +112,16 @@ function HomePage() {
           </div>
         </div>
         
+        {/* --- LLM SCREENER SECTION --- */}
+        <div className="early-access-section scroll-target" ref={llmSectionRef}> 
+          <LlmScreenerHome 
+            key={llmScreenerKey}
+            onLimitReached={handleScrollToSignup} 
+            startTour={startLlmTour}
+            onTourFinish={handleTourFinish} 
+          />
+        </div>
+
         {/* --- POWERED BY SECTION --- */}
         <div className="powered-by-section">
           <div className="marquee-container">
@@ -97,7 +136,7 @@ function HomePage() {
         </div>
 
         {/* --- EARLY ACCESS FORM --- */}
-        <div className="early-access-section">
+        <div className="early-access-section scroll-target" ref={signupSectionRef}>
           <h2 className="early-access-title">
             Join Our Early Access List!
           </h2>
@@ -137,9 +176,23 @@ function HomePage() {
         <PopupModal show={showPopup} onClose={() => setShowPopup(false)} title="Thank You!">
           <p>You’ve successfully joined our early access list. We’ll keep you up to date on our progress.</p>
         </PopupModal>
-
-
       </div>
+
+      {/* --- FLOATING SCROLL PROMPT --- */}
+      {showScrollPrompt && (
+        <div className="floating-prompt" onClick={handleScrollToLLM}>
+          <span>✨ Demo Our Prototype!</span>
+          <button 
+            className="floating-prompt-close-btn" 
+            onClick={(e) => {
+              e.stopPropagation(); // Prevents the scroll action when closing
+              setShowScrollPrompt(false);
+            }}
+          >
+            &times;
+          </button>
+        </div>
+      )}
     </>
   );
 }
