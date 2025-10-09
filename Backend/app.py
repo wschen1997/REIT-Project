@@ -1034,6 +1034,7 @@ def translate_query_to_filters(user_query):
     3. Prioritize the user's most important criteria for the "filters" object. You MUST generate 3 to 4 filters in total.
     4. For numeric ranges in the "filters" object, use your financial knowledge to set reasonable min/max values. For example, "high growth" might mean a minimum of 8% (0.08).
     5. The filter names in the "filters" object must be one of the following: min_operating_margin, max_operating_margin, min_revenue_growth, max_revenue_growth, min_ffo_growth, max_ffo_growth, min_interest_coverage, max_interest_coverage, min_debt_to_asset, max_debt_to_asset, min_payout_ratio, max_payout_ratio, min_ffo_payout_ratio, max_ffo_payout_ratio, min_pe_ratio, max_pe_ratio, min_pffo_ratio, max_pffo_ratio, min_ffo_to_revenue, max_ffo_to_revenue, min_net_debt_to_ebitda, max_net_debt_to_ebitda.
+    6. Do not be overly restrictive. The goal is to return a manageable list of companies, not zero results.
 
     EXAMPLE:
     User Query: "Show me some safe apartment buildings with decent returns."
