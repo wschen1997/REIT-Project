@@ -68,7 +68,7 @@ function LlmScreenerHome({ onLimitReached, startTour, onTourFinish }) {
     },
     { // Index 4
       target: '#tour-step-4-apply',
-      content: 'Now, click here to apply these filters...',
+      content: 'Now, click "Next" to apply these filters...',
       disableBeacon: true,
     },
     { // Index 5
