@@ -7,7 +7,7 @@ import Joyride, { EVENTS, ACTIONS, STATUS } from 'react-joyride';
 
 // --- Constants and Mock Data ---
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'http://127.0.0.1:5000';
-const MOCK_API_CALLS = false; // Set to true to use mock data for testing
+const MOCK_API_CALLS = true; // Set to true to use mock data for testing
 const DEVELOPER_MODE = false; // Set to false to test the 2-use limit for regular users
 
 const MOCK_RESPONSE = {
