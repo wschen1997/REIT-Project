@@ -1,10 +1,18 @@
 import os
 from dotenv import load_dotenv
 
-dotenv_path = os.path.abspath(
-    "C:/Users/wsche/OneDrive/桌面/Investment Research/Startup Project/Python Run/Credentials.env"
-)
-load_dotenv(dotenv_path)
+# Try to load .env file from common locations
+env_paths = [
+    os.path.join(os.path.dirname(__file__), "..", ".env"),
+    os.path.join(os.path.dirname(__file__), ".env"),
+    os.path.expanduser("~/.env"),
+    # Keep the original path as a fallback (though it won't exist on Mac)
+    os.path.abspath("C:/Users/wsche/OneDrive/桌面/Investment Research/Startup Project/Python Run/Credentials.env"),
+]
+for path in env_paths:
+    if os.path.exists(path):
+        load_dotenv(path)
+        break
 
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
@@ -61,6 +69,15 @@ DB_PASSWORD = os.getenv("DB_PASSWORD")
 DB_HOST = os.getenv("DB_HOST")
 DB_PORT = os.getenv("DB_PORT")
 DB_NAME = os.getenv("DB_NAME")
+
+# Validate DB_PORT - must be a valid integer
+if DB_PORT is not None:
+    try:
+        DB_PORT = int(DB_PORT)
+    except (ValueError, TypeError):
+        raise ValueError(f"DB_PORT must be a valid integer, got: {DB_PORT}")
+else:
+    raise ValueError("DB_PORT environment variable is not set")
 
 # Construct the database connection string
 DB_URL = f"mysql+pymysql://{DB_USERNAME}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"

@@ -22,3 +22,36 @@ Credentials.env
 # Ignore text files
 Maintenance process.txt
 Acrion Items.txt
+
+# Ignore Python virtual environment
+venv/
+env/
+ENV/
+.venv/
+
+# Ignore Python cache and compiled files
+*.pyc
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Ignore IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Ignore OS files
+.DS_Store
+Thumbs.db
+
+# Ignore frontend build and dependencies
+Frontend/frontend-setup/node_modules/
+Frontend/frontend-setup/build/
+Frontend/frontend-setup/.env.local
+Frontend/frontend-setup/.env.development.local
+Frontend/frontend-setup/.env.test.local
+Frontend/frontend-setup/.env.production.local

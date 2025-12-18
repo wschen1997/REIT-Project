@@ -62,12 +62,13 @@ Update database: run
     4. REC universe - initial set up.py
 
 Github update process
-git add -A; git commit -m "Development Update"; git push origin main
+git add .
+git commit -m "Development Update"
+git push origin main
 
 test dev mode on local machine: 
-    0. Strat environment
-        cntrl + shift + p 
-        Python: Select Interpreter
+    0. Start environment
+        source venv/bin/activate
     1. Start flask
         cd Backend; python -m flask --app app run
     2. Start react

@@ -3,8 +3,20 @@ import os
 import requests
 from celery import Celery
 from sqlalchemy import create_engine, text
+from dotenv import load_dotenv
 
 # --- Load Environment Variables ---
+# Try to load .env file from common locations
+env_paths = [
+    os.path.join(os.path.dirname(__file__), "..", ".env"),
+    os.path.join(os.path.dirname(__file__), ".env"),
+    os.path.expanduser("~/.env"),
+]
+for path in env_paths:
+    if os.path.exists(path):
+        load_dotenv(path)
+        break
+
 DB_USERNAME = os.getenv("DB_USERNAME")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
 DB_HOST = os.getenv("DB_HOST")
@@ -12,6 +24,56 @@ DB_PORT = os.getenv("DB_PORT")
 DB_NAME = os.getenv("DB_NAME")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 REDIS_URL = os.getenv("REDIS_URL")
+
+# #region agent log
+LOG_PATH = "/Users/liuyunchen/Development/REIT-Project/.cursor/debug.log"
+import json
+from datetime import datetime
+def log_debug(session_id, run_id, hypothesis_id, location, message, data):
+    entry = {
+        "sessionId": session_id,
+        "runId": run_id,
+        "hypothesisId": hypothesis_id,
+        "location": location,
+        "message": message,
+        "data": data,
+        "timestamp": int(datetime.now().timestamp() * 1000)
+    }
+    try:
+        with open(LOG_PATH, "a") as f:
+            f.write(json.dumps(entry) + "\n")
+    except:
+        pass
+
+log_debug("debug-session", "worker-init-1", "A", "worker.py:35", "Environment variables loaded", {
+    "DB_USERNAME_set": DB_USERNAME is not None,
+    "DB_PASSWORD_set": DB_PASSWORD is not None,
+    "DB_HOST_set": DB_HOST is not None,
+    "DB_PORT_value": DB_PORT,
+    "DB_PORT_type": type(DB_PORT).__name__,
+    "DB_NAME_set": DB_NAME is not None,
+    "GEMINI_API_KEY_set": GEMINI_API_KEY is not None,
+    "REDIS_URL_set": REDIS_URL is not None
+})
+# #endregion
+
+# Validate DB_PORT - must be a valid integer or None
+if DB_PORT is not None:
+    try:
+        DB_PORT = int(DB_PORT)
+    except (ValueError, TypeError):
+        # #region agent log
+        log_debug("debug-session", "worker-init-1", "B", "worker.py:52", "DB_PORT validation failed", {
+            "DB_PORT_raw": DB_PORT,
+            "error": "Cannot convert to int"
+        })
+        # #endregion
+        raise ValueError(f"DB_PORT must be a valid integer, got: {DB_PORT}")
+else:
+    # #region agent log
+    log_debug("debug-session", "worker-init-1", "B", "worker.py:60", "DB_PORT is None", {})
+    # #endregion
+    raise ValueError("DB_PORT environment variable is not set")
 
 # --- Initialize Celery ---
 celery_app = Celery(
@@ -21,10 +83,32 @@ celery_app = Celery(
 )
 
 # --- Database Engine ---
-engine = create_engine(
-    f"mysql+pymysql://{DB_USERNAME}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}",
-    connect_args={"ssl": {"fake_flag_to_enable": True}}
-)
+# #region agent log
+log_debug("debug-session", "worker-init-1", "C", "worker.py:70", "Creating database engine", {
+    "DB_HOST": DB_HOST,
+    "DB_PORT": DB_PORT,
+    "DB_NAME": DB_NAME,
+    "DB_USERNAME_set": DB_USERNAME is not None,
+    "connection_string_preview": f"mysql+pymysql://{DB_USERNAME}:***@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+})
+# #endregion
+
+try:
+    engine = create_engine(
+        f"mysql+pymysql://{DB_USERNAME}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}",
+        connect_args={"ssl": {"fake_flag_to_enable": True}}
+    )
+    # #region agent log
+    log_debug("debug-session", "worker-init-1", "C", "worker.py:80", "Database engine created successfully", {})
+    # #endregion
+except Exception as e:
+    # #region agent log
+    log_debug("debug-session", "worker-init-1", "C", "worker.py:83", "Database engine creation failed", {
+        "error": str(e),
+        "error_type": type(e).__name__
+    })
+    # #endregion
+    raise
 
 @celery_app.task(name="worker.generate_stability_analysis_task")
 def generate_stability_analysis_task(ticker):
